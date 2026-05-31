@@ -337,20 +337,20 @@ async function cargarSlots(){
   }catch(e){cont.innerHTML='<p style="color:#e74c3c;font-size:13px;padding:12px 0">Error al cargar. Verifica conexión.</p>';}
 }
 function seleccionarSlot(hora){slotSeleccionado=hora;document.getElementById("can-form").style.display="block";cargarSlots();}
-async function reservarCancha(){
+function reservarCancha(){
   const nombre=(document.getElementById("can-nombre").value||"").trim();
   const tel=(document.getElementById("can-tel").value||"").trim();
   const fecha=document.getElementById("can-fecha").value;
   const cancha=document.getElementById("can-cancha").value;
   if(!nombre){toast("⚠️ Escribe tu nombre");return;}
   if(!slotSeleccionado){toast("⚠️ Selecciona un horario");return;}
-  try{
-    await db.collection("reservas").add({nombre,tel,fecha,hora:slotSeleccionado,cancha,ts:firebase.firestore.FieldValue.serverTimestamp()});
-    const msg=encodeURIComponent(`📅 *RESERVA DE CANCHA ATMAS*\nNombre: ${nombre}\nTeléfono: ${tel||"(no indicado)"}\nFecha: ${fecha}\nHora: ${slotSeleccionado}\nCancha: ${cancha}`);
-    closeModal();slotSeleccionado=null;
-    window.open(`https://wa.me/56956343558?text=${msg}`,"_blank");
-    toast("✅ Reserva confirmada");
-  }catch(e){toast("❌ Error al guardar. Intenta de nuevo.");}
+  const msg=encodeURIComponent("📅 *RESERVA DE CANCHA ATMAS*\nNombre: "+nombre+"\nTeléfono: "+(tel||"(no indicado)")+"\nFecha: "+fecha+"\nHora: "+slotSeleccionado+"\nCancha: "+cancha);
+  const hora=slotSeleccionado;
+  closeModal();
+  window.open("https://wa.me/56956343558?text="+msg,"_blank");
+  slotSeleccionado=null;
+  toast("✅ Reserva confirmada");
+  db.collection("reservas").add({nombre,tel,fecha,hora,cancha,ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(){});
 }
 function enviarReservaWA(){
   const nombre=(document.getElementById("can-nombre").value||"").trim();
