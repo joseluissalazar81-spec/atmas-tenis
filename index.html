@@ -8,6 +8,8 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <meta name="apple-mobile-web-app-title" content="ATMAS">
 <meta name="theme-color" content="#2f6b1a">
 <style>
@@ -97,6 +99,11 @@
   .toast.show{opacity:1}
   .foot{text-align:center;font-size:11px;color:var(--suave);margin-top:16px;font-style:italic}
   .aviso{background:#fffbea;border:1px solid #f5d020;border-radius:12px;padding:11px 14px;font-size:13px;margin-bottom:12px}
+  .slot-grid{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .slot{padding:10px 12px;border-radius:10px;border:2px solid var(--verde);background:var(--verde-claro);color:var(--verde-osc);font-weight:700;font-size:13px;cursor:pointer;text-align:center;min-width:72px}
+  .slot.sel{background:var(--verde-osc);border-color:var(--verde-osc);color:#fff}
+  .slot.lleno{background:var(--gris);border-color:var(--linea);color:var(--suave);cursor:default}
+  .slot .sub{font-size:10px;font-weight:400;display:block;margin-top:2px}
 </style>
 </head>
 <body>
@@ -225,6 +232,8 @@
   <div class="toast" id="toast"></div>
 </div>
 <script>
+firebase.initializeApp({apiKey:"AIzaSyC5WSNETjUxYfUpMr6nkOk8jjDqrD44Snw",authDomain:"atmas-tenis.firebaseapp.com",projectId:"atmas-tenis",storageBucket:"atmas-tenis.firebasestorage.app",messagingSenderId:"545823553419",appId:"1:545823553419:web:7131283910ded048c9a18e"});
+const db=firebase.firestore();
 const PAGO={nombre:"Marcelo Andrés Escalona Gálvez",rut:"12.637.853-K",banco:"Mercado Pago",tipo:"Cuenta Vista",cuenta:"1057752328",email:"locampinotenisclub@hotmail.com"};
 const avatarColors=["#e74c3c","#e67e22","#f39c12","#2ecc71","#1abc9c","#3498db","#9b59b6","#e91e63","#00bcd4","#4caf50","#ff5722","#607d8b"];
 function initials(n){return n.split(" ").slice(0,2).map(x=>x[0]).join("").toUpperCase()}
@@ -288,11 +297,57 @@ function openModal(tipo,idx){
   if(tipo==="torneo"){const t=torneos[idx];html=`<h3>Inscripción · ${t.n}</h3><div class="field"><label>Tu nombre</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div>${t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':""}${pagoHTML(t.monto,t.n)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="clase"){html=`<h3>Inscripción · Academia ATMAS</h3><div class="field"><label>Nombre del alumno</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Nivel</label><select><option>Iniciación (3–7 años)</option><option>Intermedio</option><option>Avanzado</option><option>Alto rendimiento</option></select></div><div class="field"><label>Tipo de clase</label><select><option>Grupal (Lun/Mié/Sáb)</option><option>Individual (Horario a convenir)</option></select></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El valor lo coordinas directamente con Marcelo según el plan elegido.</p><button class="btn wa" onclick="closeModal();toast('💬 Conectando con ATMAS para tu clase')">💬 Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="encordado"){html=`<h3>Solicitar encordado ATMAS</h3><div class="field"><label>Tu nombre</label><input id="enc-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Tipo de encordado</label><select id="enc-tipo"><option>Control</option><option>Competencia</option><option>Potencia</option><option>Híbrido</option></select></div><div class="field"><label>¿Quieres cambio de grip también?</label><select id="enc-grip"><option>No, solo encordado</option><option>Sí, grip también</option></select></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El valor y disponibilidad lo coordinas con Marcelo.</p><button class="btn wa" onclick="enviarEncordadoWA()">💬 Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
-  else if(tipo==="cancha"){html=`<h3>Reservar cancha</h3><div class="aviso" style="margin-bottom:12px">🎾 Solo zapatillas de arcilla. Reprogramación con 24 hrs de anticipación.</div><div class="field"><label>Tu nombre</label><input id="can-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="can-tel" type="tel" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Fecha</label><input id="can-fecha" type="date" value="2026-06-13"></div><div class="field"><label>Hora</label><input id="can-hora" type="time" value="10:00"></div><div class="field"><label>Cancha preferida</label><select id="can-cancha"><option>Sin preferencia</option><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><button class="btn wa" onclick="enviarReservaWA()">📅 Confirmar reserva por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
+  else if(tipo==="cancha"){
+    slotSeleccionado=null;
+    const hoy=new Date().toISOString().split("T")[0];
+    html=`<h3>Reservar cancha</h3><div class="aviso" style="margin-bottom:12px">🎾 Solo zapatillas de arcilla. Reprogramación con 24 hrs de anticipación.</div><div class="field"><label>Fecha</label><input id="can-fecha" type="date" value="${hoy}" min="${hoy}" oninput="cargarSlots()"></div><div id="slots-container"><p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Selecciona una fecha para ver disponibilidad</p></div><div id="can-form" style="display:none"><div class="field"><label>Tu nombre</label><input id="can-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="can-tel" type="tel" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Cancha preferida</label><select id="can-cancha"><option>Sin preferencia</option><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><button class="btn wa" onclick="reservarCancha()">📅 Confirmar reserva por WhatsApp</button></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+    setTimeout(()=>cargarSlots(),100);
+  }
   else if(tipo==="partido"){let oh="<option>Invitado</option>";players.forEach(p=>{if(p[0]!=="Invitado")oh+=`<option>${p[0]}</option>`});html=`<h3>Registrar partido</h3><div class="field"><label>Oponente</label><select>${oh}</select></div><div class="field"><label>Cancha</label><select><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Fecha</label><input type="date" value="2026-05-31"></div><div class="field"><label>Resultado (sets)</label><div class="sets"><input placeholder="6-0"><input placeholder="6-2"><input placeholder="—"></div></div><button class="btn" onclick="closeModal();toast('✅ Partido registrado · Ranking actualizado')">Guardar</button><button class="btn sec" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="jugador"){html=`<h3>Agregar jugador</h3><div class="field"><label>Nombre del jugador</label><input id="jg-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Puntos iniciales</label><input id="jg-pts" type="number" inputmode="numeric" value="0"></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El jugador se suma a la escalerilla del club ordenado por puntos.</p><button class="btn" onclick="confirmarJugador()">Agregar a la escalerilla</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   document.getElementById("sheet-content").innerHTML=html;
   document.getElementById("modal").classList.add("show");
+}
+let slotSeleccionado=null;
+function horasDelDia(fecha){const d=new Date(fecha+"T12:00:00");const dia=d.getDay();if(dia===0)return{desde:8,hasta:22};if(dia===5)return{desde:10,hasta:22};if(dia===6)return{desde:11,hasta:21};return{desde:10,hasta:24};}
+async function cargarSlots(){
+  const fecha=document.getElementById("can-fecha").value;
+  if(!fecha)return;
+  const cont=document.getElementById("slots-container");
+  cont.innerHTML='<p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Cargando disponibilidad...</p>';
+  try{
+    const snap=await db.collection("reservas").where("fecha","==",fecha).get();
+    const ocupadas={};
+    snap.forEach(doc=>{const h=doc.data().hora;ocupadas[h]=(ocupadas[h]||0)+1;});
+    const {desde,hasta}=horasDelDia(fecha);
+    let html='<p style="font-size:12px;color:var(--suave);margin-bottom:6px">Toca un horario disponible:</p><div class="slot-grid">';
+    for(let h=desde;h<hasta;h++){
+      const hora=String(h).padStart(2,"0")+":00";
+      const count=ocupadas[hora]||0;
+      const libre=count<4;
+      const sel=slotSeleccionado===hora;
+      html+=`<button class="slot${sel?" sel":!libre?" lleno":""}" onclick="${libre?`seleccionarSlot('${hora}')`:"void(0)"}" ${libre?"":"disabled"}>${hora}<span class="sub">${libre?`${4-count} libre${4-count!==1?"s":""}`:""Lleno""}</span></button>`;
+    }
+    html+='</div>';
+    cont.innerHTML=html;
+    document.getElementById("can-form").style.display=slotSeleccionado?"block":"none";
+  }catch(e){cont.innerHTML='<p style="color:#e74c3c;font-size:13px;padding:12px 0">Error al cargar. Verifica conexión.</p>';}
+}
+function seleccionarSlot(hora){slotSeleccionado=hora;document.getElementById("can-form").style.display="block";cargarSlots();}
+async function reservarCancha(){
+  const nombre=(document.getElementById("can-nombre").value||"").trim();
+  const tel=(document.getElementById("can-tel").value||"").trim();
+  const fecha=document.getElementById("can-fecha").value;
+  const cancha=document.getElementById("can-cancha").value;
+  if(!nombre){toast("⚠️ Escribe tu nombre");return;}
+  if(!slotSeleccionado){toast("⚠️ Selecciona un horario");return;}
+  try{
+    await db.collection("reservas").add({nombre,tel,fecha,hora:slotSeleccionado,cancha,ts:firebase.firestore.FieldValue.serverTimestamp()});
+    const msg=encodeURIComponent(`📅 *RESERVA DE CANCHA ATMAS*\nNombre: ${nombre}\nTeléfono: ${tel||"(no indicado)"}\nFecha: ${fecha}\nHora: ${slotSeleccionado}\nCancha: ${cancha}`);
+    closeModal();slotSeleccionado=null;
+    window.open(`https://wa.me/56956343558?text=${msg}`,"_blank");
+    toast("✅ Reserva confirmada");
+  }catch(e){toast("❌ Error al guardar. Intenta de nuevo.");}
 }
 function enviarReservaWA(){
   const nombre=(document.getElementById("can-nombre").value||"").trim();
