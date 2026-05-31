@@ -300,7 +300,7 @@ function openModal(tipo,idx){
   else if(tipo==="cancha"){
     slotSeleccionado=null;
     const hoy=new Date().toISOString().split("T")[0];
-    html=`<h3>Reservar cancha</h3><div class="aviso" style="margin-bottom:12px">🎾 Solo zapatillas de arcilla. Reprogramación con 24 hrs de anticipación.</div><div class="field"><label>Fecha</label><input id="can-fecha" type="date" value="${hoy}" min="${hoy}" oninput="cargarSlots()"></div><div id="slots-container"><p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Selecciona una fecha para ver disponibilidad</p></div><div id="can-form" style="display:none"><div class="field"><label>Tu nombre</label><input id="can-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="can-tel" type="tel" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Cancha preferida</label><select id="can-cancha"><option>Sin preferencia</option><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><button class="btn wa" onclick="reservarCancha()">📅 Confirmar reserva por WhatsApp</button></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+    html=`<h3>Reservar cancha</h3><div class="aviso" style="margin-bottom:12px">🎾 Solo zapatillas de arcilla. Reprogramación con 24 hrs de anticipación.</div><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia">1 hora</span><span class="hrs">$15.000</span></div><div class="hrow"><span class="dia">2 horas</span><span class="hrs">$25.000</span></div><div class="hrow"><span class="dia">2 horas después de las 18:00</span><span class="hrs">$25.000</span></div></div><div class="field"><label>Fecha</label><input id="can-fecha" type="date" value="${hoy}" min="${hoy}" oninput="cargarSlots()"></div><div id="slots-container"><p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Selecciona una fecha para ver disponibilidad</p></div><div id="can-form" style="display:none"><div class="field"><label>Tu nombre</label><input id="can-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="can-tel" type="tel" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Cancha preferida</label><select id="can-cancha"><option>Sin preferencia</option><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Duración</label><select id="can-duracion" onchange="actualizarPagoCancha()"><option value="15000">1 hora · $15.000</option><option value="25000">2 horas · $25.000</option></select></div><div id="can-pago"></div></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
     setTimeout(()=>cargarSlots(),100);
   }
   else if(tipo==="partido"){let oh="<option>Invitado</option>";players.forEach(p=>{if(p[0]!=="Invitado")oh+=`<option>${p[0]}</option>`});html=`<h3>Registrar partido</h3><div class="field"><label>Oponente</label><select>${oh}</select></div><div class="field"><label>Cancha</label><select><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Fecha</label><input type="date" value="2026-05-31"></div><div class="field"><label>Resultado (sets)</label><div class="sets"><input placeholder="6-0"><input placeholder="6-2"><input placeholder="—"></div></div><button class="btn" onclick="closeModal();toast('✅ Partido registrado · Ranking actualizado')">Guardar</button><button class="btn sec" onclick="closeModal()">Cancelar</button>`;}
@@ -336,21 +336,40 @@ async function cargarSlots(){
     document.getElementById("can-form").style.display=slotSeleccionado?"block":"none";
   }catch(e){cont.innerHTML='<p style="color:#e74c3c;font-size:13px;padding:12px 0">Error al cargar. Verifica conexión.</p>';}
 }
-function seleccionarSlot(hora){slotSeleccionado=hora;document.getElementById("can-form").style.display="block";cargarSlots();}
+function seleccionarSlot(hora){
+  slotSeleccionado=hora;
+  document.getElementById("can-form").style.display="block";
+  // Preselect duration based on hour
+  const h=parseInt(hora.split(":")[0]);
+  const dur=document.getElementById("can-duracion");
+  if(dur){dur.value=h>=18?"25000":"15000";}
+  actualizarPagoCancha();
+  cargarSlots();
+}
+function actualizarPagoCancha(){
+  const dur=document.getElementById("can-duracion");
+  if(!dur)return;
+  const monto=parseInt(dur.value);
+  const label="arriendo de cancha";
+  document.getElementById("can-pago").innerHTML=pagoHTML(monto,label);
+}
 function reservarCancha(){
   const nombre=(document.getElementById("can-nombre").value||"").trim();
   const tel=(document.getElementById("can-tel").value||"").trim();
   const fecha=document.getElementById("can-fecha").value;
   const cancha=document.getElementById("can-cancha").value;
+  const durEl=document.getElementById("can-duracion");
+  const durText=durEl?durEl.options[durEl.selectedIndex].text:"1 hora";
+  const monto=durEl?parseInt(durEl.value):15000;
   if(!nombre){toast("⚠️ Escribe tu nombre");return;}
   if(!slotSeleccionado){toast("⚠️ Selecciona un horario");return;}
-  const msg=encodeURIComponent("📅 *RESERVA DE CANCHA ATMAS*\nNombre: "+nombre+"\nTeléfono: "+(tel||"(no indicado)")+"\nFecha: "+fecha+"\nHora: "+slotSeleccionado+"\nCancha: "+cancha);
+  const msg=encodeURIComponent("📅 *RESERVA DE CANCHA ATMAS*\nNombre: "+nombre+"\nTeléfono: "+(tel||"(no indicado)")+"\nFecha: "+fecha+"\nHora: "+slotSeleccionado+"\nDuración: "+durText+"\nCancha: "+cancha+"\nMonto: $"+monto.toLocaleString("es-CL")+"\n\n👉 Adjunto comprobante de transferencia.");
   const hora=slotSeleccionado;
   closeModal();
   window.open("https://wa.me/56956343558?text="+msg,"_blank");
   slotSeleccionado=null;
   toast("✅ Reserva confirmada");
-  db.collection("reservas").add({nombre,tel,fecha,hora,cancha,ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(){});
+  db.collection("reservas").add({nombre,tel,fecha,hora,cancha,duracion:durText,monto,ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(){});
 }
 function enviarReservaWA(){
   const nombre=(document.getElementById("can-nombre").value||"").trim();
