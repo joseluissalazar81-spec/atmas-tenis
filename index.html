@@ -326,7 +326,10 @@ async function cargarSlots(){
       const count=ocupadas[hora]||0;
       const libre=count<4;
       const sel=slotSeleccionado===hora;
-      html+=`<button class="slot${sel?" sel":!libre?" lleno":""}" onclick="${libre?`seleccionarSlot('${hora}')`:"void(0)"}" ${libre?"":"disabled"}>${hora}<span class="sub">${libre?`${4-count} libre${4-count!==1?"s":""}`:""Lleno""}</span></button>`;
+      const cls="slot"+(sel?" sel":!libre?" lleno":"");
+      const libresText=libre?(4-count)+" libre"+(4-count!==1?"s":""):"Sin cupo";
+      const clickAttr=libre?'onclick="seleccionarSlot(\''+hora+'\')"':'';
+      html+='<button class="'+cls+'" '+clickAttr+(libre?'':' disabled')+'>'+hora+'<span class="sub">'+libresText+'</span></button>';
     }
     html+='</div>';
     cont.innerHTML=html;
