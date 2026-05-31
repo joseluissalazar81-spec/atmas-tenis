@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ATMAS · Academia de Tenis AT+</title>
-<link rel="icon" type="image/svg+xml" href="icon.svg">
-<link rel="apple-touch-icon" href="icon.svg">
+<link id="favicon" rel="icon" type="image/png">
+<link id="apple-icon" rel="apple-touch-icon">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -183,9 +183,9 @@
         <div class="hrow"><span class="dia">Sábado</span><span class="hrs">11:00 – 21:00</span></div>
         <div class="hrow"><span class="dia">Domingo</span><span class="hrs">08:00 – 22:00</span></div>
       </div>
-      <div class="lcard"><div class="ic">🤝</div><div style="flex:1"><div class="nm">¿No tienes con quién jugar?</div><div class="ds">ATMAS te busca rival de tu nivel</div></div><button class="mini wa" onclick="toast('💬 Conectando con ATMAS para encontrar rival...')">Pedir rival</button></div>
+      <div class="lcard"><div class="ic">🤝</div><div style="flex:1"><div class="nm">¿No tienes con quién jugar?</div><div class="ds">ATMAS te busca rival de tu nivel</div></div><button class="mini wa" onclick="window.open('https://wa.me/56956343558?text='+encodeURIComponent('Hola ATMAS! Busco rival de mi nivel para jugar.'),'_blank')">Pedir rival</button></div>
       <button class="btn" onclick="openModal('cancha')">📅 Reservar cancha</button>
-      <button class="btn wa" onclick="toast('💬 Abriendo WhatsApp +569 5634 3558')">💬 WhatsApp ATMAS</button>
+      <button class="btn wa" onclick="window.open('https://wa.me/56956343558','_blank')">💬 WhatsApp ATMAS</button>
       <p class="foot">Santa Luisa 3361, Quilicura</p>
     </section>
     <section class="screen" id="academia">
@@ -232,6 +232,19 @@
   <div class="toast" id="toast"></div>
 </div>
 <script>
+(function(){
+  const c=document.createElement("canvas");c.width=180;c.height=180;
+  const ctx=c.getContext("2d");
+  const g=ctx.createRadialGradient(63,54,10,90,90,90);
+  g.addColorStop(0,"#c4f000");g.addColorStop(1,"#7ac143");
+  ctx.beginPath();ctx.arc(90,90,87,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  ctx.strokeStyle="#2f6b1a";ctx.lineWidth=5;ctx.stroke();
+  ctx.fillStyle="#2f6b1a";ctx.font="900 italic 62px Arial Black,Arial,sans-serif";
+  ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("AT+",90,94);
+  const url=c.toDataURL("image/png");
+  document.getElementById("favicon").href=url;
+  document.getElementById("apple-icon").href=url;
+})();
 firebase.initializeApp({apiKey:"AIzaSyC5WSNETjUxYfUpMr6nkOk8jjDqrD44Snw",authDomain:"atmas-tenis.firebaseapp.com",projectId:"atmas-tenis",storageBucket:"atmas-tenis.firebasestorage.app",messagingSenderId:"545823553419",appId:"1:545823553419:web:7131283910ded048c9a18e"});
 const db=firebase.firestore();
 const PAGO={nombre:"Marcelo Andrés Escalona Gálvez",rut:"12.637.853-K",banco:"Mercado Pago",tipo:"Cuenta Vista",cuenta:"1057752328",email:"locampinotenisclub@hotmail.com"};
@@ -291,11 +304,11 @@ function tie(a,b,w){const c=x=>x?(x===w?'p w':'p'):'p tbd';return `<div class="t
 function renderBracket(k){let bk=`<div class="round"><h4>Ronda 16</h4>`;cuadros[k].forEach(t=>bk+=tie(t[0],t[1],t[2]));bk+=`</div><div class="round"><h4>Cuartos</h4>`;for(let i=0;i<4;i++)bk+=tie(null,null);bk+=`</div><div class="round"><h4>Semifinal</h4>`;for(let i=0;i<2;i++)bk+=tie(null,null);bk+=`</div><div class="round"><h4>Final 🏆</h4>`+tie(null,null)+`</div>`;document.getElementById("bracket").innerHTML=bk}
 function setCuadro(k){renderBracket(k);document.getElementById("segOro").classList.toggle("on",k==="oro");document.getElementById("segPlata").classList.toggle("on",k==="plata")}
 renderBracket("oro");
-function pagoHTML(monto,label){return `<div class="pagobox"><h4>💳 Datos de transferencia</h4><div class="row"><span class="k">Nombre</span><span class="v">${PAGO.nombre}</span></div><div class="row"><span class="k">RUT</span><span class="v">${PAGO.rut}</span></div><div class="row"><span class="k">Banco</span><span class="v">${PAGO.banco}</span></div><div class="row"><span class="k">Tipo</span><span class="v">${PAGO.tipo}</span></div><div class="row"><span class="k">N° Cuenta</span><span class="v">${PAGO.cuenta}</span></div><div class="row"><span class="k">Email</span><span class="v" style="font-size:11px">${PAGO.email}</span></div><div class="row"><span class="k">Monto</span><span class="v" style="color:var(--verde-osc);font-size:16px">$${monto.toLocaleString('es-CL')}</span></div></div><p style="font-size:12px;color:var(--suave);margin-bottom:12px">Transfiere y envía el comprobante por WhatsApp para confirmar tu cupo.</p><button class="btn wa" onclick="closeModal();toast('💬 Abriendo WhatsApp para confirmar ${label}')">💬 Enviar comprobante por WhatsApp</button>`;}
+function pagoHTML(monto,label){const waMsg=encodeURIComponent('Hola ATMAS! Te envío el comprobante de pago para confirmar: '+label+(monto?'. Monto: $'+monto.toLocaleString('es-CL'):''));return `<div class="pagobox"><h4>💳 Datos de transferencia</h4><div class="row"><span class="k">Nombre</span><span class="v">${PAGO.nombre}</span></div><div class="row"><span class="k">RUT</span><span class="v">${PAGO.rut}</span></div><div class="row"><span class="k">Banco</span><span class="v">${PAGO.banco}</span></div><div class="row"><span class="k">Tipo</span><span class="v">${PAGO.tipo}</span></div><div class="row"><span class="k">N° Cuenta</span><span class="v">${PAGO.cuenta}</span></div><div class="row"><span class="k">Email</span><span class="v" style="font-size:11px">${PAGO.email}</span></div><div class="row"><span class="k">Monto</span><span class="v" style="color:var(--verde-osc);font-size:16px">$${monto.toLocaleString('es-CL')}</span></div></div><p style="font-size:12px;color:var(--suave);margin-bottom:12px">Transfiere y envía el comprobante por WhatsApp para confirmar tu cupo.</p><button class="btn wa" onclick="closeModal();window.open('https://wa.me/56956343558?text=${waMsg}','_blank')">💬 Enviar comprobante por WhatsApp</button>`;}
 function openModal(tipo,idx){
   let html="";
   if(tipo==="torneo"){const t=torneos[idx];html=`<h3>Inscripción · ${t.n}</h3><div class="field"><label>Tu nombre</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div>${t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':""}${pagoHTML(t.monto,t.n)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
-  else if(tipo==="clase"){html=`<h3>Inscripción · Academia ATMAS</h3><div class="field"><label>Nombre del alumno</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Nivel</label><select><option>Iniciación (3–7 años)</option><option>Intermedio</option><option>Avanzado</option><option>Alto rendimiento</option></select></div><div class="field"><label>Tipo de clase</label><select><option>Grupal (Lun/Mié/Sáb)</option><option>Individual (Horario a convenir)</option></select></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El valor lo coordinas directamente con Marcelo según el plan elegido.</p><button class="btn wa" onclick="closeModal();toast('💬 Conectando con ATMAS para tu clase')">💬 Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
+  else if(tipo==="clase"){html=`<h3>Inscripción · Academia ATMAS</h3><div class="field"><label>Nombre del alumno</label><input id="cls-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="cls-tel" type="tel" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Nivel</label><select id="cls-nivel"><option>Iniciación (3–7 años)</option><option>Intermedio</option><option>Avanzado</option><option>Alto rendimiento</option></select></div><div class="field"><label>Tipo de clase</label><select id="cls-tipo"><option>Grupal (Lun/Mié/Sáb)</option><option>Individual (Horario a convenir)</option></select></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El valor lo coordinas directamente con Marcelo según el plan elegido.</p><button class="btn wa" onclick="enviarClaseWA()">💬 Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="encordado"){html=`<h3>Solicitar encordado ATMAS</h3><div class="field"><label>Tu nombre</label><input id="enc-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Tipo de encordado</label><select id="enc-tipo"><option>Control</option><option>Competencia</option><option>Potencia</option><option>Híbrido</option></select></div><div class="field"><label>¿Quieres cambio de grip también?</label><select id="enc-grip"><option>No, solo encordado</option><option>Sí, grip también</option></select></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El valor y disponibilidad lo coordinas con Marcelo.</p><button class="btn wa" onclick="enviarEncordadoWA()">💬 Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="cancha"){
     slotSeleccionado=null;
@@ -363,6 +376,15 @@ function enviarReservaWA(){
   const msg=encodeURIComponent(`📅 *RESERVA DE CANCHA ATMAS*\nNombre: ${nombre}\nTeléfono: ${tel||"(no indicado)"}\nFecha: ${fecha}\nHora: ${hora}\nCancha: ${cancha}`);
   closeModal();
   window.open(`https://wa.me/56956343558?text=${msg}`,"_blank");
+}
+function enviarClaseWA(){
+  const nombre=(document.getElementById("cls-nombre").value||"").trim();
+  const tel=(document.getElementById("cls-tel").value||"").trim();
+  const nivel=document.getElementById("cls-nivel").value;
+  const tipo=document.getElementById("cls-tipo").value;
+  const msg=encodeURIComponent("Hola ATMAS! Quiero inscribirme en la academia.\nNombre: "+(nombre||"(sin indicar)")+"\nTeléfono: "+(tel||"(no indicado)")+"\nNivel: "+nivel+"\nTipo: "+tipo);
+  closeModal();
+  window.open("https://wa.me/56956343558?text="+msg,"_blank");
 }
 function enviarEncordadoWA(){
   const nombre=(document.getElementById("enc-nombre").value||"").trim();
