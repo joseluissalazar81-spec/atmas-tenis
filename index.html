@@ -191,8 +191,10 @@
     <section class="screen" id="academia">
       <div class="section-title">Academia · Todos los niveles</div>
       <div class="chips">
-        <span class="chip">Iniciación</span><span class="chip">Intermedio</span>
-        <span class="chip">Avanzado</span><span class="chip">Alto rendimiento</span>
+        <span class="chip" onclick="openModal('nivel','iniciacion')" style="cursor:pointer">Iniciación</span>
+        <span class="chip" onclick="openModal('nivel','intermedio')" style="cursor:pointer">Intermedio</span>
+        <span class="chip" onclick="openModal('nivel','avanzado')" style="cursor:pointer">Avanzado</span>
+        <span class="chip" onclick="openModal('nivel','rendimiento')" style="cursor:pointer">Alto rendimiento</span>
       </div>
       <div class="lcard"><div class="ic">👶</div><div style="flex:1"><div class="nm">Grupo Iniciación · 3 a 7 años</div><div class="ds">Sábados · 1h 30min · grupales</div></div><button class="mini" onclick="openModal('clase')">Inscribir</button></div>
       <div class="lcard"><div class="ic">👥</div><div style="flex:1"><div class="nm">Clases grupales</div><div class="ds">Lun / Mié / Sáb · desde 3 años</div></div><button class="mini" onclick="openModal('clase')">Inscribir</button></div>
@@ -300,6 +302,16 @@ function pagoHTML(monto,label){const waMsg=encodeURIComponent('Hola ATMAS! Te en
 function openModal(tipo,idx){
   let html="";
   if(tipo==="torneo"){const t=torneos[idx];html=`<h3>Inscripción · ${t.n}</h3><div class="field"><label>Tu nombre</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div>${t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':""}${pagoHTML(t.monto,t.n)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
+  else if(tipo==="nivel"){
+    const niveles={
+      iniciacion:{t:"Iniciación 👶",desc:"Para niños de 3 a 7 años. Aprenden las bases del tenis en un ambiente divertido y dinámico.",horario:"Sábados · 1h 30min · Grupales",extra:"Ideal para comenzar desde cero."},
+      intermedio:{t:"Intermedio 👥",desc:"Para jugadores que ya conocen las bases y quieren mejorar su técnica y consistencia.",horario:"Lun / Mié / Sáb · Grupales o individuales",extra:"Se trabaja golpes, posicionamiento y juego en cancha."},
+      avanzado:{t:"Avanzado 🎾",desc:"Para jugadores con buena base técnica que buscan llevar su juego al siguiente nivel.",horario:"Horario a convenir · Individual o grupal reducido",extra:"Táctica, competencia y preparación física específica."},
+      rendimiento:{t:"Alto rendimiento 🏆",desc:"Para jugadores competitivos que buscan perfeccionar cada aspecto de su juego.",horario:"Horario personalizado · Individual",extra:"Preparación para torneos, análisis de juego y físico específico."}
+    };
+    const n=niveles[idx];
+    html=`<h3>${n.t}</h3><p style="font-size:14px;color:var(--texto);margin-bottom:12px">${n.desc}</p><div class="infobox"><div class="hrow"><span class="dia">Horario</span><span class="hrs" style="font-size:12px">${n.horario}</span></div></div><p style="font-size:13px;color:var(--suave);margin-bottom:16px">${n.extra}</p><button class="btn wa" onclick="inscribirNivel('${n.t}')">💬 Inscribirme por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
+  }
   else if(tipo==="clase"){html=`<h3>Inscripción · Academia ATMAS</h3><div class="field"><label>Nombre del alumno</label><input id="cls-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="cls-tel" type="tel" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Nivel</label><select id="cls-nivel"><option>Iniciación (3–7 años)</option><option>Intermedio</option><option>Avanzado</option><option>Alto rendimiento</option></select></div><div class="field"><label>Tipo de clase</label><select id="cls-tipo"><option>Grupal (Lun/Mié/Sáb)</option><option>Individual (Horario a convenir)</option></select></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El valor lo coordinas directamente con Marcelo según el plan elegido.</p><button class="btn wa" onclick="enviarClaseWA()">💬 Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="encordado"){html=`<h3>Solicitar encordado ATMAS</h3><div class="field"><label>Tu nombre</label><input id="enc-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Tipo de encordado</label><select id="enc-tipo"><option>Control</option><option>Competencia</option><option>Potencia</option><option>Híbrido</option></select></div><div class="field"><label>¿Quieres cambio de grip también?</label><select id="enc-grip"><option>No, solo encordado</option><option>Sí, grip también</option></select></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El valor y disponibilidad lo coordinas con Marcelo.</p><button class="btn wa" onclick="enviarEncordadoWA()">💬 Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="cancha"){
@@ -387,6 +399,11 @@ function enviarReservaWA(){
   const msg=encodeURIComponent(`📅 *RESERVA DE CANCHA ATMAS*\nNombre: ${nombre}\nTeléfono: ${tel||"(no indicado)"}\nFecha: ${fecha}\nHora: ${hora}\nCancha: ${cancha}`);
   closeModal();
   window.open(`https://wa.me/56956343558?text=${msg}`,"_blank");
+}
+function inscribirNivel(nivel){
+  const msg=encodeURIComponent("Hola ATMAS! Me interesa inscribirme en el nivel: "+nivel+". ¿Me pueden dar más información?");
+  closeModal();
+  window.open("https://wa.me/56956343558?text="+msg,"_blank");
 }
 function enviarClaseWA(){
   const nombre=(document.getElementById("cls-nombre").value||"").trim();
