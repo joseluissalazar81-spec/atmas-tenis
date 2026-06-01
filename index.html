@@ -165,6 +165,14 @@
           <button id="segPlata" onclick="setCuadro('plata')">Cuadro PLATA</button>
         </div>
         <div class="bracket" id="bracket"></div>
+        <div class="section-title">📅 Calendario Escalerilla</div>
+        <div class="infobox">
+          <div class="hrow"><span class="dia">🔒 Fase Cerrada</span><span class="hrs">22/5 al 31/5</span></div>
+          <div class="hrow"><span class="dia">🏆 Copa Oro y Plata · R16</span><span class="hrs">01/6 al 05/6</span></div>
+          <div class="hrow"><span class="dia">⚔️ Cuartos Oro y Plata</span><span class="hrs">06/6 al 08/6</span></div>
+          <div class="hrow"><span class="dia">🎾 Semifinales</span><span class="hrs">09/6 al 11/6</span></div>
+          <div class="hrow" style="background:var(--verde-claro);border-radius:8px;padding:8px 4px"><span class="dia" style="color:var(--verde-osc)">🏅 FINALES</span><span class="hrs" style="color:var(--verde-osc);font-weight:800">13 Junio · 10:30 AM</span></div>
+        </div>
         <p class="foot">Los 16 mejores de la escalerilla clasifican al Cuadro ORO 🏆</p>
       </div>
     </section>
@@ -306,7 +314,7 @@ renderRanking();
 const torneos=[
   {n:"Torneo Novicios 4",f:"11 julio 2026 · 16:00 y 18:00",p:"$20.000",c:"6 cupos",monto:20000},
   {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"16 cupos",monto:15000},
-  {n:"Nueva Escalerilla Jun–Ago",f:"Series A y B · + $15.000 por partido",p:"$35.000",c:"4 cupos",monto:35000}
+  {n:"Nueva Escalerilla Jun–Ago 🏅",f:"Series A y B · Valor por partido $15.000",p:"$35.000",c:"4 cupos",monto:35000}
 ];
 let th="";
 torneos.forEach((t,i)=>{th+=`<div class="tcard"><div class="tn">${t.n}</div><div class="tm">${t.f}</div><div class="trow"><span class="price">${t.p}</span><span class="cupos">${t.c}</span><button class="mini wa" onclick="openModal('torneo',${i})">Inscribirme</button></div></div>`;});
@@ -317,8 +325,8 @@ nov.forEach((n,i)=>{const col=avatarColor(n);const ini=initials(n);nh+=`<div cla
 for(let i=nov.length;i<16;i++)nh+=`<div class="lcard"><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--suave)">${i+1}</div><div style="flex:1"><div class="ds">Cupo disponible</div></div><button class="mini" onclick="openModal('torneo',0)">Unirme</button></div>`;
 document.getElementById("novicios-list").innerHTML=nh;
 const cuadros={
-  oro:[["Rodrigo Bernal","Pablo Ortiz","Rodrigo Bernal"],["G.Cuadro5","Miguel Osores",null],["Rodrigo Navarro","Marcelo Escalona","Marcelo Escalona"],["Emilio Alzérreca","Rubén González",null],["Pedro González","Pablo Concha",null],["Sebastián Lopez","Patricio Chamorro",null],["Carlos Tapia","Sebastian Brito","Sebastian Brito"],["Néstor Zárate","Mauricio Morales",null]],
-  plata:[["Claudio Andres","John Burdiles",null],["Perd.Cuadro5","Vicente Rodriguez",null],["Nicolas Martinez","Maximo Escalona",null],["Ricardo Asmuru","Felipe Martínez",null],["Aurelio Saavedra","Hipólito Bello",null],["Cristobal Retamales","Felipe Miño",null],["Manuel Illanes","Victor Marchant",null],["Oscar Enriquez","Edgardo Pacheco",null]]
+  oro:[["Rodrigo Bernal","Pablo Ortiz",null],["Alfredo Muñoz","Miguel Osores",null],["Rodrigo Navarro","Marcelo Escalona",null],["Emilio Alzérreca","Rubén González",null],["Pedro González","Pablo Concha",null],["Sebastián Lopez","Patricio Chamorro",null],["Carlos Tapia","Sebastian Brito","Sebastian Brito"],["Néstor Zárate","Mauricio Morales",null]],
+  plata:[["Claudio Andres","John Burdièss",null],["Joaquín Guerra","Vicente Rodríguez",null],["Nicolas Martinez","Maximo Escalona",null],["Ricardo Asmuru","Felipe Martínez",null],["Aurelio Saavedra","Hipólito Bello",null],["Cristobal Retamales","Felipe Miño",null],["Manuel Illanes","Victor Marchant",null],["Oscar Enriquez","Edgardo Pacheco",null]]
 };
 function tie(a,b,w){const c=x=>x?(x===w?'p w':'p'):'p tbd';return `<div class="tie"><div class="${c(a)}">${a||'Por definir'}</div><div class="${c(b)}">${b||'Por definir'}</div></div>`}
 function renderBracket(k){let bk=`<div class="round"><h4>Ronda 16</h4>`;cuadros[k].forEach(t=>bk+=tie(t[0],t[1],t[2]));bk+=`</div><div class="round"><h4>Cuartos</h4>`;for(let i=0;i<4;i++)bk+=tie(null,null);bk+=`</div><div class="round"><h4>Semifinal</h4>`;for(let i=0;i<2;i++)bk+=tie(null,null);bk+=`</div><div class="round"><h4>Final 🏆</h4>`+tie(null,null)+`</div>`;document.getElementById("bracket").innerHTML=bk}
