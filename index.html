@@ -223,6 +223,12 @@
           <span class="cupos">Profesor de Tenis</span><span class="cupos">Pelota Roja</span><span class="cupos">Pelota Naranja</span>
         </div>
       </div>
+      <div class="section-title">📚 Verdades Incómodas del Tenis</div>
+      <div style="background:var(--negro);border-radius:18px;padding:18px;margin-bottom:14px;color:#fff">
+        <div style="font-size:11px;font-weight:700;color:var(--lima);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Serie · 7 capítulos</div>
+        <div style="font-size:19px;font-weight:900;line-height:1.2;margin-bottom:14px">Verdades Incómodas<br>del Tenis</div>
+        <div id="vi-list"></div>
+      </div>
       <div class="section-title">Academia · Todos los niveles</div>
       <div class="chips">
         <span class="chip" onclick="openModal('nivel','iniciacion')" style="cursor:pointer">Iniciación</span>
@@ -230,9 +236,10 @@
         <span class="chip" onclick="openModal('nivel','avanzado')" style="cursor:pointer">Avanzado</span>
         <span class="chip" onclick="openModal('nivel','rendimiento')" style="cursor:pointer">Alto rendimiento</span>
       </div>
-      <div class="lcard"><div class="ic">👶</div><div style="flex:1"><div class="nm">Grupo Iniciación · 3 a 7 años</div><div class="ds">Sábados · 1h 30min · grupales</div></div><button class="mini" onclick="openModal('clase')">Inscribir</button></div>
-      <div class="lcard"><div class="ic">👥</div><div style="flex:1"><div class="nm">Clases grupales</div><div class="ds">Lun / Mié / Sáb · desde 3 años</div></div><button class="mini" onclick="openModal('clase')">Inscribir</button></div>
-      <div class="lcard"><div class="ic">🎾</div><div style="flex:1"><div class="nm">Clases individuales</div><div class="ds">Horario a convenir</div></div><button class="mini" onclick="openModal('clase')">Inscribir</button></div>
+      <div class="lcard"><div class="ic">👶</div><div style="flex:1"><div class="nm">Grupo Iniciación · 3 a 7 años</div><div class="ds">Sábados · $60.000/mes</div></div><button class="mini" onclick="openModal('clase','iniciacion')">Inscribir</button></div>
+      <div class="lcard"><div class="ic">👥</div><div style="flex:1"><div class="nm">Clases Intermedios</div><div class="ds">Sáb/Mar/Jue · desde $70.000</div></div><button class="mini" onclick="openModal('clase','intermedio')">Inscribir</button></div>
+      <div class="lcard"><div class="ic">🏆</div><div style="flex:1"><div class="nm">Clases Avanzados</div><div class="ds">Sáb/Lun/Mié · desde $80.000</div></div><button class="mini" onclick="openModal('clase','avanzado')">Inscribir</button></div>
+      <div class="lcard"><div class="ic">🎾</div><div style="flex:1"><div class="nm">Clases individuales</div><div class="ds">4 clases $120.000 · 8 clases $200.000</div></div><button class="mini" onclick="openModal('clase','individual')">Inscribir</button></div>
       <div class="section-title">Servicios ATMAS 🔧</div>
       <div class="lcard"><div class="ic">🛠️</div><div style="flex:1"><div class="nm">Mano de obra</div><div class="ds">Encordado profesional</div></div><button class="mini" onclick="openModal('encordado')">Solicitar</button></div>
       <div class="lcard"><div class="ic">🧵</div><div style="flex:1"><div class="nm">Venta de cuerdas</div><div class="ds">Distintas marcas y tensiones</div></div><button class="mini" onclick="openModal('encordado')">Solicitar</button></div>
@@ -246,20 +253,7 @@
       <p class="foot">@ATMAS_TENIS · Club de Tenis Las Avestruces</p>
     </section>
     <section class="screen" id="perfil">
-      <div class="mycard">
-        <div class="pos">Tu perfil</div>
-        <div class="name">Rodrigo Bernal</div>
-        <div class="row">
-          <div><span class="big">66</span><span class="cap">Puntos</span></div>
-          <div><span class="big">13</span><span class="cap">Ganados</span></div>
-          <div><span class="big">1</span><span class="cap">Perdidos</span></div>
-        </div>
-      </div>
-      <button class="btn" onclick="openModal('partido')">+ Registrar partido</button>
-      <div class="section-title">Mis últimos partidos</div>
-      <div class="match win"><div class="top"><span>18/05 · Cancha 1</span><span class="badge win">Ganado</span></div><div class="vs">vs Rubén González</div><div>6-0, 6-1</div></div>
-      <div class="match win"><div class="top"><span>26/04 · Cancha 2</span><span class="badge win">Ganado</span></div><div class="vs">vs Mauricio Morales</div><div>6-3, 4-6, 10-5</div></div>
-      <p class="foot">Formando jugadores y personas desde la base 🎾</p>
+      <div id="perfil-body"></div>
     </section>
   </div>
   <div class="tabbar">
@@ -268,6 +262,7 @@
     <button class="tab" data-s="torneos" onclick="go('torneos')"><span class="ic">🎯</span>Torneos</button>
     <button class="tab" data-s="cancha" onclick="go('cancha')"><span class="ic">📅</span>Cancha</button>
     <button class="tab" data-s="academia" onclick="go('academia')"><span class="ic">🎾</span>Academia</button>
+    <button class="tab" data-s="perfil" onclick="go('perfil')"><span class="ic">👤</span>Mi perfil</button>
   </div>
   <div class="modal" id="modal"><div class="sheet" id="sheet-content"></div></div>
   <div class="toast" id="toast"></div>
@@ -338,15 +333,26 @@ function openModal(tipo,idx){
   if(tipo==="torneo"){const t=torneos[idx];html=`<h3>Inscripción · ${t.n}</h3><div class="field"><label>Tu nombre</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div>${t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':""}${pagoHTML(t.monto,t.n)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="nivel"){
     const niveles={
-      iniciacion:{t:"Iniciación 👶",desc:"Para niños de 3 a 7 años. Aprenden las bases del tenis en un ambiente divertido y dinámico.",horario:"Sábados · 1h 30min · Grupales",extra:"Ideal para comenzar desde cero."},
-      intermedio:{t:"Intermedio 👥",desc:"Para jugadores que ya conocen las bases y quieren mejorar su técnica y consistencia.",horario:"Lun / Mié / Sáb · Grupales o individuales",extra:"Se trabaja golpes, posicionamiento y juego en cancha."},
-      avanzado:{t:"Avanzado 🎾",desc:"Para jugadores con buena base técnica que buscan llevar su juego al siguiente nivel.",horario:"Horario a convenir · Individual o grupal reducido",extra:"Táctica, competencia y preparación física específica."},
-      rendimiento:{t:"Alto rendimiento 🏆",desc:"Para jugadores competitivos que buscan perfeccionar cada aspecto de su juego.",horario:"Horario personalizado · Individual",extra:"Preparación para torneos, análisis de juego y físico específico."}
+      iniciacion:{t:"Iniciación 👶",desc:"Para niños de 3 a 7 años. Aprenden las bases del tenis en un ambiente divertido y dinámico.",horario:"Sábados · 1h 30min · Grupales",precio:"$60.000/mes",extra:"Solo sábados. Ideal para comenzar desde cero."},
+      intermedio:{t:"Intermedio 👥",desc:"Para jugadores que ya conocen las bases y quieren mejorar técnica y consistencia.",horario:"Sábados · Martes · Jueves",precio:"1 día $70.000 · 2 días $120.000 · 3 días $150.000",extra:"Se trabaja golpes, posicionamiento y juego en cancha."},
+      avanzado:{t:"Avanzado 🎾",desc:"Para jugadores con buena base técnica que buscan llevar su juego al siguiente nivel.",horario:"Sábados · Lunes · Miércoles",precio:"1 día $80.000 · 2 días $120.000 · 3 días $150.000",extra:"Táctica, competencia y preparación física específica."},
+      rendimiento:{t:"Alto rendimiento 🏆",desc:"Para jugadores competitivos que buscan perfeccionar cada aspecto de su juego.",horario:"Horario personalizado · Individual",precio:"Clases individuales · Valor a convenir",extra:"Preparación para torneos, análisis de juego y físico específico."}
     };
     const n=niveles[idx];
-    html=`<h3>${n.t}</h3><p style="font-size:14px;color:var(--texto);margin-bottom:12px">${n.desc}</p><div class="infobox"><div class="hrow"><span class="dia">Horario</span><span class="hrs" style="font-size:12px">${n.horario}</span></div></div><p style="font-size:13px;color:var(--suave);margin-bottom:16px">${n.extra}</p><button class="btn wa" onclick="inscribirNivel('${n.t}')">💬 Inscribirme por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
+    html=`<h3>${n.t}</h3><p style="font-size:14px;color:var(--texto);margin-bottom:12px">${n.desc}</p><div class="infobox"><div class="hrow"><span class="dia">Horario</span><span class="hrs" style="font-size:12px">${n.horario}</span></div><div class="hrow"><span class="dia">Valor</span><span class="hrs" style="font-size:12px;color:var(--verde-osc);font-weight:800">${n.precio}</span></div></div><p style="font-size:13px;color:var(--suave);margin-bottom:16px">${n.extra}</p><button class="btn wa" onclick="inscribirNivel('${n.t}')">💬 Inscribirme por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
   }
-  else if(tipo==="clase"){html=`<h3>Inscripción · Academia ATMAS</h3><div class="field"><label>Nombre del alumno</label><input id="cls-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="cls-tel" type="tel" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Nivel</label><select id="cls-nivel"><option>Iniciación (3–7 años)</option><option>Intermedio</option><option>Avanzado</option><option>Alto rendimiento</option></select></div><div class="field"><label>Tipo de clase</label><select id="cls-tipo"><option>Grupal (Lun/Mié/Sáb)</option><option>Individual (Horario a convenir)</option></select></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El valor lo coordinas directamente con Marcelo según el plan elegido.</p><button class="btn wa" onclick="enviarClaseWA()">💬 Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
+  else if(tipo==="clase"){
+    const planes={
+      iniciacion:{t:"Iniciación · Sábados",opciones:[{l:"1 día · Sábados",v:60000}]},
+      intermedio:{t:"Intermedios",opciones:[{l:"1 día (Sáb/Mar/Jue)",v:70000},{l:"2 días",v:120000},{l:"3 días",v:150000}]},
+      avanzado:{t:"Avanzados",opciones:[{l:"1 día (Sáb/Lun/Mié)",v:80000},{l:"2 días",v:120000},{l:"3 días",v:150000}]},
+      individual:{t:"Clases individuales",opciones:[{l:"4 clases",v:120000},{l:"8 clases",v:200000}]}
+    };
+    const plan=planes[idx]||planes.individual;
+    let optsHtml=plan.opciones.map((o,i)=>`<option value="${o.v}">${o.l} · $${o.v.toLocaleString('es-CL')}</option>`).join("");
+    html=`<h3>Inscripción · ${plan.t}</h3><div class="field"><label>Nombre del alumno</label><input id="cls-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="cls-tel" type="tel" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Plan</label><select id="cls-plan" onchange="actualizarPagoClase()">${optsHtml}</select></div><div id="cls-pago"></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+    setTimeout(()=>actualizarPagoClase(),50);
+  }
   else if(tipo==="encordado"){html=`<h3>Solicitar encordado ATMAS</h3><div class="field"><label>Tu nombre</label><input id="enc-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Tipo de encordado</label><select id="enc-tipo"><option>Control</option><option>Competencia</option><option>Potencia</option><option>Híbrido</option></select></div><div class="field"><label>¿Quieres cambio de grip también?</label><select id="enc-grip"><option>No, solo encordado</option><option>Sí, grip también</option></select></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El valor y disponibilidad lo coordinas con Marcelo.</p><button class="btn wa" onclick="enviarEncordadoWA()">💬 Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="cancha"){
     slotSeleccionado=null;
@@ -355,6 +361,7 @@ function openModal(tipo,idx){
     setTimeout(()=>cargarSlots(),100);
   }
   else if(tipo==="partido"){let oh="<option>Invitado</option>";players.forEach(p=>{if(p[0]!=="Invitado")oh+=`<option>${p[0]}</option>`});html=`<h3>Registrar partido</h3><div class="field"><label>Oponente</label><select>${oh}</select></div><div class="field"><label>Cancha</label><select><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Fecha</label><input type="date" value="2026-05-31"></div><div class="field"><label>Resultado (sets)</label><div class="sets"><input placeholder="6-0"><input placeholder="6-2"><input placeholder="—"></div></div><button class="btn" onclick="closeModal();toast('✅ Partido registrado · Ranking actualizado')">Guardar</button><button class="btn sec" onclick="closeModal()">Cancelar</button>`;}
+  else if(tipo==="socio"){openSocioModal();return;}
   else if(tipo==="jugador"){html=`<h3>Agregar jugador</h3><div class="field"><label>Nombre del jugador</label><input id="jg-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Puntos iniciales</label><input id="jg-pts" type="number" inputmode="numeric" value="0"></div><p style="font-size:13px;color:var(--suave);margin-bottom:12px">El jugador se suma a la escalerilla del club ordenado por puntos.</p><button class="btn" onclick="confirmarJugador()">Agregar a la escalerilla</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   document.getElementById("sheet-content").innerHTML=html;
   document.getElementById("modal").classList.add("show");
@@ -439,12 +446,19 @@ function inscribirNivel(nivel){
   closeModal();
   window.open("https://wa.me/56956343558?text="+msg,"_blank");
 }
+function actualizarPagoClase(){
+  const sel=document.getElementById("cls-plan");
+  if(!sel)return;
+  const monto=parseInt(sel.value);
+  const label="inscripción academia · "+sel.options[sel.selectedIndex].text;
+  document.getElementById("cls-pago").innerHTML=pagoHTML(monto,label);
+}
 function enviarClaseWA(){
   const nombre=(document.getElementById("cls-nombre").value||"").trim();
   const tel=(document.getElementById("cls-tel").value||"").trim();
-  const nivel=document.getElementById("cls-nivel").value;
-  const tipo=document.getElementById("cls-tipo").value;
-  const msg=encodeURIComponent("Hola ATMAS! Quiero inscribirme en la academia.\nNombre: "+(nombre||"(sin indicar)")+"\nTeléfono: "+(tel||"(no indicado)")+"\nNivel: "+nivel+"\nTipo: "+tipo);
+  const plan=document.getElementById("cls-plan");
+  const planText=plan?plan.options[plan.selectedIndex].text:"(sin indicar)";
+  const msg=encodeURIComponent("Hola ATMAS! Quiero inscribirme en la academia.\nNombre: "+(nombre||"(sin indicar)")+"\nTeléfono: "+(tel||"(no indicado)")+"\nPlan: "+planText);
   closeModal();
   window.open("https://wa.me/56956343558?text="+msg,"_blank");
 }
@@ -457,10 +471,72 @@ function enviarEncordadoWA(){
   window.open(`https://wa.me/56956343558?text=${msg}`,"_blank");
 }
 function confirmarJugador(){const nombre=(document.getElementById("jg-nombre").value||"").trim();const pts=parseInt(document.getElementById("jg-pts").value||"0",10)||0;if(!nombre){toast("⚠️ Escribe el nombre del jugador");return}agregarJugador(nombre,pts);closeModal();go("escalerilla");setVista("rank");toast("✅ "+nombre+" agregado a la escalerilla");}
+// --- PERFIL ---
+function getPerfil(){try{return JSON.parse(localStorage.getItem("atmas_perfil")||"null")}catch(e){return null}}
+function savePerfil(p){localStorage.setItem("atmas_perfil",JSON.stringify(p));db.collection("jugadores").doc(p.rut.replace(/\./g,"").replace("-","")).set(p,{merge:true}).catch(()=>{});}
+function renderPerfil(){
+  const p=getPerfil();
+  const el=document.getElementById("perfil-body");
+  if(!p){
+    el.innerHTML=`<div class="hero" style="margin-bottom:14px"><div class="ball"></div><h2>Crea tu perfil ATMAS</h2><p>Regístrate para reservar canchas, inscribirte en clases y participar en la escalerilla.</p></div><div class="infobox"><div class="field"><label>Nombre completo</label><input id="reg-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>RUT</label><input id="reg-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)"></div><div class="field"><label>Fecha de nacimiento</label><input id="reg-fnac" type="date"></div><div class="field"><label>Teléfono</label><input id="reg-tel" type="tel" placeholder="+569 XXXX XXXX"></div><button class="btn" onclick="registrarPerfil()">Crear mi perfil</button></div>`;
+  } else {
+    const ini=initials(p.nombre);const col=avatarColor(p.nombre);
+    const socioTag=p.socio?`<span class="cupos" style="background:#ffd700;color:#7a5c00">⭐ SOCIO</span>`:`<span class="cupos">Sin membresía</span>`;
+    el.innerHTML=`<div class="mycard"><div class="pos">Mi perfil ATMAS</div><div style="display:flex;align-items:center;gap:12px;margin:6px 0 12px"><div class="avatar" style="background:${col};width:52px;height:52px;font-size:18px">${ini}</div><div><div class="name" style="margin:0">${p.nombre}</div><div style="font-size:12px;opacity:.85">RUT: ${p.rut}</div></div></div><div style="display:flex;gap:8px;flex-wrap:wrap">${socioTag}</div></div><div class="section-title">Mis opciones</div><button class="btn" onclick="openModal('socio')" style="margin-bottom:10px">⭐ Hacerme socio / Membresía</button><button class="btn dark" onclick="go('cancha')" style="margin-bottom:10px">📅 Reservar cancha</button><button class="btn sec" onclick="go('academia')" style="margin-bottom:10px">🎾 Inscribir clases</button><button class="btn sec" style="margin-top:4px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesión</button><p class="foot" style="margin-top:16px">@ATMAS_TENIS · Club Las Avestruces</p>`;
+  }
+}
+function formatRut(el){let v=el.value.replace(/[^0-9kK]/g,"");if(v.length>1){const d=v.slice(0,-1);const dv=v.slice(-1);let fmt="";for(let i=d.length-1,j=0;i>=0;i--,j++){if(j>0&&j%3===0)fmt="."+fmt;fmt=d[i]+fmt;}el.value=fmt+"-"+dv;}else{el.value=v;}}
+function registrarPerfil(){
+  const nombre=(document.getElementById("reg-nombre").value||"").trim();
+  const rut=(document.getElementById("reg-rut").value||"").trim();
+  const fnac=(document.getElementById("reg-fnac").value||"").trim();
+  const tel=(document.getElementById("reg-tel").value||"").trim();
+  if(!nombre){toast("⚠️ Escribe tu nombre");return;}
+  if(!rut){toast("⚠️ Ingresa tu RUT");return;}
+  const p={nombre,rut,fnac,tel,socio:false,ts:new Date().toISOString()};
+  savePerfil(p);
+  toast("✅ ¡Bienvenido a ATMAS, "+nombre.split(" ")[0]+"!");
+  renderPerfil();
+}
+function cerrarSesion(){localStorage.removeItem("atmas_perfil");renderPerfil();toast("Sesión cerrada");}
+// --- SOCIOS ---
+const MESES_INSCRIPCION=["Marzo","Junio","Septiembre","Diciembre"];
+function openSocioModal(){
+  const html=`<h3>⭐ Membresía ATMAS</h3><p style="font-size:13px;color:var(--suave);margin-bottom:14px">Elige tu plan de membresía. Los socios activos acceden a beneficios exclusivos del club.</p><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia" style="font-weight:800">Inscripción trimestral</span><span class="hrs" style="color:var(--verde-osc);font-weight:800">$30.000</span></div><div style="font-size:12px;color:var(--suave);padding:4px 0">Se paga en: ${MESES_INSCRIPCION.join(" · ")}</div></div><div class="section-title">Elige tu plan mensual</div><div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"><button class="btn" onclick="pagarMembresia('mensualidad',90000)">🏆 Mensualidad socio · $90.000/mes</button><button class="btn sec" onclick="pagarMembresia('inscripcion',30000)">📋 Solo inscripción trimestral · $30.000</button><button class="btn sec" onclick="closeModal();go('cancha')">📅 Solo arriendo cancha · $15.000/hr</button></div><button class="btn sec" onclick="closeModal()">Cerrar</button>`;
+  document.getElementById("sheet-content").innerHTML=html;
+  document.getElementById("modal").classList.add("show");
+}
+function pagarMembresia(tipo,monto){
+  const label=tipo==="mensualidad"?"mensualidad socio ATMAS":"inscripción trimestral ATMAS";
+  document.getElementById("sheet-content").innerHTML=`<h3>💳 Pago ${tipo}</h3>${pagoHTML(monto,label)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
+}
+// --- VERDADES INCOMODAS ---
+const verdades=[
+  {n:1,t:"¿Quieres mejorar tu tenis?",url:null},
+  {n:2,t:"El pasapelotas no te gana.",url:null},
+  {n:3,t:"Tu problema no es la raqueta.",url:null},
+  {n:4,t:"El miedo a equivocarte te está frenando.",url:null},
+  {n:5,t:"Jugar seguro no siempre es jugar inteligente.",url:null},
+  {n:6,t:"Ganar no siempre significa mejorar.",url:null},
+  {n:7,t:"Tu rival más difícil eres tú mismo.",url:null}
+];
+function renderVerdades(){
+  const el=document.getElementById("vi-list");if(!el)return;
+  let h="";
+  verdades.forEach(v=>{
+    const active=v.n===2;
+    const bg=active?"background:var(--lima);color:var(--negro)":"background:rgba(255,255,255,0.08);color:#fff";
+    const btn=v.url?`<button onclick="window.open('${v.url}','_blank')" style="background:var(--lima);color:var(--negro);border:none;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;cursor:pointer;flex-shrink:0">▶ Ver</button>`:`<span style="font-size:11px;color:rgba(255,255,255,.4);flex-shrink:0">Próximamente</span>`;
+    h+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;margin-bottom:6px;${bg}"><span style="font-size:15px;font-weight:900;flex-shrink:0">${v.n}</span><span style="font-size:13px;font-weight:700;flex:1">${v.t}</span>${btn}</div>`;
+  });
+  el.innerHTML=h;
+}
+renderVerdades();
 function closeModal(){document.getElementById("modal").classList.remove("show")}
 document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal()});
 function setVista(v){document.getElementById("vista-rank").style.display=v==="rank"?"block":"none";document.getElementById("vista-cuadro").style.display=v==="cuadro"?"block":"none";document.getElementById("vRank").classList.toggle("on",v==="rank");document.getElementById("vCuadro").classList.toggle("on",v==="cuadro");}
-function go(s){document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active"));document.getElementById(s).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.s===s));document.querySelector(".content").scrollTop=0;}
+function go(s){document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active"));document.getElementById(s).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.s===s));document.querySelector(".content").scrollTop=0;if(s==="perfil")renderPerfil();}
+renderPerfil();
 let tt;
 function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2800)}
 </script>
