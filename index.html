@@ -299,7 +299,6 @@ function renderProfesores(){
   el.innerHTML=h;
 }
 renderProfesores();
-// Links Mercado Pago — reemplazar con links reales de la cuenta de Marcelo
 const MP = {
   cancha1hr:   "https://mpago.la/REEMPLAZAR_1HR",
   cancha2hrs:  "https://mpago.la/REEMPLAZAR_2HRS",
@@ -388,17 +387,27 @@ async function cargarInscripciones(){
   }
 }
 cargarInscripciones();
-const cuadros={
-  oro:[["Rodrigo Bernal","Pablo Ortiz",null],["Alfredo Muñoz","Miguel Osores",null],["Rodrigo Navarro","Marcelo Escalona",null],["Emilio Alzérreca","Rubén González",null],["Pedro González","Pablo Concha",null],["Sebastián Lopez","Patricio Chamorro",null],["Carlos Tapia","Sebastian Brito","Sebastian Brito"],["Néstor Zárate","Mauricio Morales",null]],
-  plata:[["Claudio Andres","John Burdièss",null],["Joaquín Guerra","Vicente Rodríguez",null],["Nicolas Martinez","Maximo Escalona",null],["Ricardo Asmuru","Felipe Martínez",null],["Aurelio Saavedra","Hipólito Bello",null],["Cristobal Retamales","Felipe Miño",null],["Manuel Illanes","Victor Marchant",null],["Oscar Enriquez","Edgardo Pacheco",null]]
-};
+function generarCuadros(){
+  const lista=players.concat(cargarExtra()).slice().sort((a,b)=>b[1]-a[1]);
+  const buildMatches=(start)=>{
+    const ps=lista.slice(start,start+16);
+    const n=ps.length;
+    const matches=[];
+    for(let i=0;i<8;i++){
+      const a=ps[i]?ps[i][0]:null;
+      const b=ps[n-1-i]?ps[n-1-i][0]:null;
+      matches.push([a,b,null]);
+    }
+    return matches;
+  };
+  return{oro:buildMatches(0),plata:buildMatches(16)};
+}
+const cuadros=generarCuadros();
 function tie(a,b,w){const c=x=>x?(x===w?'p w':'p'):'p tbd';return `<div class="tie"><div class="${c(a)}">${a||'Por definir'}</div><div class="${c(b)}">${b||'Por definir'}</div></div>`}
 function renderBracket(k){let bk=`<div class="round"><h4>Ronda 16</h4>`;cuadros[k].forEach(t=>bk+=tie(t[0],t[1],t[2]));bk+=`</div><div class="round"><h4>Cuartos</h4>`;for(let i=0;i<4;i++)bk+=tie(null,null);bk+=`</div><div class="round"><h4>Semifinal</h4>`;for(let i=0;i<2;i++)bk+=tie(null,null);bk+=`</div><div class="round"><h4>Final 🏆</h4>`+tie(null,null)+`</div>`;document.getElementById("bracket").innerHTML=bk}
 function setCuadro(k){renderBracket(k);document.getElementById("segOro").classList.toggle("on",k==="oro");document.getElementById("segPlata").classList.toggle("on",k==="plata")}
 renderBracket("oro");
 function pagoHTML(monto,label,mpLink){
-  const waConfirm = encodeURIComponent('Hola ATMAS! Acabo de pagar por Mercado Pago: '+label+'. Monto: $'+monto.toLocaleString('es-CL')+'. ¿Pueden confirmar mi reserva/cupo?');
-  const waTransf  = encodeURIComponent('Hola ATMAS! Te envío el comprobante de transferencia: '+label+'. Monto: $'+monto.toLocaleString('es-CL'));
   const hasMP = mpLink && !mpLink.includes('REEMPLAZAR');
   if(hasMP){
     return `<div style="margin:14px 0">
@@ -424,7 +433,6 @@ function pagoHTML(monto,label,mpLink){
     <button class="btn wa" onclick="closeModal();window.open('https://wa.me/56956343558?text='+encodeURIComponent('Hola ATMAS! Te envío el comprobante: ${label}. Monto: $'+monto.toLocaleString('es-CL')),'_blank')">💬 Enviar comprobante por WhatsApp</button>`;
   }
 }
-
 function registrarIntentoPago(label, monto){
   db.collection("pagos_mp").add({label,monto,ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
 }
@@ -511,7 +519,7 @@ async function cargarSlots(){
       const libre=count<4;
       const sel=slotSeleccionado===hora;
       const cls="slot"+(sel?" sel":!libre?" lleno":"");
-      const libresText=libre?(4-count)+" libre"+(4-count!==1?"s":"y"):"Sin cupo";
+      const libresText=libre?(4-count)+" libre"+(4-count!==1?"s":""):"Sin cupo";
       const clickAttr=libre?'onclick="seleccionarSlot(\''+hora+'\')"':'';
       html+='<button class="'+cls+'" '+clickAttr+(libre?'':' disabled')+'>'+hora+'<span class="sub">'+libresText+'</span></button>';
     }
@@ -555,11 +563,28 @@ async function reservarCancha(){
       if(doc.exists)throw new Error("ocupada");
       t.set(ref,{nombre,tel,fecha,hora:slotSeleccionado,cancha,duracion:durText,monto,ts:firebase.firestore.FieldValue.serverTimestamp()});
     });
-    const msg=encodeURIComponent("📅 *RESERVA CONFIRMADA · ATMAS*\nNombre: "+nombre+"\nTeléfono: "+(tel||"(no indicado)")+"\nFecha: "+fecha+"\nHora: "+slotSeleccionado+"\nDuración: "+durText+"\nCancha: "+cancha+"\nMonto: $"+monto.toLocaleString("es-CL")+"\n\n👉 Adjunto comprobante de transferencia.");
-    closeModal();
-    window.open("https://wa.me/56956343558?text="+msg,"_blank");
+    const horaConf=slotSeleccionado;
+    const fechaFmt=fecha.split("-").reverse().join("/");
+    const waMsg=encodeURIComponent("📅 *RESERVA CONFIRMADA · ATMAS*\nNombre: "+nombre+"\nTeléfono: "+(tel||"(no indicado)")+"\nFecha: "+fecha+"\nHora: "+horaConf+"\nDuración: "+durText+"\nCancha: "+cancha+"\nMonto: $"+monto.toLocaleString("es-CL")+"\n\n👉 Adjunto comprobante de transferencia.");
     slotSeleccionado=null;
-    toast("✅ Cancha reservada exitosamente");
+    document.getElementById("sheet-content").innerHTML=`
+      <div style="text-align:center;padding:8px 0 16px">
+        <div style="font-size:54px;margin-bottom:8px">✅</div>
+        <div style="font-size:20px;font-weight:900;color:var(--verde-osc);margin-bottom:4px">¡Cancha reservada!</div>
+        <div style="font-size:13px;color:var(--suave)">Tu hora está confirmada en el sistema</div>
+      </div>
+      <div class="infobox" style="margin-bottom:14px">
+        <div class="hrow"><span class="dia">📅 Fecha</span><span class="hrs">${fechaFmt}</span></div>
+        <div class="hrow"><span class="dia">🕐 Hora</span><span class="hrs">${horaConf}</span></div>
+        <div class="hrow"><span class="dia">🎾 Cancha</span><span class="hrs">${cancha}</span></div>
+        <div class="hrow"><span class="dia">⏱ Duración</span><span class="hrs">${durText}</span></div>
+        <div class="hrow"><span class="dia">💰 Monto</span><span class="hrs" style="color:var(--verde-osc);font-weight:800">$${monto.toLocaleString("es-CL")}</span></div>
+        <div class="hrow"><span class="dia">👤 Nombre</span><span class="hrs">${nombre}</span></div>
+      </div>
+      ${pagoHTML(monto,"arriendo de cancha",monto===15000?MP.cancha1hr:MP.cancha2hrs)}
+      <button class="btn wa" style="margin-top:10px" onclick="window.open('https://wa.me/56956343558?text=${waMsg}','_blank')">💬 Enviar comprobante a ATMAS</button>
+      <button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>
+    `;
   }catch(e){
     if(e.message==="ocupada"){
       toast("❌ Esa cancha ya fue reservada. Elige otro horario.");
@@ -568,18 +593,6 @@ async function reservarCancha(){
       toast("⚠️ Error al reservar. Intenta de nuevo.");
     }
   }
-}
-function enviarReservaWA(){
-  const nombre=(document.getElementById("can-nombre").value||"").trim();
-  const tel=(document.getElementById("can-tel").value||"").trim();
-  const fecha=document.getElementById("can-fecha").value;
-  const hora=document.getElementById("can-hora").value;
-  const cancha=document.getElementById("can-cancha").value;
-  if(!nombre){toast("⚠️ Escribe tu nombre");return}
-  if(!fecha||!hora){toast("⚠️ Indica fecha y hora");return}
-  const msg=encodeURIComponent(`📅 *RESERVA DE CANCHA ATMAS*\nNombre: ${nombre}\nTeléfono: ${tel||"(no indicado)"}\nFecha: ${fecha}\nHora: ${hora}\nCancha: ${cancha}`);
-  closeModal();
-  window.open(`https://wa.me/56956343558?text=${msg}`,"_blank");
 }
 function inscribirNivel(nivel){
   const msg=encodeURIComponent("Hola ATMAS! Me interesa inscribirme en el nivel: "+nivel+". ¿Me pueden dar más información?");
@@ -611,7 +624,6 @@ function enviarEncordadoWA(){
   window.open(`https://wa.me/56956343558?text=${msg}`,"_blank");
 }
 function confirmarJugador(){const nombre=(document.getElementById("jg-nombre").value||"").trim();const pts=parseInt(document.getElementById("jg-pts").value||"0",10)||0;if(!nombre){toast("⚠️ Escribe el nombre del jugador");return}agregarJugador(nombre,pts);closeModal();go("escalerilla");setVista("rank");toast("✅ "+nombre+" agregado a la escalerilla");}
-// --- PERFIL ---
 function getPerfil(){try{return JSON.parse(localStorage.getItem("atmas_perfil")||"null")}catch(e){return null}}
 function savePerfil(p){localStorage.setItem("atmas_perfil",JSON.stringify(p));db.collection("jugadores").doc(p.rut.replace(/\./g,"").replace("-","")).set(p,{merge:true}).catch(()=>{});}
 function renderPerfil(){
@@ -672,7 +684,6 @@ function cerrarSesion(){
   document.querySelector(".tabbar").style.display="none";
   toast("Sesión cerrada");
 }
-// --- SOCIOS ---
 const MESES_INSCRIPCION=["Marzo","Junio","Septiembre","Diciembre"];
 function openSocioModal(){
   const html=`<h3>⭐ Membresía ATMAS</h3><p style="font-size:13px;color:var(--suave);margin-bottom:14px">Elige tu plan de membresía. Los socios activos acceden a beneficios exclusivos del club.</p><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia" style="font-weight:800">Inscripción trimestral</span><span class="hrs" style="color:var(--verde-osc);font-weight:800">$30.000</span></div><div style="font-size:12px;color:var(--suave);padding:4px 0">Se paga en: ${MESES_INSCRIPCION.join(" · ")}</div></div><div class="section-title">Elige tu plan mensual</div><div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"><button class="btn" onclick="pagarMembresia('mensualidad',90000)">🏆 Mensualidad socio · $90.000/mes</button><button class="btn sec" onclick="pagarMembresia('inscripcion',30000)">📋 Solo inscripción trimestral · $30.000</button><button class="btn sec" onclick="closeModal();go('cancha')">📅 Solo arriendo cancha · $15.000/hr</button></div><button class="btn sec" onclick="closeModal()">Cerrar</button>`;
@@ -684,7 +695,6 @@ function pagarMembresia(tipo,monto){
   const mpLink=tipo==="mensualidad"?MP.socio:MP.inscripcion;
   document.getElementById("sheet-content").innerHTML=`<h3>💳 Pago ${tipo}</h3>${pagoHTML(monto,label,mpLink)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
 }
-// --- VERDADES INCOMODAS ---
 const verdades=[
   {n:1,t:"¿Quieres mejorar tu tenis?",url:null},
   {n:2,t:"El pasapelotas no te gana.",url:null},
@@ -763,7 +773,7 @@ async function cargarMisReservas(nombre){
     const proximas=[];
     snap.forEach(doc=>{const d=doc.data();if(d.fecha>=hoy)proximas.push(d);});
     if(proximas.length===0){
-      el.innerHTML='<p style="color:var(--suave);font-size:13px;padding:8px 4px">No tienes reservas próximas. <button onclick="go(\'cancha\')\'" style="background:none;border:none;color:var(--verde-osc);font-weight:700;cursor:pointer;font-size:13px">Reservar ahora →</button></p>';
+      el.innerHTML='<p style="color:var(--suave);font-size:13px;padding:8px 4px">No tienes reservas próximas. <button onclick="go(\'cancha\')" style="background:none;border:none;color:var(--verde-osc);font-weight:700;cursor:pointer;font-size:13px">Reservar ahora →</button></p>';
       return;
     }
     let h="";
