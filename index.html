@@ -330,7 +330,7 @@ let players=[
   ["Aurelio Saavedra",7,7,0,7,0],["Cesar Moreno",6,6,0,6,0]
 ];
 function cargarExtra(){try{return JSON.parse(localStorage.getItem("atmas_jugadores")||"[]")}catch(e){return[]}}
-function guardarExtra(arr){localStorage.setItem("atmas_jugadores",JSON.stringify(arr));}
+function guardarExtra(arr){localStorage.setItem("atmas_jugadores",JSON.stringify(arr))}
 function agregarJugador(nombre,pts){const extra=cargarExtra();extra.push([nombre,pts,0,0,0,0]);guardarExtra(extra);renderRanking();}
 function renderRanking(){
   const lista=players.concat(cargarExtra()).slice().sort((a,b)=>b[1]-a[1]);
@@ -345,11 +345,9 @@ function renderRanking(){
 }
 renderRanking();
 async function actualizarStats(){
-  // Jugadores: players array + extras in localStorage
   const total = players.concat(cargarExtra()).length;
   const elJ = document.getElementById("stat-jugadores");
   if(elJ) elJ.textContent = total;
-  // Partidos: count from Firestore
   try{
     const snap = await db.collection("partidos_atmas").get();
     const elP = document.getElementById("stat-partidos");
@@ -365,7 +363,6 @@ const torneos=[
 let th="";
 torneos.forEach((t,i)=>{th+=`<div class="tcard"><div class="tn">${t.n}</div><div class="tm">${t.f}</div><div class="trow"><span class="price">${t.p}</span><span class="cupos">${t.c}</span><button class="mini wa" onclick="openModal('torneo',${i})">Inscribirme</button></div></div>`;});
 document.getElementById("torneos-list").innerHTML=th;
-// Load Novicios 4 inscriptions from Firestore
 async function cargarInscripciones(){
   const el=document.getElementById("novicios-list");
   if(!el)return;
@@ -383,7 +380,6 @@ async function cargarInscripciones(){
       nh+=`<div class="lcard"><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--suave)">${i+1}</div><div style="flex:1"><div class="ds">Cupo disponible</div></div><button class="mini" onclick="openModal('torneo',0)">Unirme</button></div>`;
     el.innerHTML=nh||'<p style="color:var(--suave);font-size:13px;padding:8px 4px">Aún no hay inscritos.</p>';
   }catch(e){
-    // Fallback to hardcoded list if Firestore fails
     const nov=["Máximo Escalona","Felipe Muñoz","Jonathan Muñoz","Matías Córdova","Mauricio Melo","Fabian Araneda","Franco Gutiérrez","Andres Gutiérrez","Benjamín Díaz","Nico Martínez","Alex Berrocal"];
     let nh="";
     nov.forEach(n=>{const col=avatarColor(n);const ini=initials(n);nh+=`<div class="lcard"><div class="avatar" style="background:${col};width:32px;height:32px;font-size:12px;flex-shrink:0">${ini}</div><div style="flex:1"><div class="nm">${n}</div></div><span style="font-size:18px">✅</span></div>`;});
@@ -515,7 +511,7 @@ async function cargarSlots(){
       const libre=count<4;
       const sel=slotSeleccionado===hora;
       const cls="slot"+(sel?" sel":!libre?" lleno":"");
-      const libresText=libre?(4-count)+" libre"+(4-count!==1?"s":""):"Sin cupo";
+      const libresText=libre?(4-count)+" libre"+(4-count!==1?"s":"y"):"Sin cupo";
       const clickAttr=libre?'onclick="seleccionarSlot(\''+hora+'\')"':'';
       html+='<button class="'+cls+'" '+clickAttr+(libre?'':' disabled')+'>'+hora+'<span class="sub">'+libresText+'</span></button>';
     }
@@ -527,7 +523,6 @@ async function cargarSlots(){
 function seleccionarSlot(hora){
   slotSeleccionado=hora;
   document.getElementById("can-form").style.display="block";
-  // Preselect duration based on hour
   const h=parseInt(hora.split(":")[0]);
   const dur=document.getElementById("can-duracion");
   if(dur){dur.value=h>=18?"25000":"15000";}
@@ -725,7 +720,6 @@ async function guardarPartido(){
   const perdedor=resultado==="gane"?rival:yo;
   const sets=[s1,s2,s3].filter(s=>s&&s!=="—").join(", ");
   await db.collection("partidos_atmas").add({jugador1:yo,jugador2:rival,ganador,perdedor,sets,cancha,fecha,ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
-  // Update in-memory ranking
   const actualizar=(lista)=>{
     lista.forEach(p=>{
       if(p[0]===ganador){p[1]+=5;p[2]+=1;p[3]+=1;p[5]=Math.round(p[3]/Math.max(1,p[2])*100);}
@@ -745,7 +739,6 @@ async function inscribirTorneo(idx){
   const t=torneos[idx];
   if(!nombre){toast("⚠️ Escribe tu nombre");return;}
   try{
-    // Check if already registered
     const existe=await db.collection("inscripciones_atmas")
       .where("torneo","==",t.n).where("nombre","==",nombre).get();
     if(!existe.empty){toast("⚠️ Ya estás inscrito en este torneo");return;}
@@ -770,7 +763,7 @@ async function cargarMisReservas(nombre){
     const proximas=[];
     snap.forEach(doc=>{const d=doc.data();if(d.fecha>=hoy)proximas.push(d);});
     if(proximas.length===0){
-      el.innerHTML='<p style="color:var(--suave);font-size:13px;padding:8px 4px">No tienes reservas próximas. <button onclick="go(\'cancha\')" style="background:none;border:none;color:var(--verde-osc);font-weight:700;cursor:pointer;font-size:13px">Reservar ahora →</button></p>';
+      el.innerHTML='<p style="color:var(--suave);font-size:13px;padding:8px 4px">No tienes reservas próximas. <button onclick="go(\'cancha\')\'" style="background:none;border:none;color:var(--verde-osc);font-weight:700;cursor:pointer;font-size:13px">Reservar ahora →</button></p>';
       return;
     }
     let h="";
@@ -795,7 +788,6 @@ function setVista(v){document.getElementById("vista-rank").style.display=v==="ra
 function go(s){document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active"));document.getElementById(s).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.s===s));document.querySelector(".content").scrollTop=0;if(s==="perfil")renderPerfil();}
 let tt;
 function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2800)}
-// Init: show login or app
 (function(){
   if(getPerfil()){
     renderPerfil();
