@@ -333,7 +333,7 @@ renderBracket("oro");
 function pagoHTML(monto,label){const waMsg=encodeURIComponent('Hola ATMAS! Te envío el comprobante de pago para confirmar: '+label+(monto?'. Monto: $'+monto.toLocaleString('es-CL'):''));return `<div class="pagobox"><h4>💳 Datos de transferencia</h4><div class="row"><span class="k">Nombre</span><span class="v">${PAGO.nombre}</span></div><div class="row"><span class="k">RUT</span><span class="v">${PAGO.rut}</span></div><div class="row"><span class="k">Banco</span><span class="v">${PAGO.banco}</span></div><div class="row"><span class="k">Tipo</span><span class="v">${PAGO.tipo}</span></div><div class="row"><span class="k">N° Cuenta</span><span class="v">${PAGO.cuenta}</span></div><div class="row"><span class="k">Email</span><span class="v" style="font-size:11px">${PAGO.email}</span></div><div class="row"><span class="k">Monto</span><span class="v" style="color:var(--verde-osc);font-size:16px">$${monto.toLocaleString('es-CL')}</span></div></div><p style="font-size:12px;color:var(--suave);margin-bottom:12px">Transfiere y envía el comprobante por WhatsApp para confirmar tu cupo.</p><button class="btn wa" onclick="closeModal();window.open('https://wa.me/56956343558?text=${waMsg}','_blank')">💬 Enviar comprobante por WhatsApp</button>`;}
 function openModal(tipo,idx){
   let html="";
-  if(tipo==="torneo"){const t=torneos[idx];html=`<h3>Inscripción · ${t.n}</h3><div class="field"><label>Tu nombre</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div>${t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':""}`+pagoHTML(t.monto,t.n)+`<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
+  if(tipo==="torneo"){const t=torneos[idx];html=`<h3>Inscripción · ${t.n}</h3><div class="field"><label>Tu nombre</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div>${t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':""}${pagoHTML(t.monto,t.n)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="nivel"){
     const niveles={
       iniciacion:{t:"Iniciación 👶",desc:"Para niños de 3 a 7 años. Aprenden las bases del tenis en un ambiente divertido y dinámico.",horario:"Sábados · 1h 30min · Grupales",precio:"$60.000/mes",extra:"Solo sábados. Ideal para comenzar desde cero."},
@@ -512,6 +512,32 @@ function registrarPerfil(){
   savePerfil(p);
   toast("✅ ¡Bienvenido a ATMAS, "+nombre.split(" ")[0]+"!");
   renderPerfil();
+  setTimeout(()=>openTorneosInscripcion(nombre,tel),600);
+}
+async function openTorneosInscripcion(nombre,tel){
+  let torneos=[];
+  try{
+    const snap=await db.collection("torneos_admin").orderBy("ts","desc").get();
+    snap.forEach(d=>torneos.push({id:d.id,...d.data()}));
+  }catch(e){}
+  if(!torneos.length){return;}
+  let rows="";
+  torneos.forEach(t=>{
+    const agotado=(t.cupos||"").toLowerCase().includes("agotado")||(t.cupos||"").toLowerCase().includes("sold")||parseInt(t.cupos||"1")===0;
+    const btnStyle=agotado?"background:#e5e7eb;color:#9ca3af;cursor:not-allowed":"background:var(--lima);color:var(--negro)";
+    const btnText=agotado?"Sin cupos":"✅ Anotarme";
+    const btnClick=agotado?"":`onclick="inscribirTorneo('${t.id}','${(t.nombre||'').replace(/'/g,"\\'")}',' ${t.fecha||''}','${t.precio||''}',this)"`;
+    rows+=`<div style="padding:10px 0;border-bottom:1px solid var(--linea)"><div style="font-weight:700;font-size:14px;margin-bottom:2px">${t.nombre||""}</div><div style="font-size:12px;color:var(--suave);margin-bottom:6px">${t.fecha||""} · ${t.precio||""} · <b>${t.cupos||""}</b></div><button style="border:none;border-radius:20px;padding:6px 16px;font-weight:700;font-size:13px;cursor:pointer;${btnStyle}" ${btnClick} ${agotado?"disabled":""}>${btnText}</button></div>`;
+  });
+  const html=`<h3>🎾 Torneos disponibles</h3><p style="font-size:13px;color:var(--suave);margin-bottom:12px">¡Hola! Hay torneos abiertos en el club. ¿Te anotas?</p>${rows}<button class="btn sec" style="margin-top:12px" onclick="closeModal()">Ahora no</button>`;
+  document.getElementById("sheet-content").innerHTML=html;
+  document.getElementById("modal").classList.add("show");
+}
+function inscribirTorneo(id,nombre_torneo,fecha,precio,btn){
+  const p=getPerfil()||{};
+  const msg=encodeURIComponent("Hola ATMAS! Quiero inscribirme en el torneo:\n🎾 "+nombre_torneo+"\n📅 "+fecha+"\n💵 "+precio+"\n\nNombre: "+(p.nombre||"(sin indicar)")+"\nTeléfono: "+(p.tel||"(no indicado)"));
+  btn.textContent="✔ Enviado";btn.disabled=true;btn.style.background="#d1fae5";btn.style.color="#065f46";
+  window.open("https://wa.me/56956343558?text="+msg,"_blank");
 }
 async function openAdminModal(){
   const snap=await db.collection("actividades_hoy").orderBy("orden").get();
