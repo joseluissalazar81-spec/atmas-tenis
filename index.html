@@ -1,4 +1,4 @@
-[Resource from github at repo://joseluissalazar81-spec/atmas-tenis/sha/e07b8f05cd737aa5a545d7c0f1cc3da5967f2f2c/contents/index.html] <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -91,7 +91,7 @@
   .match .vs{font-weight:700;font-size:15px;margin:4px 0}
   .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
   .badge.win{background:#dcfce7;color:#15803d}.badge.loss{background:#fee2e2;color:#b91c1c}
-  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;display:flex;border-top:1px solid var(--linea);padding:8px 0 12px}
+  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;display:flex;border-top:1px solid var(--linea);padding:8px 0 12px;z-index:50}
   .tab{flex:1;text-align:center;font-size:10px;color:var(--suave);cursor:pointer;border:none;background:none}
   .tab.active{color:var(--verde-osc);font-weight:700}.tab .ic{font-size:19px;display:block;margin-bottom:2px}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:60}
@@ -540,7 +540,7 @@ async function openTorneosInscripcion(nombre,tel){
     const agotado=(t.cupos||"").toLowerCase().includes("agotado")||(t.cupos||"").toLowerCase().includes("sold")||parseInt(t.cupos||"1")===0;
     const btnStyle=agotado?"background:#e5e7eb;color:#9ca3af;cursor:not-allowed":"background:var(--lima);color:var(--negro)";
     const btnText=agotado?"Sin cupos":"✅ Anotarme";
-    const btnClick=agotado?"":`onclick="inscribirTorneo('${t.id}','${(t.nombre||'').replace(/'/g,"\\'")  }','${t.fecha||''}','${t.precio||''}',this)"`;
+    const btnClick=agotado?"":`onclick="inscribirTorneo('${t.id}','${(t.nombre||'').replace(/'/g,"\\'")}','${t.fecha||''}','${t.precio||''}',this)"`;
     rows+=`<div style="padding:10px 0;border-bottom:1px solid var(--linea)"><div style="font-weight:700;font-size:14px;margin-bottom:2px">${t.nombre||""}</div><div style="font-size:12px;color:var(--suave);margin-bottom:6px">${t.fecha||""} · ${t.precio||""} · <b>${t.cupos||""}</b></div><button style="border:none;border-radius:20px;padding:6px 16px;font-weight:700;font-size:13px;cursor:pointer;${btnStyle}" ${btnClick} ${agotado?"disabled":""}>${btnText}</button></div>`;
   });
   const html=`<h3>🎾 Torneos disponibles</h3><p style="font-size:13px;color:var(--suave);margin-bottom:12px">¡Hola! Hay torneos abiertos en el club. ¿Te anotas?</p>${rows}<button class="btn sec" style="margin-top:12px" onclick="closeModal()">Ahora no</button>`;
