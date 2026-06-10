@@ -12,6 +12,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <meta name="apple-mobile-web-app-title" content="ATMAS">
 <meta name="theme-color" content="#2f6b1a">
+<meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="expires" content="0">
 <style>
   :root{
     --verde:#7ac143;--verde-osc:#2f6b1a;--verde-mid:#4e8a1f;--verde-claro:#e9f5dd;
@@ -270,6 +273,7 @@
   <div class="toast" id="toast"></div>
 </div>
 <script>
+// Navigation and toast defined first so tabs work even if Firebase CDN is slow
 let tt;
 function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2800)}
 function go(s){document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active"));document.getElementById(s).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.s===s));document.querySelector(".content").scrollTop=0;if(s==="perfil")renderPerfil();}
@@ -342,7 +346,7 @@ renderBracket("oro");
 function pagoHTML(monto,label){const waMsg=encodeURIComponent('Hola ATMAS! Te envío el comprobante de pago para confirmar: '+label+(monto?'. Monto: $'+monto.toLocaleString('es-CL'):''));return `<div class="pagobox"><h4>💳 Datos de transferencia</h4><div class="row"><span class="k">Nombre</span><span class="v">${PAGO.nombre}</span></div><div class="row"><span class="k">RUT</span><span class="v">${PAGO.rut}</span></div><div class="row"><span class="k">Banco</span><span class="v">${PAGO.banco}</span></div><div class="row"><span class="k">Tipo</span><span class="v">${PAGO.tipo}</span></div><div class="row"><span class="k">N° Cuenta</span><span class="v">${PAGO.cuenta}</span></div><div class="row"><span class="k">Email</span><span class="v" style="font-size:11px">${PAGO.email}</span></div><div class="row"><span class="k">Monto</span><span class="v" style="color:var(--verde-osc);font-size:16px">$${monto.toLocaleString('es-CL')}</span></div></div><p style="font-size:12px;color:var(--suave);margin-bottom:12px">Transfiere y envía el comprobante por WhatsApp para confirmar tu cupo.</p><button class="btn wa" onclick="closeModal();window.open('https://wa.me/56956343558?text=${waMsg}','_blank')">💬 Enviar comprobante por WhatsApp</button>`;}
 function openModal(tipo,idx){
   let html="";
-  if(tipo==="torneo"){const t=torneos[idx];html=`<h3>Inscripción · ${t.n}</h3><div class="field"><label>Tu nombre</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div>${t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':""}<br>${pagoHTML(t.monto,t.n)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
+  if(tipo==="torneo"){const t=torneos[idx];html=`<h3>Inscripción · ${t.n}</h3><div class="field"><label>Tu nombre</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div>${t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':""  }${pagoHTML(t.monto,t.n)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="nivel"){
     const niveles={
       iniciacion:{t:"Iniciación 👶",desc:"Para niños de 3 a 7 años. Aprenden las bases del tenis en un ambiente divertido y dinámico.",horario:"Sábados · 1h 30min · Grupales",precio:"$60.000/mes",extra:"Solo sábados. Ideal para comenzar desde cero."},
@@ -370,7 +374,7 @@ function openModal(tipo,idx){
     slotSeleccionado=null;
     const hoy=new Date().toISOString().split("T")[0];
     const _cp=getPerfil()||{};
-    html=`<h3>Reservar cancha</h3><div class="aviso" style="margin-bottom:12px">🎾 Solo zapatillas de arcilla. Reprogramación con 24 hrs de anticipación.</div><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia">1 hora</span><span class="hrs">$15.000</span></div><div class="hrow"><span class="dia">2 horas</span><span class="hrs">$25.000</span></div><div class="hrow"><span class="dia">2 horas después de las 18:00</span><span class="hrs">$25.000</span></div></div><div class="field"><label>Fecha</label><input id="can-fecha" type="date" value="${hoy}" min="${hoy}" oninput="cargarSlots()"></div><div id="slots-container"><p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Selecciona una fecha para ver disponibilidad</p></div><div id="can-form" style="display:none"><div class="field"><label>Tu nombre</label><input id="can-nombre" value="${_cp.nombre||\'\'}" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="can-tel" type="tel" value="${_cp.tel||\'\'}" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Cancha preferida</label><select id="can-cancha"><option>Sin preferencia</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Duración</label><select id="can-duracion" onchange="actualizarPagoCancha()"><option value="15000">1 hora · $15.000</option><option value="25000">2 horas · $25.000</option></select></div><div id="can-pago"></div></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+    html=`<h3>Reservar cancha</h3><div class="aviso" style="margin-bottom:12px">🎾 Solo zapatillas de arcilla. Reprogramación con 24 hrs de anticipación.</div><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia">1 hora</span><span class="hrs">$15.000</span></div><div class="hrow"><span class="dia">2 horas</span><span class="hrs">$25.000</span></div><div class="hrow"><span class="dia">2 horas después de las 18:00</span><span class="hrs">$25.000</span></div></div><div class="field"><label>Fecha</label><input id="can-fecha" type="date" value="${hoy}" min="${hoy}" oninput="cargarSlots()"></div><div id="slots-container"><p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Selecciona una fecha para ver disponibilidad</p></div><div id="can-form" style="display:none"><div class="field"><label>Tu nombre</label><input id="can-nombre" value="${_cp.nombre||''}" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="can-tel" type="tel" value="${_cp.tel||''}" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Cancha preferida</label><select id="can-cancha"><option>Sin preferencia</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Duración</label><select id="can-duracion" onchange="actualizarPagoCancha()"><option value="15000">1 hora · $15.000</option><option value="25000">2 horas · $25.000</option></select></div><div id="can-pago"></div></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
     setTimeout(()=>cargarSlots(),100);
   }
   else if(tipo==="partido"){let oh="<option>Invitado</option>";players.forEach(p=>{if(p[0]!=="Invitado")oh+=`<option>${p[0]}</option>`});html=`<h3>Registrar partido</h3><div class="field"><label>Oponente</label><select>${oh}</select></div><div class="field"><label>Cancha</label><select><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Fecha</label><input type="date" value="2026-05-31"></div><div class="field"><label>Resultado (sets)</label><div class="sets"><input placeholder="6-0"><input placeholder="6-2"><input placeholder="—"></div></div><button class="btn" onclick="closeModal();toast('✅ Partido registrado · Ranking actualizado')">Guardar</button><button class="btn sec" onclick="closeModal()">Cancelar</button>`;}
@@ -414,6 +418,7 @@ async function cargarSlots(){
 function seleccionarSlot(hora){
   slotSeleccionado=hora;
   document.getElementById("can-form").style.display="block";
+  // Preselect duration based on hour
   const h=parseInt(hora.split(":")[0]);
   const dur=document.getElementById("can-duracion");
   if(dur){dur.value=h>=18?"25000":"15000";}
@@ -424,9 +429,10 @@ function actualizarPagoCancha(){
   const dur=document.getElementById("can-duracion");
   if(!dur)return;
   const monto=parseInt(dur.value);
+  const label="arriendo de cancha";
   const mpLink=MP_CANCHA[monto];
   const mpBtn=mpLink?`<a href="${mpLink}" target="_blank" class="btn" style="background:#009ee3;display:block;text-align:center;text-decoration:none;margin-bottom:8px">💳 Pagar con Mercado Pago</a>`:'';
-  document.getElementById("can-pago").innerHTML=mpBtn+pagoHTML(monto,"arriendo de cancha");
+  document.getElementById("can-pago").innerHTML=mpBtn+pagoHTML(monto,label);
 }
 function reservarCancha(){
   const nombre=(document.getElementById("can-nombre").value||"").trim();
@@ -439,11 +445,24 @@ function reservarCancha(){
   if(!nombre){toast("⚠️ Escribe tu nombre");return;}
   if(!slotSeleccionado){toast("⚠️ Selecciona un horario");return;}
   const msg=encodeURIComponent("📅 *RESERVA DE CANCHA ATMAS*\nNombre: "+nombre+"\nTeléfono: "+(tel||"(no indicado)")+"\nFecha: "+fecha+"\nHora: "+slotSeleccionado+"\nDuración: "+durText+"\nCancha: "+cancha+"\nMonto: $"+monto.toLocaleString("es-CL")+"\n\n👉 Adjunto comprobante de transferencia.");
+  const hora=slotSeleccionado;
   closeModal();
   window.open("https://wa.me/56956343558?text="+msg,"_blank");
   slotSeleccionado=null;
   toast("✅ Reserva confirmada");
-  db.collection("reservas").add({nombre,tel,fecha,hora:slotSeleccionado||"",cancha,duracion:durText,monto,ts:new Date().toISOString()}).catch(()=>{});
+  db.collection("reservas").add({nombre,tel,fecha,hora,cancha,duracion:durText,monto,ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(){});
+}
+function enviarReservaWA(){
+  const nombre=(document.getElementById("can-nombre").value||"").trim();
+  const tel=(document.getElementById("can-tel").value||"").trim();
+  const fecha=document.getElementById("can-fecha").value;
+  const hora=document.getElementById("can-hora").value;
+  const cancha=document.getElementById("can-cancha").value;
+  if(!nombre){toast("⚠️ Escribe tu nombre");return}
+  if(!fecha||!hora){toast("⚠️ Indica fecha y hora");return}
+  const msg=encodeURIComponent(`📅 *RESERVA DE CANCHA ATMAS*\nNombre: ${nombre}\nTeléfono: ${tel||"(no indicado)"}\nFecha: ${fecha}\nHora: ${hora}\nCancha: ${cancha}`);
+  closeModal();
+  window.open(`https://wa.me/56956343558?text=${msg}`,"_blank");
 }
 function inscribirNivel(nivel){
   const msg=encodeURIComponent("Hola ATMAS! Me interesa inscribirme en el nivel: "+nivel+". ¿Me pueden dar más información?");
@@ -454,7 +473,8 @@ function actualizarPagoClase(){
   const sel=document.getElementById("cls-plan");
   if(!sel)return;
   const monto=parseInt(sel.value);
-  document.getElementById("cls-pago").innerHTML=pagoHTML(monto,"inscripción academia · "+sel.options[sel.selectedIndex].text);
+  const label="inscripción academia · "+sel.options[sel.selectedIndex].text;
+  document.getElementById("cls-pago").innerHTML=pagoHTML(monto,label);
 }
 function enviarClaseWA(){
   const nombre=(document.getElementById("cls-nombre").value||"").trim();
@@ -469,14 +489,14 @@ function enviarEncordadoWA(){
   const nombre=(document.getElementById("enc-nombre").value||"").trim();
   const tipo=document.getElementById("enc-tipo").value;
   const grip=document.getElementById("enc-grip").value;
-  const msg=encodeURIComponent("Hola ATMAS! Quiero solicitar un encordado.\nNombre: "+(nombre||"(sin indicar)")+"\nTipo: "+tipo+"\n"+grip);
+  const msg=encodeURIComponent(`Hola ATMAS! Quiero solicitar un encordado.\nNombre: ${nombre||"(sin indicar)"}\nTipo: ${tipo}\n${grip}`);
   closeModal();
-  window.open("https://wa.me/56956343558?text="+msg,"_blank");
+  window.open(`https://wa.me/56956343558?text=${msg}`,"_blank");
 }
 function confirmarJugador(){const nombre=(document.getElementById("jg-nombre").value||"").trim();const pts=parseInt(document.getElementById("jg-pts").value||"0",10)||0;if(!nombre){toast("⚠️ Escribe el nombre del jugador");return}agregarJugador(nombre,pts);closeModal();go("escalerilla");setVista("rank");toast("✅ "+nombre+" agregado a la escalerilla");}
+// --- PERFIL ---
 function getPerfil(){try{return JSON.parse(localStorage.getItem("atmas_perfil")||"null")}catch(e){return null}}
 function savePerfil(p){localStorage.setItem("atmas_perfil",JSON.stringify(p));db.collection("jugadores").doc(p.rut.replace(/\./g,"").replace("-","")).set(p,{merge:true}).catch(()=>{});}
-function esAdmin(nombre){if(!nombre)return false;const n=nombre.toLowerCase();return n.includes("marcelo")&&n.includes("escalona");}
 function renderPerfil(){
   const p=getPerfil();
   const el=document.getElementById("perfil-body");
@@ -485,7 +505,12 @@ function renderPerfil(){
   } else {
     const ini=initials(p.nombre);const col=avatarColor(p.nombre);
     const socioTag=p.socio?`<span class="cupos" style="background:#ffd700;color:#7a5c00">⭐ SOCIO</span>`:`<span class="cupos">Sin membresía</span>`;
-    el.innerHTML=`<div class="mycard"><div class="pos">Mi perfil ATMAS</div><div style="display:flex;align-items:center;gap:12px;margin:6px 0 12px"><div class="avatar" style="background:${col};width:52px;height:52px;font-size:18px">${ini}</div><div><div class="name" style="margin:0">${p.nombre}</div><div style="font-size:12px;opacity:.85">RUT: ${p.rut}</div></div></div><div style="display:flex;gap:8px;flex-wrap:wrap">${socioTag}</div></div><div class="section-title">Mis opciones</div><button class="btn" onclick="openModal('socio')" style="margin-bottom:10px">⭐ Hacerme socio / Membresía</button><button class="btn dark" onclick="go('cancha')" style="margin-bottom:10px">📅 Reservar cancha</button><button class="btn sec" onclick="go('academia')" style="margin-bottom:10px">🎾 Inscribir clases</button><button class="btn sec" style="margin-top:4px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesión</button>${esAdmin(p.nombre)?`<div class="section-title" style="margin-top:16px">⚙️ Panel Administrador</div><button class="btn dark" onclick="openModal('admin')" style="margin-bottom:10px">📋 Actividades del día</button><button class="btn dark" onclick="openModal('admin-ranking')" style="margin-bottom:10px">🏆 Actualizar Ranking</button><button class="btn dark" onclick="openModal('admin-torneos')" style="margin-bottom:10px">🎯 Gestionar Torneos</button><button class="btn dark" onclick="openModal('admin-partidos')" style="margin-bottom:10px">📊 Registrar Partido</button>`:""}<p class="foot" style="margin-top:16px">@ATMAS_TENIS · Club Las Avestruces</p>`;
+    el.innerHTML=`<div class="mycard"><div class="pos">Mi perfil ATMAS</div><div style="display:flex;align-items:center;gap:12px;margin:6px 0 12px"><div class="avatar" style="background:${col};width:52px;height:52px;font-size:18px">${ini}</div><div><div class="name" style="margin:0">${p.nombre}</div><div style="font-size:12px;opacity:.85">RUT: ${p.rut}</div></div></div><div style="display:flex;gap:8px;flex-wrap:wrap">${socioTag}</div></div><div class="section-title">Mis opciones</div><button class="btn" onclick="openModal('socio')" style="margin-bottom:10px">⭐ Hacerme socio / Membresía</button><button class="btn dark" onclick="go('cancha')" style="margin-bottom:10px">📅 Reservar cancha</button><button class="btn sec" onclick="go('academia')" style="margin-bottom:10px">🎾 Inscribir clases</button><button class="btn sec" style="margin-top:4px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesión</button>${esAdmin(p.nombre)?`<div class="section-title" style="margin-top:16px">⚙️ Panel Administrador</div>
+<button class="btn dark" onclick="openModal('admin')" style="margin-bottom:10px">📋 Actividades del día</button>
+<button class="btn dark" onclick="openModal('admin-ranking')" style="margin-bottom:10px">🏆 Actualizar Ranking</button>
+<button class="btn dark" onclick="openModal('admin-torneos')" style="margin-bottom:10px">🎯 Gestionar Torneos</button>
+<button class="btn dark" onclick="openModal('admin-partidos')" style="margin-bottom:10px">📊 Registrar Partido</button>":""}
+    <p class="foot" style="margin-top:16px">@ATMAS_TENIS · Club Las Avestruces</p>`;
   }
 }
 function formatRut(el){let v=el.value.replace(/[^0-9kK]/g,"");if(v.length>1){const d=v.slice(0,-1);const dv=v.slice(-1);let fmt="";for(let i=d.length-1,j=0;i>=0;i--,j++){if(j>0&&j%3===0)fmt="."+fmt;fmt=d[i]+fmt;}el.value=fmt+"-"+dv;}else{el.value=v;}}
@@ -500,23 +525,25 @@ function registrarPerfil(){
   savePerfil(p);
   toast("✅ ¡Bienvenido a ATMAS, "+nombre.split(" ")[0]+"!");
   renderPerfil();
-  setTimeout(()=>openTorneosInscripcion(),600);
+  setTimeout(()=>openTorneosInscripcion(nombre,tel),600);
 }
-async function openTorneosInscripcion(){
-  let lista=[];
+async function openTorneosInscripcion(nombre,tel){
+  let torneos=[];
   try{
     const snap=await db.collection("torneos_admin").orderBy("ts","desc").get();
-    snap.forEach(d=>lista.push({id:d.id,...d.data()}));
+    snap.forEach(d=>torneos.push({id:d.id,...d.data()}));
   }catch(e){}
-  if(!lista.length)return;
+  if(!torneos.length){return;}
   let rows="";
-  lista.forEach(t=>{
+  torneos.forEach(t=>{
     const agotado=(t.cupos||"").toLowerCase().includes("agotado")||(t.cupos||"").toLowerCase().includes("sold")||parseInt(t.cupos||"1")===0;
     const btnStyle=agotado?"background:#e5e7eb;color:#9ca3af;cursor:not-allowed":"background:var(--lima);color:var(--negro)";
-    const btnClick=agotado?"":`onclick="inscribirTorneo('${t.id}','${(t.nombre||"").replace(/'/g,\"\\\'\")  }','${t.fecha||""}','${t.precio||""}',this)"`;
-    rows+=`<div style="padding:10px 0;border-bottom:1px solid var(--linea)"><div style="font-weight:700;font-size:14px;margin-bottom:2px">${t.nombre||""}</div><div style="font-size:12px;color:var(--suave);margin-bottom:6px">${t.fecha||""} · ${t.precio||""} · <b>${t.cupos||""}</b></div><button style="border:none;border-radius:20px;padding:6px 16px;font-weight:700;font-size:13px;${btnStyle}" ${btnClick} ${agotado?"disabled":""}>` +(agotado?"Sin cupos":"✅ Anotarme")+`</button></div>`;
+    const btnText=agotado?"Sin cupos":"✅ Anotarme";
+    const btnClick=agotado?"":`onclick="inscribirTorneo('${t.id}','${(t.nombre||'').replace(/'/g,"\\'")  }','${t.fecha||''}','${t.precio||''}',this)"`;
+    rows+=`<div style="padding:10px 0;border-bottom:1px solid var(--linea)"><div style="font-weight:700;font-size:14px;margin-bottom:2px">${t.nombre||""}</div><div style="font-size:12px;color:var(--suave);margin-bottom:6px">${t.fecha||""} · ${t.precio||""} · <b>${t.cupos||""}</b></div><button style="border:none;border-radius:20px;padding:6px 16px;font-weight:700;font-size:13px;cursor:pointer;${btnStyle}" ${btnClick} ${agotado?"disabled":""}>${btnText}</button></div>`;
   });
-  document.getElementById("sheet-content").innerHTML=`<h3>🎾 Torneos disponibles</h3><p style="font-size:13px;color:var(--suave);margin-bottom:12px">¡Hola! Hay torneos abiertos en el club. ¿Te anotas?</p>${rows}<button class="btn sec" style="margin-top:12px" onclick="closeModal()">Ahora no</button>`;
+  const html=`<h3>🎾 Torneos disponibles</h3><p style="font-size:13px;color:var(--suave);margin-bottom:12px">¡Hola! Hay torneos abiertos en el club. ¿Te anotas?</p>${rows}<button class="btn sec" style="margin-top:12px" onclick="closeModal()">Ahora no</button>`;
+  document.getElementById("sheet-content").innerHTML=html;
   document.getElementById("modal").classList.add("show");
 }
 function inscribirTorneo(id,nombre_torneo,fecha,precio,btn){
@@ -524,6 +551,33 @@ function inscribirTorneo(id,nombre_torneo,fecha,precio,btn){
   const msg=encodeURIComponent("Hola ATMAS! Quiero inscribirme en el torneo:\n🎾 "+nombre_torneo+"\n📅 "+fecha+"\n💵 "+precio+"\n\nNombre: "+(p.nombre||"(sin indicar)")+"\nTeléfono: "+(p.tel||"(no indicado)"));
   btn.textContent="✔ Enviado";btn.disabled=true;btn.style.background="#d1fae5";btn.style.color="#065f46";
   window.open("https://wa.me/56956343558?text="+msg,"_blank");
+}
+async function openAdminModal(){
+  const snap=await db.collection("actividades_hoy").orderBy("orden").get();
+  let rows="";
+  snap.forEach(d=>{
+    const a=d.data();
+    rows+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--linea)"><span style="font-size:13px;flex:1"><b>${a.hora}</b> C${a.cancha}) ${a.desc}</span><button onclick="borrarActividad('${d.id}')" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer">✕</button></div>`;
+  });
+  const html=`<h3>📋 Actividades del día</h3>${rows||"<p style='color:var(--suave);font-size:13px'>No hay actividades cargadas.</p>"}<div style="margin-top:14px"><div class="field"><label>Hora</label><input id="adm-hora" placeholder="Ej: 18:00"></div><div class="field"><label>Cancha (1-4)</label><input id="adm-cancha" type="number" min="1" max="4" placeholder="3"></div><div class="field"><label>Descripción</label><input id="adm-desc" placeholder="Ej: Ricky / Máximo 🏆🥈"></div><button class="btn" onclick="agregarActividad()">+ Agregar</button></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
+  document.getElementById("sheet-content").innerHTML=html;
+  document.getElementById("modal").classList.add("show");
+}
+async function agregarActividad(){
+  const hora=(document.getElementById("adm-hora").value||"").trim();
+  const cancha=(document.getElementById("adm-cancha").value||"").trim();
+  const desc=(document.getElementById("adm-desc").value||"").trim();
+  if(!hora||!cancha||!desc){toast("⚠️ Completa todos los campos");return;}
+  await db.collection("actividades_hoy").add({hora,cancha,desc,orden:hora+cancha,ts:firebase.firestore.FieldValue.serverTimestamp()});
+  toast("✅ Actividad agregada");
+  cargarActividades();
+  openAdminModal();
+}
+async function borrarActividad(id){
+  await db.collection("actividades_hoy").doc(id).delete();
+  toast("Actividad eliminada");
+  cargarActividades();
+  openAdminModal();
 }
 async function ingresarConRut(){
   const rutEl=document.getElementById("login-rut");
@@ -536,8 +590,9 @@ async function ingresarConRut(){
     let snap=await db.collection("jugadores").doc(docId).get();
     if(!snap.exists) snap=await db.collection("jugadores").doc(docIdLower).get();
     if(snap.exists){
-      savePerfil(snap.data());
-      toast("✅ ¡Bienvenido de vuelta, "+snap.data().nombre.split(" ")[0]+"!");
+      const p=snap.data();
+      savePerfil(p);
+      toast("✅ ¡Bienvenido de vuelta, "+p.nombre.split(" ")[0]+"!");
       renderPerfil();
     }else{
       toast("⚠️ RUT no encontrado — crea tu perfil abajo");
@@ -547,92 +602,101 @@ async function ingresarConRut(){
   }
 }
 function cerrarSesion(){localStorage.removeItem("atmas_perfil");renderPerfil();toast("Sesión cerrada");}
+// --- SOCIOS ---
 const MESES_INSCRIPCION=["Marzo","Junio","Septiembre","Diciembre"];
 function openSocioModal(){
-  document.getElementById("sheet-content").innerHTML=`<h3>⭐ Membresía ATMAS</h3><p style="font-size:13px;color:var(--suave);margin-bottom:14px">Elige tu plan de membresía. Los socios activos acceden a beneficios exclusivos del club.</p><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia" style="font-weight:800">Inscripción trimestral</span><span class="hrs" style="color:var(--verde-osc);font-weight:800">$30.000</span></div><div style="font-size:12px;color:var(--suave);padding:4px 0">Se paga en: ${MESES_INSCRIPCION.join(" · ")}</div></div><div class="section-title">Elige tu plan mensual</div><div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"><button class="btn" onclick="pagarMembresia('mensualidad',90000)">🏆 Mensualidad socio · $90.000/mes</button><button class="btn sec" onclick="pagarMembresia('inscripcion',30000)">📋 Solo inscripción trimestral · $30.000</button><button class="btn sec" onclick="closeModal();go('cancha')">📅 Solo arriendo cancha · $15.000/hr</button></div><button class="btn sec" onclick="closeModal()">Cerrar</button>`;
+  const html=`<h3>⭐ Membresía ATMAS</h3><p style="font-size:13px;color:var(--suave);margin-bottom:14px">Elige tu plan de membresía. Los socios activos acceden a beneficios exclusivos del club.</p><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia" style="font-weight:800">Inscripción trimestral</span><span class="hrs" style="color:var(--verde-osc);font-weight:800">$30.000</span></div><div style="font-size:12px;color:var(--suave);padding:4px 0">Se paga en: ${MESES_INSCRIPCION.join(" · ")}</div></div><div class="section-title">Elige tu plan mensual</div><div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"><button class="btn" onclick="pagarMembresia('mensualidad',90000)">🏆 Mensualidad socio · $90.000/mes</button><button class="btn sec" onclick="pagarMembresia('inscripcion',30000)">📋 Solo inscripción trimestral · $30.000</button><button class="btn sec" onclick="closeModal();go('cancha')">📅 Solo arriendo cancha · $15.000/hr</button></div><button class="btn sec" onclick="closeModal()">Cerrar</button>`;
+  document.getElementById("sheet-content").innerHTML=html;
   document.getElementById("modal").classList.add("show");
 }
 function pagarMembresia(tipo,monto){
   const label=tipo==="mensualidad"?"mensualidad socio ATMAS":"inscripción trimestral ATMAS";
   document.getElementById("sheet-content").innerHTML=`<h3>💳 Pago ${tipo}</h3>${pagoHTML(monto,label)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
 }
+// --- VERDADES INCOMODAS ---
 const verdades=[
-  {n:1,t:"¿Quieres mejorar tu tenis?",url:null},{n:2,t:"El pasapelotas no te gana.",url:null},
-  {n:3,t:"Tu problema no es la raqueta.",url:null},{n:4,t:"El miedo a equivocarte te está frenando.",url:null},
-  {n:5,t:"Jugar seguro no siempre es jugar inteligente.",url:null},{n:6,t:"Ganar no siempre significa mejorar.",url:null},
+  {n:1,t:"¿Quieres mejorar tu tenis?",url:null},
+  {n:2,t:"El pasapelotas no te gana.",url:null},
+  {n:3,t:"Tu problema no es la raqueta.",url:null},
+  {n:4,t:"El miedo a equivocarte te está frenando.",url:null},
+  {n:5,t:"Jugar seguro no siempre es jugar inteligente.",url:null},
+  {n:6,t:"Ganar no siempre significa mejorar.",url:null},
   {n:7,t:"Tu rival más difícil eres tú mismo.",url:null}
 ];
 function renderVerdades(){
   const el=document.getElementById("vi-list");if(!el)return;
   let h="";
   verdades.forEach(v=>{
-    const bg=v.n===2?"background:var(--lima);color:var(--negro)":"background:rgba(255,255,255,0.08);color:#fff";
+    const active=v.n===2;
+    const bg=active?"background:var(--lima);color:var(--negro)":"background:rgba(255,255,255,0.08);color:#fff";
     const btn=v.url?`<button onclick="window.open('${v.url}','_blank')" style="background:var(--lima);color:var(--negro);border:none;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;cursor:pointer;flex-shrink:0">▶ Ver</button>`:`<span style="font-size:11px;color:rgba(255,255,255,.4);flex-shrink:0">Próximamente</span>`;
     h+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;margin-bottom:6px;${bg}"><span style="font-size:15px;font-weight:900;flex-shrink:0">${v.n}</span><span style="font-size:13px;font-weight:700;flex:1">${v.t}</span>${btn}</div>`;
   });
   el.innerHTML=h;
 }
 renderVerdades();
+cargarActividades();
+function esAdmin(nombre){
+  if(!nombre)return false;
+  const n=nombre.toLowerCase();
+  return n.includes("marcelo")&&n.includes("escalona");
+}
 async function cargarActividades(){
   try{
     const snap=await db.collection("actividades_hoy").orderBy("orden").get();
     const acts=[];
     snap.forEach(d=>acts.push(d.data()));
-    const lista=document.getElementById("act-lista");
-    const titulo=document.getElementById("act-titulo");
-    if(!lista||!titulo)return;
-    if(!acts.length){titulo.style.display="none";lista.innerHTML="";return;}
-    titulo.style.display="block";
-    let h="",lastHora="";
-    acts.forEach(a=>{
-      if(a.hora!==lastHora){if(lastHora)h+=`</div>`;h+=`<div class="infobox" style="margin-bottom:8px"><div style="font-weight:800;font-size:15px;color:var(--verde-osc);margin-bottom:6px">🕐 ${a.hora}</div>`;lastHora=a.hora;}
-      h+=`<div style="font-size:13px;padding:3px 0"><span style="font-weight:700;color:var(--suave)">C${a.cancha})</span> ${a.desc}</div>`;
-    });
-    if(lastHora)h+=`</div>`;
-    lista.innerHTML=h;
+    renderActividades(acts);
   }catch(e){}
 }
-cargarActividades();
-async function openAdminModal(){
-  const snap=await db.collection("actividades_hoy").orderBy("orden").get();
-  let rows="";
-  snap.forEach(d=>{const a=d.data();rows+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--linea)"><span style="font-size:13px;flex:1"><b>${a.hora}</b> C${a.cancha}) ${a.desc}</span><button onclick="borrarActividad('${d.id}')" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer">✕</button></div>`;});
-  document.getElementById("sheet-content").innerHTML=`<h3>📋 Actividades del día</h3>${rows||"<p style='color:var(--suave);font-size:13px'>No hay actividades cargadas.</p>"}<div style="margin-top:14px"><div class="field"><label>Hora</label><input id="adm-hora" placeholder="Ej: 18:00"></div><div class="field"><label>Cancha (1-4)</label><input id="adm-cancha" type="number" min="1" max="4" placeholder="3"></div><div class="field"><label>Descripción</label><input id="adm-desc" placeholder="Ej: Ricky / Máximo"></div><button class="btn" onclick="agregarActividad()">+ Agregar</button></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
-  document.getElementById("modal").classList.add("show");
-}
-async function agregarActividad(){
-  const hora=(document.getElementById("adm-hora").value||"").trim();
-  const cancha=(document.getElementById("adm-cancha").value||"").trim();
-  const desc=(document.getElementById("adm-desc").value||"").trim();
-  if(!hora||!cancha||!desc){toast("⚠️ Completa todos los campos");return;}
-  await db.collection("actividades_hoy").add({hora,cancha,desc,orden:hora+cancha,ts:new Date().toISOString()});
-  toast("✅ Actividad agregada");cargarActividades();openAdminModal();
-}
-async function borrarActividad(id){
-  await db.collection("actividades_hoy").doc(id).delete();
-  toast("Actividad eliminada");cargarActividades();openAdminModal();
+function renderActividades(acts){
+  const lista=document.getElementById("act-lista");
+  const titulo=document.getElementById("act-titulo");
+  if(!lista||!titulo)return;
+  if(!acts||acts.length===0){titulo.style.display="none";lista.innerHTML="";return;}
+  titulo.style.display="block";
+  let h="";
+  let lastHora="";
+  acts.forEach(a=>{
+    if(a.hora!==lastHora){
+      if(lastHora!=="")h+=`</div>`;
+      h+=`<div class="infobox" style="margin-bottom:8px"><div style="font-weight:800;font-size:15px;color:var(--verde-osc);margin-bottom:6px">🕐 ${a.hora}</div>`;
+      lastHora=a.hora;
+    }
+    h+=`<div style="font-size:13px;padding:3px 0"><span style="font-weight:700;color:var(--suave)">C${a.cancha})</span> ${a.desc}</div>`;
+  });
+  if(lastHora!=="")h+=`</div>`;
+  lista.innerHTML=h;
 }
 async function openAdminRanking(){
   const snap=await db.collection("ranking_atmas").orderBy("pts","desc").get();
   let rows="";
   snap.forEach(d=>{const j=d.data();rows+=`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--linea)"><span style="flex:1;font-size:13px"><b>${j.nombre}</b></span><input type="number" value="${j.pts}" style="width:60px;padding:4px;border:1px solid var(--linea);border-radius:8px;text-align:center" onchange="actualizarPtsRanking('${d.id}',this.value)"><button onclick="borrarJugadorRanking('${d.id}')" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:8px;padding:4px 8px;cursor:pointer">✕</button></div>`;});
-  document.getElementById("sheet-content").innerHTML=`<h3>🏆 Ranking</h3><p style="font-size:12px;color:var(--suave);margin-bottom:10px">Editá los puntos de cada jugador.</p>${rows||"<p style='color:var(--suave);font-size:13px'>Sin jugadores en Firebase.</p>"}<div style="margin-top:14px"><div class="field"><label>Nombre</label><input id="rk-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Puntos</label><input id="rk-pts" type="number" value="0"></div><button class="btn" onclick="agregarJugadorRanking()">+ Agregar</button></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
+  const html=`<h3>🏆 Ranking</h3><p style="font-size:12px;color:var(--suave);margin-bottom:10px">Editá los puntos de cada jugador directamente.</p>${rows||"<p style='color:var(--suave);font-size:13px'>Sin jugadores en Firebase. El ranking usa datos del código.</p>"}<div style="margin-top:14px"><div class="field"><label>Nombre jugador</label><input id="rk-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Puntos</label><input id="rk-pts" type="number" value="0"></div><button class="btn" onclick="agregarJugadorRanking()">+ Agregar jugador</button></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
+  document.getElementById("sheet-content").innerHTML=html;
   document.getElementById("modal").classList.add("show");
 }
-async function actualizarPtsRanking(id,pts){await db.collection("ranking_atmas").doc(id).update({pts:parseInt(pts)}).catch(()=>{});toast("✅ Puntos actualizados");}
-async function borrarJugadorRanking(id){await db.collection("ranking_atmas").doc(id).delete();toast("Jugador eliminado");openAdminRanking();}
+async function actualizarPtsRanking(id,pts){
+  await db.collection("ranking_atmas").doc(id).update({pts:parseInt(pts)}).catch(()=>{});
+  toast("✅ Puntos actualizados");
+}
+async function borrarJugadorRanking(id){
+  await db.collection("ranking_atmas").doc(id).delete();
+  toast("Jugador eliminado");openAdminRanking();
+}
 async function agregarJugadorRanking(){
   const nombre=(document.getElementById("rk-nombre").value||"").trim();
   const pts=parseInt(document.getElementById("rk-pts").value||"0");
   if(!nombre){toast("⚠️ Escribe el nombre");return;}
-  await db.collection("ranking_atmas").add({nombre,pts,j:0,g:0,p:0,pct:0,ts:new Date().toISOString()});
+  await db.collection("ranking_atmas").add({nombre,pts,j:0,g:0,p:0,pct:0,ts:firebase.firestore.FieldValue.serverTimestamp()});
   toast("✅ Jugador agregado");openAdminRanking();
 }
 async function openAdminTorneos(){
   const snap=await db.collection("torneos_admin").orderBy("ts","desc").get();
   let rows="";
   snap.forEach(d=>{const t=d.data();rows+=`<div style="padding:8px 0;border-bottom:1px solid var(--linea)"><b style="font-size:13px">${t.nombre}</b><br><span style="font-size:12px;color:var(--suave)">${t.fecha} · ${t.precio} · ${t.cupos}</span> <button onclick="borrarTorneo('${d.id}')" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:8px;padding:2px 8px;font-size:12px;cursor:pointer">✕</button></div>`;});
-  document.getElementById("sheet-content").innerHTML=`<h3>🎯 Torneos</h3>${rows||"<p style='color:var(--suave);font-size:13px;margin-bottom:10px'>Sin torneos en Firebase.</p>"}<div style="margin-top:14px"><div class="field"><label>Nombre torneo</label><input id="tn-nombre" placeholder="Ej: Novicios 5"></div><div class="field"><label>Fecha</label><input id="tn-fecha" placeholder="Ej: 11 julio 2026 · 18:00"></div><div class="field"><label>Precio</label><input id="tn-precio" placeholder="Ej: $20.000"></div><div class="field"><label>Cupos</label><input id="tn-cupos" placeholder="Ej: 16 cupos"></div><button class="btn" onclick="agregarTorneo()">+ Agregar torneo</button></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
+  const html=`<h3>🎯 Torneos</h3>${rows||"<p style='color:var(--suave);font-size:13px;margin-bottom:10px'>Sin torneos en Firebase.</p>"}<div style="margin-top:14px"><div class="field"><label>Nombre torneo</label><input id="tn-nombre" placeholder="Ej: Novicioss 5"></div><div class="field"><label>Fecha</label><input id="tn-fecha" placeholder="Ej: 11 julio 2026 · 18:00"></div><div class="field"><label>Precio</label><input id="tn-precio" placeholder="Ej: $20.000"></div><div class="field"><label>Cupos</label><input id="tn-cupos" placeholder="Ej: 16 cupos"></div><button class="btn" onclick="agregarTorneo()">+ Agregar torneo</button></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>`;
+  document.getElementById("sheet-content").innerHTML=html;
   document.getElementById("modal").classList.add("show");
 }
 async function borrarTorneo(id){await db.collection("torneos_admin").doc(id).delete();toast("Torneo eliminado");openAdminTorneos();}
@@ -642,12 +706,13 @@ async function agregarTorneo(){
   const precio=(document.getElementById("tn-precio").value||"").trim();
   const cupos=(document.getElementById("tn-cupos").value||"").trim();
   if(!nombre||!fecha){toast("⚠️ Completa nombre y fecha");return;}
-  await db.collection("torneos_admin").add({nombre,fecha,precio,cupos,monto:parseInt(precio.replace(/\D/g,""))||0,ts:new Date().toISOString()});
+  await db.collection("torneos_admin").add({nombre,fecha,precio,cupos,monto:parseInt(precio.replace(/\D/g,""))||0,ts:firebase.firestore.FieldValue.serverTimestamp()});
   toast("✅ Torneo agregado");closeModal();
 }
 function openAdminPartidos(){
   let oh="<option>Invitado</option>";players.forEach(p=>{if(p[0]!=="Invitado")oh+=`<option>${p[0]}</option>`;});
-  document.getElementById("sheet-content").innerHTML=`<h3>📊 Registrar Partido</h3><div class="field"><label>Jugador A</label><select id="ap-a">${oh}</select></div><div class="field"><label>Jugador B</label><select id="ap-b">${oh}</select></div><div class="field"><label>Resultado (sets)</label><div class="sets"><input id="ap-s1" placeholder="6-0"><input id="ap-s2" placeholder="6-2"><input id="ap-s3" placeholder="—"></div></div><div class="field"><label>Ganador</label><select id="ap-win"><option value="a">Jugador A</option><option value="b">Jugador B</option></select></div><div class="field"><label>Fecha</label><input id="ap-fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div><button class="btn" onclick="guardarPartidoAdmin()">💾 Guardar partido</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+  const html=`<h3>📊 Registrar Partido</h3><div class="field"><label>Jugador A</label><select id="ap-a">${oh}</select></div><div class="field"><label>Jugador B</label><select id="ap-b">${oh}</select></div><div class="field"><label>Resultado (sets)</label><div class="sets"><input id="ap-s1" placeholder="6-0"><input id="ap-s2" placeholder="6-2"><input id="ap-s3" placeholder="—"></div></div><div class="field"><label>Ganador</label><select id="ap-win"><option value="a">Jugador A</option><option value="b">Jugador B</option></select></div><div class="field"><label>Fecha</label><input id="ap-fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div><button class="btn" onclick="guardarPartidoAdmin()">💾 Guardar partido</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+  document.getElementById("sheet-content").innerHTML=html;
   document.getElementById("modal").classList.add("show");
 }
 async function guardarPartidoAdmin(){
@@ -659,7 +724,9 @@ async function guardarPartidoAdmin(){
   const win=document.getElementById("ap-win").value;
   const fecha=document.getElementById("ap-fecha").value;
   if(a===b){toast("⚠️ Los jugadores deben ser distintos");return;}
-  await db.collection("partidos_atmas").add({jugadorA:a,jugadorB:b,ganador:win==="a"?a:b,perdedor:win==="a"?b:a,sets:[s1,s2,s3].filter(s=>s&&s!=="—"),fecha,ts:new Date().toISOString()});
+  const ganador=win==="a"?a:b;
+  const perdedor=win==="a"?b:a;
+  await db.collection("partidos_atmas").add({jugadorA:a,jugadorB:b,ganador,perdedor,sets:[s1,s2,s3].filter(s=>s&&s!=="—"),fecha,ts:firebase.firestore.FieldValue.serverTimestamp()});
   toast("✅ Partido registrado");closeModal();
 }
 document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal()});
