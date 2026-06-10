@@ -1,1 +1,1 @@
-{"version":2,"builds":[{"src":"**/*","use":"@vercel/static"}],"routes":[{"src":"/","dest":"/index.html","headers":{"cache-control":"no-cache, no-store, must-revalidate"}}]}
+{"version": 2, "builds": [{"src": "**/*", "use": "@vercel/static"}], "routes": [{"src": "/", "dest": "/index.html"}]}
