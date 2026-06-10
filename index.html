@@ -270,8 +270,18 @@
   <div class="toast" id="toast"></div>
 </div>
 <script>
-firebase.initializeApp({apiKey:"AIzaSyC5WSNETjUxYfUpMr6nkOk8jjDqrD44Snw",authDomain:"atmas-tenis.firebaseapp.com",projectId:"atmas-tenis",storageBucket:"atmas-tenis.firebasestorage.app",messagingSenderId:"545823553419",appId:"1:545823553419:web:7131283910ded048c9a18e"});
-const db=firebase.firestore();
+// Navigation and toast defined first so tabs work even if Firebase CDN is slow
+let tt;
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2800)}
+function go(s){document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active"));document.getElementById(s).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.s===s));document.querySelector(".content").scrollTop=0;if(s==="perfil")renderPerfil();}
+function closeModal(){document.getElementById("modal").classList.remove("show")}
+const _noop={get:()=>Promise.resolve({exists:false,forEach:()=>{},data:()=>({})}),add:()=>Promise.resolve(),set:()=>Promise.resolve(),update:()=>Promise.resolve(),delete:()=>Promise.resolve(),where:()=>_noop,orderBy:()=>_noop,doc:()=>_noop,limit:()=>_noop};
+const _noopDb={collection:()=>_noop};
+let db=_noopDb;
+try{
+  firebase.initializeApp({apiKey:"AIzaSyC5WSNETjUxYfUpMr6nkOk8jjDqrD44Snw",authDomain:"atmas-tenis.firebaseapp.com",projectId:"atmas-tenis",storageBucket:"atmas-tenis.firebasestorage.app",messagingSenderId:"545823553419",appId:"1:545823553419:web:7131283910ded048c9a18e"});
+  db=firebase.firestore();
+}catch(e){console.warn("Firebase no disponible:",e);}
 const MP_CANCHA={15000:"https://mpago.la/2ttfMTD",25000:"https://mpago.la/2Kyv98T"};
 const PAGO={nombre:"Marcelo Andrés Escalona Gálvez",rut:"12.637.853-K",banco:"Mercado Pago",tipo:"Cuenta Vista",cuenta:"1057752328",email:"locampinotenisclub@hotmail.com"};
 const avatarColors=["#e74c3c","#e67e22","#f39c12","#2ecc71","#1abc9c","#3498db","#9b59b6","#e91e63","#00bcd4","#4caf50","#ff5722","#607d8b"];
@@ -333,7 +343,7 @@ renderBracket("oro");
 function pagoHTML(monto,label){const waMsg=encodeURIComponent('Hola ATMAS! Te envío el comprobante de pago para confirmar: '+label+(monto?'. Monto: $'+monto.toLocaleString('es-CL'):''));return `<div class="pagobox"><h4>💳 Datos de transferencia</h4><div class="row"><span class="k">Nombre</span><span class="v">${PAGO.nombre}</span></div><div class="row"><span class="k">RUT</span><span class="v">${PAGO.rut}</span></div><div class="row"><span class="k">Banco</span><span class="v">${PAGO.banco}</span></div><div class="row"><span class="k">Tipo</span><span class="v">${PAGO.tipo}</span></div><div class="row"><span class="k">N° Cuenta</span><span class="v">${PAGO.cuenta}</span></div><div class="row"><span class="k">Email</span><span class="v" style="font-size:11px">${PAGO.email}</span></div><div class="row"><span class="k">Monto</span><span class="v" style="color:var(--verde-osc);font-size:16px">$${monto.toLocaleString('es-CL')}</span></div></div><p style="font-size:12px;color:var(--suave);margin-bottom:12px">Transfiere y envía el comprobante por WhatsApp para confirmar tu cupo.</p><button class="btn wa" onclick="closeModal();window.open('https://wa.me/56956343558?text=${waMsg}','_blank')">💬 Enviar comprobante por WhatsApp</button>`;}
 function openModal(tipo,idx){
   let html="";
-  if(tipo==="torneo"){const t=torneos[idx];html=`<h3>Inscripción · ${t.n}</h3><div class="field"><label>Tu nombre</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div>${t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':""}${pagoHTML(t.monto,t.n)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
+  if(tipo==="torneo"){const t=torneos[idx];html=`<h3>Inscripción · ${t.n}</h3><div class="field"><label>Tu nombre</label><input placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input type="tel" placeholder="+569 XXXX XXXX"></div>${t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':""} ${pagoHTML(t.monto,t.n)}<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;}
   else if(tipo==="nivel"){
     const niveles={
       iniciacion:{t:"Iniciación 👶",desc:"Para niños de 3 a 7 años. Aprenden las bases del tenis en un ambiente divertido y dinámico.",horario:"Sábados · 1h 30min · Grupales",precio:"$60.000/mes",extra:"Solo sábados. Ideal para comenzar desde cero."},
@@ -361,7 +371,7 @@ function openModal(tipo,idx){
     slotSeleccionado=null;
     const hoy=new Date().toISOString().split("T")[0];
     const _cp=getPerfil()||{};
-    html=`<h3>Reservar cancha</h3><div class="aviso" style="margin-bottom:12px">🎾 Solo zapatillas de arcilla. Reprogramación con 24 hrs de anticipación.</div><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia">1 hora</span><span class="hrs">$15.000</span></div><div class="hrow"><span class="dia">2 horas</span><span class="hrs">$25.000</span></div><div class="hrow"><span class="dia">2 horas después de las 18:00</span><span class="hrs">$25.000</span></div></div><div class="field"><label>Fecha</label><input id="can-fecha" type="date" value="${hoy}" min="${hoy}" oninput="cargarSlots()"></div><div id="slots-container"><p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Selecciona una fecha para ver disponibilidad</p></div><div id="can-form" style="display:none"><div class="field"><label>Tu nombre</label><input id="can-nombre" value="${_cp.nombre||''}" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="can-tel" type="tel" value="${_cp.tel||''}" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Cancha preferida</label><select id="can-cancha"><option>Sin preferencia</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Duración</label><select id="can-duracion" onchange="actualizarPagoCancha()"><option value="15000">1 hora · $15.000</option><option value="25000">2 horas · $25.000</option></select></div><div id="can-pago"></div></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+    html=`<h3>Reservar cancha</h3><div class="aviso" style="margin-bottom:12px">🎾 Solo zapatillas de arcilla. Reprogramación con 24 hrs de anticipación.</div><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia">1 hora</span><span class="hrs">$15.000</span></div><div class="hrow"><span class="dia">2 horas</span><span class="hrs">$25.000</span></div><div class="hrow"><span class="dia">2 horas después de las 18:00</span><span class="hrs">$25.000</span></div></div><div class="field"><label>Fecha</label><input id="can-fecha" type="date" value="${hoy}" min="${hoy}" oninput="cargarSlots()"></div><div id="slots-container"><p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Selecciona una fecha para ver disponibilidad</p></div><div id="can-form" style="display:none"><div class="field"><label>Tu nombre</label><input id="can-nombre" value="${_cp.nombre||\'\'}" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Teléfono</label><input id="can-tel" type="tel" value="${_cp.tel||\'\'}" placeholder="+569 XXXX XXXX"></div><div class="field"><label>Cancha preferida</label><select id="can-cancha"><option>Sin preferencia</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Duración</label><select id="can-duracion" onchange="actualizarPagoCancha()"><option value="15000">1 hora · $15.000</option><option value="25000">2 horas · $25.000</option></select></div><div id="can-pago"></div></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
     setTimeout(()=>cargarSlots(),100);
   }
   else if(tipo==="partido"){let oh="<option>Invitado</option>";players.forEach(p=>{if(p[0]!=="Invitado")oh+=`<option>${p[0]}</option>`});html=`<h3>Registrar partido</h3><div class="field"><label>Oponente</label><select>${oh}</select></div><div class="field"><label>Cancha</label><select><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Fecha</label><input type="date" value="2026-05-31"></div><div class="field"><label>Resultado (sets)</label><div class="sets"><input placeholder="6-0"><input placeholder="6-2"><input placeholder="—"></div></div><button class="btn" onclick="closeModal();toast('✅ Partido registrado · Ranking actualizado')">Guardar</button><button class="btn sec" onclick="closeModal()">Cancelar</button>`;}
@@ -716,13 +726,9 @@ async function guardarPartidoAdmin(){
   await db.collection("partidos_atmas").add({jugadorA:a,jugadorB:b,ganador,perdedor,sets:[s1,s2,s3].filter(s=>s&&s!=="—"),fecha,ts:firebase.firestore.FieldValue.serverTimestamp()});
   toast("✅ Partido registrado");closeModal();
 }
-function closeModal(){document.getElementById("modal").classList.remove("show")}
 document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal()});
 function setVista(v){document.getElementById("vista-rank").style.display=v==="rank"?"block":"none";document.getElementById("vista-cuadro").style.display=v==="cuadro"?"block":"none";document.getElementById("vRank").classList.toggle("on",v==="rank");document.getElementById("vCuadro").classList.toggle("on",v==="cuadro");}
-function go(s){document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active"));document.getElementById(s).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.s===s));document.querySelector(".content").scrollTop=0;if(s==="perfil")renderPerfil();}
 renderPerfil();
-let tt;
-function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2800)}
 </script>
 </body>
 </html>
