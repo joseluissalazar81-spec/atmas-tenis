@@ -24,6 +24,7 @@
       <div style="color:rgba(255,255,255,.8);font-size:13px;margin-top:4px">Academia de Tenis AT+</div>
       <div style="color:rgba(255,255,255,.65);font-size:12px">Club Las Avestruces &middot; Quilicura</div>
     </div>
+    <!-- PASO 1: elegir metodo -->
     <div id="auth-step1" style="background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
       <div style="font-size:20px;font-weight:800;margin-bottom:4px">Bienvenido/a! &#127934;</div>
       <div style="font-size:13px;color:#6b7280;margin-bottom:20px">Elige como ingresar</div>
@@ -37,10 +38,11 @@
         <span onclick="showAuthRut()" style="cursor:pointer;text-decoration:underline">Ya tengo perfil &middot; ingresar con RUT</span>
       </div>
       <div style="border-top:1px solid #f3f4f6;margin-top:16px;padding-top:14px;text-align:center">
-        <div style="font-size:12px;color:#9ca3af;margin-bottom:8px">&iquest;Primera vez en el club?</div>
+        <div style="font-size:12px;color:#9ca3af;margin-bottom:8px">¿Primera vez en el club?</div>
         <button class="btn" onclick="showAuthStep2()" style="background:var(--negro);font-size:14px">Crear mi perfil</button>
       </div>
     </div>
+    <!-- PASO 1b: email -->
     <div id="auth-email" style="display:none;background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
       <div style="font-size:18px;font-weight:800;margin-bottom:16px">&#9993; Ingresar con Email</div>
       <div class="field"><label>Email</label><input id="auth-em" type="email" placeholder="tucorreo@gmail.com" autocomplete="email"></div>
@@ -49,21 +51,22 @@
       <button class="btn sec" onclick="registrarEmail()">Crear cuenta nueva</button>
       <div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>
     </div>
+    <!-- PASO 1c: RUT legacy -->
     <div id="auth-rut" style="display:none;background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
       <div style="font-size:18px;font-weight:800;margin-bottom:16px">Ingresar con RUT</div>
-      <div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="numeric"></div>
+      <div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div>
       <button class="btn" onclick="recuperarPerfil()">Buscar mi perfil</button>
       <div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>
     </div>
+    <!-- PASO 2: completar perfil (primera vez) -->
     <div id="auth-step2" style="display:none;background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
       <div style="font-size:18px;font-weight:800;margin-bottom:4px">&#127934; Completa tu perfil</div>
       <div style="font-size:13px;color:#6b7280;margin-bottom:16px">Solo una vez para identificarte en el club</div>
       <div class="field"><label>Nombre completo *</label><input id="reg-nombre" placeholder="Ej: Juan Perez" autocomplete="name"></div>
-      <div class="field"><label>RUT *</label><input id="reg-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="numeric"></div>
+      <div class="field"><label>RUT *</label><input id="reg-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div>
       <div class="field"><label>Telefono</label><input id="reg-tel" type="tel" placeholder="+569 XXXX XXXX"></div>
       <div class="field"><label>Fecha de nacimiento</label><input id="reg-fnac" type="date"></div>
       <button class="btn" onclick="completarPerfil()">Guardar y entrar</button>
-      <div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>
     </div>
     <p style="text-align:center;font-size:11px;color:rgba(255,255,255,.45);margin-top:18px">Tus datos se guardan de forma segura &middot; ATMAS</p>
   </div>
