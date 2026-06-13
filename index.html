@@ -36,6 +36,10 @@
       <div style="text-align:center;margin-top:14px;font-size:12px;color:#9ca3af">
         <span onclick="showAuthRut()" style="cursor:pointer;text-decoration:underline">Ya tengo perfil &middot; ingresar con RUT</span>
       </div>
+      <div style="border-top:1px solid #f3f4f6;margin-top:16px;padding-top:14px;text-align:center">
+        <div style="font-size:12px;color:#9ca3af;margin-bottom:8px">&iquest;Primera vez en el club?</div>
+        <button class="btn" onclick="showAuthStep2()" style="background:var(--negro);font-size:14px">Crear mi perfil gratis</button>
+      </div>
     </div>
     <div id="auth-email" style="display:none;background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
       <div style="font-size:18px;font-weight:800;margin-bottom:16px">&#9993; Ingresar con Email</div>
@@ -59,6 +63,7 @@
       <div class="field"><label>Telefono</label><input id="reg-tel" type="tel" placeholder="+569 XXXX XXXX"></div>
       <div class="field"><label>Fecha de nacimiento</label><input id="reg-fnac" type="date"></div>
       <button class="btn" onclick="completarPerfil()">Guardar y entrar</button>
+      <div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>
     </div>
     <p style="text-align:center;font-size:11px;color:rgba(255,255,255,.45);margin-top:18px">Tus datos se guardan de forma segura &middot; ATMAS</p>
   </div>
