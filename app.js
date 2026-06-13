@@ -184,10 +184,41 @@ function renderPerfil(){
   var ini=initials(p.nombre);var col=avatarColor(p.nombre);
   var socioTag=p.socio?'<span class="cupos" style="background:#ffd700;color:#7a5c00">SOCIO</span>':'<span class="cupos">Sin membresia</span>';
   var statsHtml=jugador?'<div class="mycard" style="margin-bottom:14px"><div class="pos">Posicion #'+pos+' &middot; Escalerilla ATMAS</div><div class="name">'+p.nombre+'</div><div class="row"><div><span class="big">'+jugador[1]+'</span><span class="cap">Puntos</span></div><div><span class="big">'+jugador[3]+'</span><span class="cap">Ganados</span></div><div><span class="big">'+jugador[4]+'</span><span class="cap">Perdidos</span></div></div></div>':'<div class="aviso">Aun no tienes partidos en la escalerilla. Juega y sube tu ranking!</div>';
-  el.innerHTML='<div style="display:flex;align-items:center;gap:13px;background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><div class="avatar" style="background:'+col+';width:54px;height:54px;font-size:19px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div style="font-weight:800;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;color:var(--suave)">RUT: '+p.rut+'</div><div style="font-size:12px;color:var(--suave);margin-top:2px">'+(p.tel||"")+' </div></div>'+socioTag+'</div>'+statsHtml+'<div class="section-title">Mis proximas reservas</div><div id="mis-reservas-list"><p style="color:var(--suave);font-size:13px;padding:8px 4px">Cargando...</p></div><button class="btn" onclick="openModal(\'partido\')">+ Registrar partido</button><button class="btn dark" style="margin-top:8px" onclick="openModal(\'socio\')">Membresia ATMAS</button><button class="btn sec" style="margin-top:8px" onclick="go(\'cancha\')">Reservar cancha</button><button class="btn sec" style="margin-top:8px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesion</button><p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
-  cargarMisReservas(p.nombre);
+  el.innerHTML='<div style="display:flex;align-items:center;gap:13px;background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><div class="avatar" style="background:'+col+';width:54px;height:54px;font-size:19px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div style="font-weight:800;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;color:var(--suave)">RUT: '+p.rut+'</div><div style="font-size:12px;color:var(--suave);margin-top:2px">'+(p.tel||'')+' </div></div>'+socioTag+'</div>'+statsHtml+'<div id="mis-partidos-pend"></div><div class="section-title">Mis proximas reservas</div><div id="mis-reservas-list"><p style="color:var(--suave);font-size:13px;padding:8px 4px">Cargando...</p></div><button class="btn" onclick="openModal(\'partido\')">+ Registrar partido</button><button class="btn dark" style="margin-top:8px" onclick="openModal(\'socio\')">Membresia ATMAS</button><button class="btn sec" style="margin-top:8px" onclick="go(\'cancha\')">Reservar cancha</button><button class="btn sec" style="margin-top:8px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesion</button><p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
+  cargarMisReservas(p.nombre);cargarPartidosPendientes(p.nombre);
 }
 
+
+async function cargarPartidosPendientes(nombre){
+  var el=document.getElementById("mis-partidos-pend");if(!el)return;
+  try{
+    var snap=await db.collection("partidos_atmas").where("perdedor","==",nombre).where("estado","==","pendiente_rival").get();
+    if(snap.empty){el.innerHTML="";return;}
+    window._misPendQ=[];
+    var h='<div class="section-title" style="color:#b45309;margin-top:0">Confirmar resultado</div>';
+    snap.forEach(function(doc){
+      var r=doc.data();var qi=window._misPendQ.length;
+      window._misPendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});
+      h+='<div class="res-card" style="border-color:#f59e0b;margin-bottom:8px">';
+      h+='<div class="rc-top"><span class="rc-name">'+r.ganador+' declara victoria</span><span class="rc-date">'+(r.fecha||'')+'</span></div>';
+      h+='<div class="rc-sub">Sets: '+(r.sets||'sin sets indicados')+'</div>';
+      h+='<div style="display:flex;gap:8px;margin-top:8px">';
+      h+='<button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="miConfirmar('+qi+')">Es correcto &#10003;</button>';
+      h+='<button class="btn sec" style="flex:1;padding:8px;font-size:12px;border:1px solid #b45309;color:#b45309" onclick="miDisputar('+qi+')">Disputar</button>';
+      h+='</div></div>';
+    });
+    el.innerHTML=h;
+  }catch(e){}
+}
+function miConfirmar(i){var q=window._misPendQ[i];if(q)aprobarPartido(q.id,q.gan,q.per);}
+async function miDisputar(i){
+  var q=window._misPendQ[i];if(!q)return;
+  try{
+    await db.collection("partidos_atmas").doc(q.id).update({estado:"pendiente_admin"});
+    toast("Enviado a Marcelo Escalona para resolver");
+    cargarPartidosPendientes((getPerfil()||{}).nombre||"");
+  }catch(e){toast("Error al disputar.");}
+}
 async function cargarMisReservas(nombre){
   var el=document.getElementById("mis-reservas-list");if(!el)return;
   var hoy=new Date().toISOString().split("T")[0];
@@ -200,7 +231,7 @@ async function cargarMisReservas(nombre){
     var h="";
     proximas.forEach(function(r){
       var fechaFmt=r.fecha?r.fecha.split("-").reverse().join("/"):"-";
-      h+='<div class="lcard" style="flex-direction:column;align-items:flex-start;gap:4px"><div style="display:flex;justify-content:space-between;width:100%"><div style="font-weight:800;font-size:14px">'+(r.cancha||"Cancha")+' &middot; '+(r.hora||"")+' </div><span class="cupos" style="background:#dcfce7;color:#15803d">Conf.</span></div><div style="font-size:12px;color:var(--suave)">'+fechaFmt+' &middot; '+(r.duracion||"1 hora")+' &middot; $'+(r.monto||0).toLocaleString("es-CL")+'</div></div>';
+      h+='<div class="lcard" style="flex-direction:column;align-items:flex-start;gap:4px"><div style="display:flex;justify-content:space-between;width:100%"><div style="font-weight:800;font-size:14px">'+(r.cancha||"Cancha")+' &middot; '+(r.hora||'')+' </div><span class="cupos" style="background:#dcfce7;color:#15803d">Conf.</span></div><div style="font-size:12px;color:var(--suave)">'+fechaFmt+' &middot; '+(r.duracion||"1 hora")+' &middot; $'+(r.monto||0).toLocaleString("es-CL")+'</div></div>';
     });
     el.innerHTML=h;
   }catch(e){el.innerHTML='<p style="color:var(--suave);font-size:13px;padding:8px 4px">No se pudieron cargar las reservas.</p>';}
@@ -260,11 +291,11 @@ async function guardarPartido(){
   try{
     await db.collection("partidos_atmas").add({
       jugador1:yo,jugador2:rival,ganador:ganador,perdedor:perdedor,
-      sets:sets,cancha:cancha,fecha:fecha,estado:"pendiente",
+      sets:sets,cancha:cancha,fecha:fecha,estado:"pendiente_rival",
       ts:firebase.firestore.FieldValue.serverTimestamp()
     });
     closeModal();
-    document.getElementById("sheet-content").innerHTML='<div style="text-align:center;padding:16px 0"><div style="font-size:48px">&#128203;</div><div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido enviado</div><div style="font-size:13px;color:var(--suave);line-height:1.6">El resultado quedara <b>pendiente de validacion</b>.<br>Marcelo Escalona revisara y aprobara el partido.<br>Los puntos se suman cuando sea aprobado.</div></div><button class="btn sec" style="margin-top:16px" onclick="closeModal()">Entendido</button>';
+    document.getElementById("sheet-content").innerHTML='<div style="text-align:center;padding:16px 0"><div style="font-size:48px">&#128203;</div><div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido enviado</div><div style="font-size:13px;color:var(--suave);line-height:1.6">Enviado al rival para confirmar.<br>Si disputa el resultado, Marcelo Escalona decide.<br>Los puntos se suman una vez confirmado.</div></div><button class="btn sec" style="margin-top:16px" onclick="closeModal()">Entendido</button>';
     document.getElementById("modal").classList.add("show");
   }catch(e){
     console.warn("guardarPartido error:",e);
@@ -393,7 +424,7 @@ function openModal(tipo,idx){
     var t=torneos[idx];var perfil=getPerfil()||{};
     var turnoField=t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select id="ti-turno"><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':"";
     var mpLink=t.monto===20000?MP.torneo20:t.monto===15000?MP.torneo15:MP.escalerilla;
-    html='<h3>Inscripcion &middot; '+t.n+'</h3><div class="field"><label>Tu nombre</label><input id="ti-nombre" placeholder="Ej: Juan Perez" value="'+(perfil.nombre||"")+'"></div><div class="field"><label>Telefono</label><input id="ti-tel" type="tel" placeholder="+569 XXXX XXXX" value="'+(perfil.tel||"")+'"></div>'+turnoField+'<button class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:4px">Confirmar inscripcion</button>'+pagoHTML(t.monto,t.n,mpLink)+'<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
+    html='<h3>Inscripcion &middot; '+t.n+'</h3><div class="field"><label>Tu nombre</label><input id="ti-nombre" placeholder="Ej: Juan Perez" value="'+(perfil.nombre||'')+'"></div><div class="field"><label>Telefono</label><input id="ti-tel" type="tel" placeholder="+569 XXXX XXXX" value="'+(perfil.tel||'')+'"></div>'+turnoField+'<button class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:4px">Confirmar inscripcion</button>'+pagoHTML(t.monto,t.n,mpLink)+'<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
   }else if(tipo==="clase"){
     var planes={iniciacion:{t:"Iniciacion - Sabados",opciones:[{l:"1 dia - Sabados",v:60000}]},intermedio:{t:"Intermedios",opciones:[{l:"1 dia",v:70000},{l:"2 dias",v:120000},{l:"3 dias",v:150000}]},avanzado:{t:"Avanzados",opciones:[{l:"1 dia",v:80000},{l:"2 dias",v:120000},{l:"3 dias",v:150000}]},individual:{t:"Clases individuales",opciones:[{l:"4 clases",v:120000},{l:"8 clases",v:200000}]}};
     var plan=planes[idx]||planes.individual;
@@ -457,7 +488,7 @@ function pinPress(k){if(k==="X"){pinBuffer=pinBuffer.slice(0,-1);}else if(pinBuf
 async function renderAdmin(){
   var el=document.getElementById("admin-body");if(!el)return;
   var hoy=new Date().toISOString().split("T")[0];
-  el.innerHTML='<div class="admin-header"><div><h2>Panel Admin</h2><p>Club Las Avestruces &middot; ATMAS</p></div><button onclick="adminUnlocked=false;go(\'inicio\')" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer">Salir</button></div><div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"><div class="admin-stat"><div class="n" id="a-res-count">...</div><div class="l">Reservas hoy</div></div><div class="admin-stat"><div class="n" id="a-insc-count">...</div><div class="l">Inscripciones</div></div><div class="admin-stat"><div class="n" id="a-total">...</div><div class="l">Total semana</div></div></div><div class="admin-section"><div class="section-title">Proximas reservas</div><div id="a-reservas"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title" style="color:#b45309">Partidos pendientes de aprobacion</div><div id="a-pendientes"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Inscripciones torneo</div><div id="a-inscripciones"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div><button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div><div style="height:20px"></div>';
+  el.innerHTML='<div class="admin-header"><div><h2>Panel Admin</h2><p>Club Las Avestruces &middot; ATMAS</p></div><button onclick="adminUnlocked=false;go(\'inicio\')" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer">Salir</button></div><div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"><div class="admin-stat"><div class="n" id="a-res-count">...</div><div class="l">Reservas hoy</div></div><div class="admin-stat"><div class="n" id="a-insc-count">...</div><div class="l">Inscripciones</div></div><div class="admin-stat"><div class="n" id="a-total">...</div><div class="l">Total semana</div></div></div><div class="admin-section"><div class="section-title">Proximas reservas</div><div id="a-reservas"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title" style="color:#b45309">Partidos en disputa (decision del admin)</div><div id="a-pendientes"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Inscripciones torneo</div><div id="a-inscripciones"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div><button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div><div style="height:20px"></div>';
   try{
     var snap=await db.collection("reservas").where("fecha",">=",hoy).get();
     var docs=[];snap.forEach(function(d){docs.push(d.data());});
@@ -466,7 +497,7 @@ async function renderAdmin(){
     var fin=new Date();fin.setDate(fin.getDate()+7);var finStr=fin.toISOString().split("T")[0];
     document.getElementById("a-total").textContent="$"+docs.filter(function(r){return r.fecha<=finStr;}).reduce(function(s,r){return s+(r.monto||0);},0).toLocaleString("es-CL");
     if(docs.length===0){document.getElementById("a-reservas").innerHTML='<p style="color:var(--suave);font-size:13px">Sin reservas proximas</p>';}
-    else{var h="";docs.slice(0,20).forEach(function(r){var fd=r.fecha?r.fecha.split("-").reverse().join("/"):"-";var esHoy=r.fecha===hoy;h+='<div class="res-card" style="border-color:'+(esHoy?"var(--verde-osc)":"var(--verde)")+'"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+' </span><span class="rc-date">'+fd+' '+(r.hora||"")+' </span></div><div class="rc-sub">'+(r.cancha||"")+' &middot; '+(r.duracion||"1 hora")+' &middot; $'+(r.monto||0).toLocaleString("es-CL")+(esHoy?" &middot; <b>HOY</b>":"")+' </div></div>';});document.getElementById("a-reservas").innerHTML=h;}
+    else{var h="";docs.slice(0,20).forEach(function(r){var fd=r.fecha?r.fecha.split("-").reverse().join("/"):"-";var esHoy=r.fecha===hoy;h+='<div class="res-card" style="border-color:'+(esHoy?"var(--verde-osc)":"var(--verde)")+'"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+' </span><span class="rc-date">'+fd+' '+(r.hora||'')+' </span></div><div class="rc-sub">'+(r.cancha||"")+' &middot; '+(r.duracion||"1 hora")+' &middot; $'+(r.monto||0).toLocaleString("es-CL")+(esHoy?" &middot; <b>HOY</b>":"")+' </div></div>';});document.getElementById("a-reservas").innerHTML=h;}
   }catch(e){document.getElementById("a-reservas").innerHTML='<p style="color:var(--suave);font-size:13px">Error al cargar reservas</p>';}
   try{
     var snap2=await db.collection("inscripciones_atmas").orderBy("ts","desc").limit(40).get();
@@ -475,7 +506,7 @@ async function renderAdmin(){
     else{var h2="";snap2.forEach(function(doc){var r=doc.data();h2+='<div class="res-card" style="border-color:#6366f1"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+' </span><span style="font-size:11px;color:var(--suave)">'+(r.torneo||r.categoria||"")+' </span></div><div class="rc-sub">'+(r.tel||"")+' &middot; '+(r.estado||"pendiente")+' </div></div>';});document.getElementById("a-inscripciones").innerHTML=h2;}
   }catch(e){}
   try{
-    var snapPend=await db.collection("partidos_atmas").where("estado","==","pendiente").orderBy("ts","desc").limit(20).get();
+    var snapPend=await db.collection("partidos_atmas").where("estado","==","pendiente_admin").orderBy("ts","desc").limit(20).get();
     if(snapPend.empty){document.getElementById("a-pendientes").innerHTML='<p style="color:var(--suave);font-size:13px">Sin partidos pendientes</p>';}
     else{
       window._pendQ=[];
@@ -483,8 +514,8 @@ async function renderAdmin(){
       snapPend.forEach(function(doc){
         var r=doc.data();var qi=window._pendQ.length;
         window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});
-        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' gano</span><span class="rc-date">'+(r.fecha||"")+"</span></div>";
-        hp+='<div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div>';
+        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' gano</span><span class="rc-date">'+(r.fecha||'')+'</span></div>';
+        hp+='<div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||'sin sets')+'</div>';
         hp+='<div style="display:flex;gap:8px;margin-top:8px">';
         hp+='<button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">Aprobar +5/+1</button>';
         hp+='<button class="btn sec" style="flex:1;padding:8px;font-size:12px" onclick="pendRechazar('+qi+')">Rechazar</button>';
