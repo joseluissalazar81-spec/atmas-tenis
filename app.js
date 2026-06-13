@@ -49,6 +49,7 @@ async function seedRankingIfEmpty(){
       batch.set(ref,{nombre:p[0],pts:p[1],jugados:p[2],ganados:p[3],perdidos:p[4],pct:p[5]},{merge:true});
     });
     await batch.commit();
+    console.log("Ranking sembrado en Firestore");
   }catch(e){console.warn("Seed error:",e);}
 }
 
@@ -62,8 +63,10 @@ function iniciarRankingLive(){
         rankingData.push([d.nombre,d.pts||0,d.jugados||0,d.ganados||0,d.perdidos||0,d.pct||0,doc.id]);
       });
       if(rankingData.length===0)rankingData=SEED_PLAYERS.map(function(p){return p.slice();});
-      renderRanking();actualizarStats();
+      renderRanking();
+      actualizarStats();
     },function(e){
+      console.warn("Ranking listener error:",e);
       rankingData=SEED_PLAYERS.map(function(p){return p.slice();});
       renderRanking();
     });
@@ -137,6 +140,7 @@ function renderVerdades(){
       h+='<div style="opacity:.55;display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)"><div style="background:rgba(255,255,255,.15);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">'+v.n+'</div><div style="flex:1;font-size:14px;font-weight:600;color:#fff">'+v.t+'</div><div style="font-size:10px;color:rgba(255,255,255,.4);white-space:nowrap">Proximo</div></div>';
     }
   });
+  h+='<a href="https://youtube.com/@marceloescalona-p4f" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:12px;padding:8px;background:rgba(255,255,255,.1);border-radius:12px;color:var(--lima);font-size:12px;font-weight:700;text-decoration:none">&#9654; Ver canal completo en YouTube</a>';
   el.innerHTML=h;
 }
 renderVerdades();
@@ -159,12 +163,12 @@ function savePerfil(p){
   if(docId){try{db.collection("jugadores").doc(docId).set(p,{merge:true});}catch(e){}}
 }
 function esAdmin(nombre){if(!nombre)return false;var n=nombre.toLowerCase().trim();return n.includes("marcelo")&&n.includes("escalona");}
-function formatRut(el){var v=el.value.replace(/[^0-9kK]/g,"");if(v.length>1){var d=v.slice(0,-1);var dv=v.slice(-1);var fmt="";for(var i=d.length-1,j=0;i>=0;i--,j++){if(j>0&&j%3===0)fmt="."+fmt;fmt=d[i]+fmt;}el.value=fmt+"-"+dv;}else{el.value=v;}}
+function formatRut(el){var v=el.value.replace(/[^0-9kK]/g,"");if(v.length>1){var d=v.slice(0,-1);var dv=v.slice(-1).toUpperCase();var fmt="";for(var i=d.length-1,j=0;i>=0;i--,j++){if(j>0&&j%3===0)fmt="."+fmt;fmt=d[i]+fmt;}el.value=fmt+"-"+dv;}else{el.value=v.toUpperCase();}}
 
 function showAuthStep1(){document.getElementById("auth-step1").style.display="";document.getElementById("auth-email").style.display="none";document.getElementById("auth-rut").style.display="none";document.getElementById("auth-step2").style.display="none";}
 function showAuthEmail(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-email").style.display="";}
 function showAuthRut(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-rut").style.display="";}
-function showAuthStep2(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-email").style.display="none";document.getElementById("auth-rut").style.display="none";document.getElementById("auth-step2").style.display="";}
+function showAuthStep2(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-email").style.display="none";document.getElementById("auth-step2").style.display="";}
 
 async function loginGoogle(){
   if(!auth){toast("Auth no disponible");return;}
@@ -266,18 +270,17 @@ async function recuperarPerfil(){
       savePerfil(p);mostrarApp();renderPerfil();go("inicio");
       toast("Bienvenido de vuelta, "+p.nombre+"!");return;
     }
-    toast("RUT no encontrado. Crea tu perfil.");
+    toast("RUT no encontrado. Completa tu perfil para entrar.");
     showAuthStep2();
     var rEl=document.getElementById("reg-rut");if(rEl)rEl.value=rut;
+    var tit=document.querySelector("#auth-step2 div");
+    if(tit)tit.textContent="Confirma tu perfil para entrar";
   }catch(e){
-    var msg=e.message||"";
-    if(msg.includes("permission")||msg.includes("Missing or insufficient")||(e.code&&e.code.includes("permission"))){
-      toast("Sin acceso al servidor. Crea tu perfil nuevamente.");
-      showAuthStep2();
-      var rEl2=document.getElementById("reg-rut");if(rEl2)rEl2.value=rut;
-    }else{
-      toast("Error de conexion. Verifica tu red.");
-    }
+    toast("Sin conexion al servidor. Confirma tu perfil para entrar.");
+    showAuthStep2();
+    var rEl2=document.getElementById("reg-rut");if(rEl2)rEl2.value=rut;
+    var tit2=document.querySelector("#auth-step2 div");
+    if(tit2)tit2.textContent="Confirma tu perfil para entrar";
   }
 }
 
@@ -423,10 +426,10 @@ async function renderPerfilAdmin(p,el){
 
 const torneos=[
   {n:"Torneo Novicios 4",f:"11 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"6 cupos",monto:20000},
-  {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"16 cupos",monto:15000},
+  {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"Cerrado",monto:15000},
   {n:"Nueva Escalerilla Jun-Ago",f:"Series A y B &middot; $15.000 por partido",p:"$35.000",c:"4 cupos",monto:35000}
 ];
-var th="";torneos.forEach(function(t,i){th+='<div class="tcard"><div class="tn">'+t.n+'</div><div class="tm">'+t.f+'</div><div class="trow"><span class="price">'+t.p+'</span><span class="cupos">'+t.c+'</span><button class="mini wa" onclick="openModal(\'torneo\','+i+')">Inscribirme</button></div></div>';});
+var th="";torneos.forEach(function(t,i){var bloqueado=t.c==="Cerrado";th+='<div class="tcard"><div class="tn">'+t.n+'</div><div class="tm">'+t.f+'</div><div class="trow"><span class="price">'+t.p+'</span><span class="cupos" style="'+(bloqueado?'background:#fee2e2;color:#b91c1c':'')+'">'+t.c+'</span>'+(bloqueado?'<button class="mini" disabled style="opacity:.4">Cerrado</button>':'<button class="mini wa" onclick="openModal(\'torneo\','+i+')">Inscribirme</button>')+'</div></div>';});
 document.getElementById("torneos-list").innerHTML=th;
 
 async function cargarInscripciones(){
@@ -434,9 +437,10 @@ async function cargarInscripciones(){
   try{
     var snap=await db.collection("inscripciones_atmas").where("torneo","==","Torneo Novicios 4").get();
     var inscritos=[];snap.forEach(function(doc){inscritos.push(doc.data().nombre);});
+    var lleno=inscritos.length>=16;
     var nh="";
     inscritos.forEach(function(n){var col=avatarColor(n);var ini=initials(n);nh+='<div class="lcard"><div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div class="nm">'+n+'</div></div><span>OK</span></div>';});
-    for(var i=inscritos.length;i<16;i++)nh+='<div class="lcard"><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--suave)">'+(i+1)+'</div><div style="flex:1"><div class="ds">Cupo disponible</div></div><button class="mini" onclick="openModal(\'torneo\',0)">Unirme</button></div>';
+    for(var i=inscritos.length;i<16;i++)nh+='<div class="lcard"><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--suave)">'+(i+1)+'</div><div style="flex:1"><div class="ds">Cupo disponible</div></div>'+(lleno?'<span style="color:#b91c1c;font-size:11px">Completo</span>':'<button class="mini" onclick="openModal(\'torneo\',0)">Unirme</button>')+'</div>';
     el.innerHTML=nh;
   }catch(e){}
 }
@@ -465,6 +469,7 @@ async function guardarPartido(){
     document.getElementById("sheet-content").innerHTML='<div style="text-align:center;padding:16px 0"><div style="font-size:48px">&#128203;</div><div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido enviado</div><div style="font-size:13px;color:var(--suave);line-height:1.6">Enviado al rival para confirmar.<br>Si disputa el resultado, Marcelo Escalona decide.<br>Los puntos se suman una vez confirmado.</div></div><button class="btn sec" style="margin-top:16px" onclick="closeModal()">Entendido</button>';
     document.getElementById("modal").classList.add("show");
   }catch(e){
+    console.warn("guardarPartido error:",e);
     toast("Error al guardar. Intenta de nuevo.");
   }
 }
@@ -526,7 +531,7 @@ async function renderCalendario(){
     var cls="cal-cell"+(esHoy?" hoy":esPas?" pasado":cnt>0?" tiene":"");
     if(esSel&&!esHoy)cls+=" sel";
     var click=esPas?"":"onclick=\"calDia('"+fs+"')\"";
-    h+='<div class="'+cls+'" '+click+'>'+d+(cnt>0&&!esHoy?'<span style="font-size:7px;display:block">'+cnt+'</span>':'')+'</div>';
+    h+='<div class="'+cls+'" '+click+'>'+d+(cnt>0&&!esHoy?'<span style="font-size:7px;display:block">'+cnt+'</span>':'')+' </div>';
   }
   h+='</div>';
   el.innerHTML=h;
@@ -586,6 +591,7 @@ function openModal(tipo,idx){
   var html="";
   if(tipo==="torneo"){
     var t=torneos[idx];var perfil=getPerfil()||{};
+    if(t.c==="Cerrado"){toast("Inscripciones cerradas para este torneo");return;}
     var turnoField=t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select id="ti-turno"><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':"";
     var mpLink=t.monto===20000?MP.torneo20:t.monto===15000?MP.torneo15:MP.escalerilla;
     html='<h3>Inscripcion &middot; '+t.n+'</h3><div class="field"><label>Tu nombre</label><input id="ti-nombre" placeholder="Ej: Juan Perez" value="'+(perfil.nombre||"")+'"></div><div class="field"><label>Telefono</label><input id="ti-tel" type="tel" placeholder="+569 XXXX XXXX" value="'+(perfil.tel||"")+'"></div>'+turnoField+'<button class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:4px">Confirmar inscripcion</button>'+pagoHTML(t.monto,t.n,mpLink)+'<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
@@ -621,7 +627,9 @@ async function confirmarJugador(){
   try{
     await db.collection("ranking_atmas").doc(slugify(nombre)).set({nombre:nombre,pts:pts,jugados:0,ganados:0,perdidos:0,pct:0},{merge:true});
     closeModal();toast("Jugador agregado al ranking");
-  }catch(e){toast("Error al agregar jugador");}
+  }catch(e){
+    toast("Error al agregar jugador");
+  }
 }
 
 async function inscribirTorneo(idx){
@@ -633,6 +641,8 @@ async function inscribirTorneo(idx){
   try{
     var existe=await db.collection("inscripciones_atmas").where("torneo","==",t.n).where("nombre","==",nombre).get();
     if(!existe.empty){toast("Ya estas inscrito en este torneo");return;}
+    var totalSnap=await db.collection("inscripciones_atmas").where("torneo","==",t.n).get();
+    if(totalSnap.size>=16){toast("Torneo completo. No hay mas cupos.");return;}
     await db.collection("inscripciones_atmas").add({nombre:nombre,tel:tel,torneo:t.n,turno:turno,monto:t.monto,estado:"pendiente_pago",ts:firebase.firestore.FieldValue.serverTimestamp()});
     toast("Inscripcion registrada - Ahora completa el pago");
   }catch(e){toast("Error al inscribir. Intenta de nuevo.");}
@@ -676,7 +686,7 @@ async function renderAdmin(){
       snapPend.forEach(function(doc){
         var r=doc.data();var qi=window._pendQ.length;
         window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});
-        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' gano</span><span class="rc-date">'+(r.fecha||"")+"</span></div>";
+        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' gano</span><span class="rc-date">'+(r.fecha||"")+' </span></div>';
         hp+='<div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div>';
         hp+='<div style="display:flex;gap:8px;margin-top:8px">';
         hp+='<button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">Aprobar +5/+1</button>';
