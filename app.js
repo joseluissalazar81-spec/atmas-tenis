@@ -3,3 +3,465 @@ function toast(m){var t=document.getElementById("toast");t.textContent=m;t.class
 function go(s){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});document.getElementById(s).classList.add("active");document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.s===s);});document.querySelector(".content").scrollTop=0;if(s==="perfil")renderPerfil();if(s==="admin")renderAdmin();if(s==="cancha")renderCalendario();}
 function closeModal(){document.getElementById("modal").classList.remove("show");}
 function setVista(v){document.getElementById("vista-rank").style.display=v==="rank"?"block":"none";document.getElementById("vista-cuadro").style.display=v==="cuadro"?"block":"none";document.getElementById("vRank").classList.toggle("on",v==="rank");document.getElementById("vCuadro").classList.toggle("on",v==="cuadro");}
+
+const _noop={get:function(){return Promise.resolve({exists:false,forEach:function(){},data:function(){return{};}});},add:function(){return Promise.resolve({id:"local"});},set:function(){return Promise.resolve();},update:function(){return Promise.resolve();},delete:function(){return Promise.resolve();},where:function(){return _noop;},orderBy:function(){return _noop;},doc:function(){return _noop;},limit:function(){return _noop;},onSnapshot:function(cb){cb({forEach:function(){}});return function(){};},runTransaction:function(fn){return fn(_noop);}};
+const _noopDb={collection:function(){return _noop;},runTransaction:function(fn){return fn(_noop);}};
+var db=_noopDb;
+try{
+  firebase.initializeApp({apiKey:"AIzaSyC5WSNETjUxYfUpMr6nkOk8jjDqrD44Snw",authDomain:"atmas-tenis.firebaseapp.com",projectId:"atmas-tenis",storageBucket:"atmas-tenis.firebasestorage.app",messagingSenderId:"545823553419",appId:"1:545823553419:web:7131283910ded048c9a18e"});
+  db=firebase.firestore();
+}catch(e){console.warn("Firebase no disponible:",e);}
+
+const PAGO={nombre:"Marcelo Andres Escalona Galvez",rut:"12.637.853-K",banco:"Mercado Pago",tipo:"Cuenta Vista",cuenta:"1057752328",email:"locampinotenisclub@hotmail.com"};
+const avatarColors=["#e74c3c","#e67e22","#f39c12","#2ecc71","#1abc9c","#3498db","#9b59b6","#e91e63","#00bcd4","#4caf50","#ff5722","#607d8b"];
+function initials(n){return n.split(" ").slice(0,2).map(function(x){return x[0];}).join("").toUpperCase();}
+function avatarColor(n){var h=0;for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%avatarColors.length;return avatarColors[h];}
+function slugify(n){return n.toLowerCase().replace(/[^a-z0-9]/g,"_");}
+
+/* ─── DATOS INICIALES (solo para semilla) ─────────────────────── */
+var SEED_PLAYERS=[
+  ["Rodrigo Bernal",66,14,13,1,92.86],["Mauricio Morales",64,16,12,4,75],
+  ["Felipe Munoz",60,13,11,2,84.62],["Jonathan Munoz",59,16,11,5,68.75],
+  ["Matias Cordova",58,14,11,3,78.57],["Juan Pablo Vera",54,14,10,4,71.43],
+  ["Juan Carlos Abarca",52,14,10,4,71.43],["Mauricio Melo",51,14,9,5,64.29],
+  ["Cristian Valdes",49,16,9,7,56.25],["Ignacio Cofre",46,14,8,6,57.14],
+  ["Rodrigo Araya",44,13,8,5,61.54],["Andres Beltran",42,14,8,6,57.14],
+  ["Juan David Vera",40,12,7,5,58.33],["Nicolas Tapia",38,12,7,5,58.33],
+  ["Felipe Alvarado",36,14,6,8,42.86],["Sebastian Rojas",34,13,6,7,46.15],
+  ["Alvaro Espinoza",32,12,6,6,50],["Claudio Saavedra",30,12,6,6,50],
+  ["Maximo Escalona",28,11,5,6,45.45],["Cristian Valdes B",26,11,5,6,45.45],
+  ["Fabian Araneda",24,10,4,6,40],["Franco Gutierrez",22,10,4,6,40],
+  ["Andres Gutierrez",20,10,4,6,40],["Benjamin Diaz",18,8,3,5,37.5],
+  ["Nicolas Martinez",16,8,3,5,37.5],["Alex Berrocal",14,8,2,6,25],
+  ["Victor Saavedra",12,7,2,5,28.57],["Pablo Araneda",8,6,1,5,16.67],
+  ["Waldo Escalona",6,6,0,6,0],["Cesar Moreno",6,6,0,6,0]
+];
+
+/* ─── RANKING LIVE DESDE FIRESTORE ───────────────────────────── */
+var rankingData=[];
+var rankingListener=null;
+
+async function seedRankingIfEmpty(){
+  try{
+    var snap=await db.collection("ranking_atmas").limit(1).get();
+    if(!snap.empty)return;
+    var batch=db.batch();
+    SEED_PLAYERS.forEach(function(p){
+      var ref=db.collection("ranking_atmas").doc(slugify(p[0]));
+      batch.set(ref,{nombre:p[0],pts:p[1],jugados:p[2],ganados:p[3],perdidos:p[4],pct:p[5]},{merge:true});
+    });
+    await batch.commit();
+    console.log("Ranking sembrado en Firestore");
+  }catch(e){console.warn("Seed error:",e);}
+}
+
+function iniciarRankingLive(){
+  if(rankingListener)rankingListener();
+  try{
+    rankingListener=db.collection("ranking_atmas").orderBy("pts","desc").onSnapshot(function(snap){
+      rankingData=[];
+      snap.forEach(function(doc){
+        var d=doc.data();
+        rankingData.push([d.nombre,d.pts||0,d.jugados||0,d.ganados||0,d.perdidos||0,d.pct||0,doc.id]);
+      });
+      if(rankingData.length===0)rankingData=SEED_PLAYERS.map(function(p){return p.slice();});
+      renderRanking();
+      actualizarStats();
+    },function(e){
+      console.warn("Ranking listener error:",e);
+      rankingData=SEED_PLAYERS.map(function(p){return p.slice();});
+      renderRanking();
+    });
+  }catch(e){
+    rankingData=SEED_PLAYERS.map(function(p){return p.slice();});
+    renderRanking();
+  }
+}
+
+function renderRanking(){
+  var lista=rankingData.slice();
+  var maxPts=Math.max(1,...lista.map(function(p){return p[1];}));
+  var rh="";
+  lista.forEach(function(p,i){
+    var c=i===0?"top1":i===1?"top2":i===2?"top3":"";
+    var col=avatarColor(p[0]);var ini=initials(p[0]);
+    rh+='<div class="rank-item '+c+'"><div class="rank-pos">'+(i+1)+'</div><div class="avatar" style="background:'+col+'">'+ini+'</div><div class="rank-info"><div class="nm">'+p[0]+'</div><div class="sub">'+p[3]+'G &middot; '+p[4]+'P &middot; '+p[2]+' jugados</div><div class="bar"><i style="width:'+(p[1]/maxPts*100)+'%"></i></div></div><div class="rank-pts"><div class="p">'+p[1]+'</div><div class="pct">'+p[5]+'%</div></div></div>';
+  });
+  document.getElementById("ranking-list").innerHTML=rh;
+}
+
+async function actualizarStats(){
+  var elJ=document.getElementById("stat-jugadores");
+  if(elJ)elJ.textContent=rankingData.length||SEED_PLAYERS.length;
+  try{var snap=await db.collection("partidos_atmas").get();var elP=document.getElementById("stat-partidos");if(elP)elP.textContent=snap.size;}catch(e){}
+}
+
+function generarCuadros(){
+  var lista=rankingData.slice().sort(function(a,b){return b[1]-a[1];});
+  function buildMatches(start){var ps=lista.slice(start,start+16);var n=ps.length;var matches=[];for(var i=0;i<8;i++){var a=ps[i]?ps[i][0]:null;var b=ps[n-1-i]?ps[n-1-i][0]:null;matches.push([a,b,null]);}return matches;}
+  return{oro:buildMatches(0),plata:buildMatches(16)};
+}
+var cuadros={oro:[],plata:[]};
+function tie(a,b,w){function c(x){return x?(x===w?"p w":"p"):"p tbd";}return '<div class="tie"><div class="'+c(a)+'">'+(a||"Por definir")+'</div><div class="'+c(b)+'">'+(b||"Por definir")+'</div></div>';}
+function renderBracket(k){var bk='<div class="round"><h4>Ronda 16</h4>';cuadros[k].forEach(function(t){bk+=tie(t[0],t[1],t[2]);});bk+='</div><div class="round"><h4>Cuartos</h4>';for(var i=0;i<4;i++)bk+=tie(null,null);bk+='</div><div class="round"><h4>Semifinal</h4>';for(var i=0;i<2;i++)bk+=tie(null,null);bk+='</div><div class="round"><h4>Final</h4>'+tie(null,null)+'</div>';document.getElementById("bracket").innerHTML=bk;}
+function setCuadro(k){renderBracket(k);document.getElementById("segOro").classList.toggle("on",k==="oro");document.getElementById("segPlata").classList.toggle("on",k==="plata");}
+
+/* ─── PROFESORES ──────────────────────────────────────────────── */
+const profesores=[{nombre:"Marcelo Escalona G.",rol:"Director ATMAS &middot; Profesor de Tenis",bio:"Entrenador certificado con mas de 15 anos de experiencia en formacion y competencia. Director de ATMAS Academia de Tenis AT+ en el Club Las Avestruces, Quilicura. Especialista en desarrollo de jugadores desde iniciacion hasta alto rendimiento.",certs:{"PTR":["Nivel 1","Nivel 2","Nivel 3","High Performance"],"ITF":["Nivel 1","Nivel 2","Play and Stay"],"PST":["Nivel 1 Entrenador Nacional","Nivel 2"],"Play Tenis":["Profesor de Tenis","Pelota Roja","Pelota Naranja"]}}];
+
+function renderProfesores(){
+  var el=document.getElementById("profes-list");if(!el)return;
+  var h="";
+  profesores.forEach(function(prof){
+    var ini=initials(prof.nombre);var col=avatarColor(prof.nombre);
+    var certsH="";
+    Object.entries(prof.certs).forEach(function(ent){
+      certsH+='<div style="margin-top:12px"><div style="font-size:10px;font-weight:800;color:var(--verde-osc);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">'+ent[0]+'</div><div style="display:flex;flex-wrap:wrap;gap:5px">'+ent[1].map(function(i){return'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">'+i+'</span>';}).join('')+'</div></div>';
+    });
+    h+='<div style="background:#fff;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)"><div style="display:flex;align-items:center;gap:14px;margin-bottom:14px"><div class="avatar" style="background:'+col+';width:60px;height:60px;font-size:20px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800">'+ini+'</div><div><div style="font-weight:900;font-size:17px;color:var(--texto)">'+prof.nombre+'</div><div style="font-size:12px;color:var(--verde-osc);font-weight:600;margin-top:2px">'+prof.rol+'</div></div></div><p style="font-size:13px;color:var(--suave);line-height:1.6;border-top:1px solid var(--linea);padding-top:12px;margin-bottom:4px">'+prof.bio+'</p><div style="border-top:1px solid var(--linea);margin-top:12px;padding-top:4px">'+certsH+'</div></div>';
+  });
+  el.innerHTML=h;
+}
+renderProfesores();
+
+/* ─── VERDADES INCOMODAS ──────────────────────────────────────── */
+const verdades=[
+  {n:1,t:"Quieres mejorar tu tenis?",url:null},
+  {n:2,t:"El pasapelotas no te gana.",url:null},
+  {n:3,t:"Tu problema no es la raqueta.",url:null},
+  {n:4,t:"El miedo a equivocarte te esta frenando.",url:null},
+  {n:5,t:"Jugar seguro no siempre es jugar inteligente.",url:null},
+  {n:6,t:"Ganar no siempre significa mejorar.",url:null},
+  {n:7,t:"Tu rival mas dificil eres tu mismo.",url:null}
+];
+function renderVerdades(){
+  var el=document.getElementById("vi-list");if(!el)return;
+  var h="";
+  verdades.forEach(function(v){
+    var row='<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)"><div style="background:var(--lima);color:var(--negro);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">'+v.n+'</div><div style="flex:1;font-size:14px;font-weight:600;color:#fff">'+v.t+'</div><div style="font-size:18px;color:rgba(255,255,255,.4)">&#9654;</div></div>';
+    if(v.url){h+='<a href="'+v.url+'" target="_blank" style="text-decoration:none;display:block">'+row+'</a>';}
+    else{h+='<div style="opacity:.75;cursor:pointer" onclick="toast(\'Video proximamente...\')">'+row+'</div>';}
+  });
+  el.innerHTML=h;
+}
+renderVerdades();
+
+/* ─── MERCADO PAGO ────────────────────────────────────────────── */
+const MP={cancha1hr:"https://mpago.li/2Up5tJ7",cancha2hrs:"https://mpago.la/1JgQ4Y5",torneo20:"https://mpago.la/REEMPLAZAR_T20",torneo15:"https://mpago.la/REEMPLAZAR_T15",escalerilla:"https://mpago.la/REEMPLAZAR_ESC",socio:"https://mpago.la/REEMPLAZAR_SOCIO",inscripcion:"https://mpago.la/REEMPLAZAR_INSC"};
+function pagoHTML(monto,label,link){
+  var t=PAGO;
+  return '<div class="pago-box"><div class="pago-title">Pago &middot; $'+monto.toLocaleString("es-CL")+'</div><div class="pago-row"><span>Nombre</span><b>'+t.nombre+'</b></div><div class="pago-row"><span>RUT</span><b>'+t.rut+'</b></div><div class="pago-row"><span>Banco</span><b>'+t.banco+' &middot; '+t.tipo+'</b></div><div class="pago-row"><span>N&deg; cuenta</span><b>'+t.cuenta+'</b></div><div class="pago-row"><span>Email</span><b>'+t.email+'</b></div><a class="btn wa" href="'+link+'" target="_blank" onclick="registrarIntentoPago(\''+label+'\','+monto+')">Pagar con Mercado Pago &rarr;</a></div>';
+}
+function registrarIntentoPago(label,monto){try{db.collection("pagos_mp").add({label:label,monto:monto,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}}
+
+/* ─── PERFIL ──────────────────────────────────────────────────── */
+function getPerfil(){try{return JSON.parse(localStorage.getItem("atmas_perfil")||"null");}catch(e){return null;}}
+function savePerfil(p){localStorage.setItem("atmas_perfil",JSON.stringify(p));try{db.collection("jugadores").doc(p.rut.replace(/\./g,"").replace("-","")).set(p,{merge:true});}catch(e){}}
+function esAdmin(nombre){if(!nombre)return false;var n=nombre.toLowerCase().trim();return n.includes("marcelo")&&n.includes("escalona");}
+function formatRut(el){var v=el.value.replace(/[^0-9kK]/g,"");if(v.length>1){var d=v.slice(0,-1);var dv=v.slice(-1);var fmt="";for(var i=d.length-1,j=0;i>=0;i--,j++){if(j>0&&j%3===0)fmt="."+fmt;fmt=d[i]+fmt;}el.value=fmt+"-"+dv;}else{el.value=v;}}
+
+function registrarPerfil(){
+  var nombre=(document.getElementById("reg-nombre").value||"").trim();
+  var rut=(document.getElementById("reg-rut").value||"").trim();
+  var fnac=document.getElementById("reg-fnac").value;
+  var tel=(document.getElementById("reg-tel").value||"").trim();
+  if(!nombre||!rut){toast("Nombre y RUT son obligatorios");return;}
+  var p={nombre:nombre,rut:rut,fnac:fnac,tel:tel,socio:false};
+  savePerfil(p);mostrarApp();renderPerfil();go("inicio");toast("Bienvenido "+nombre+"!");
+}
+function mostrarApp(){document.getElementById("login-screen").classList.remove("show");document.querySelector("header").style.display="";document.querySelector(".content").style.display="";document.querySelector(".tabbar").style.display="";}
+function cerrarSesion(){localStorage.removeItem("atmas_perfil");document.getElementById("login-screen").classList.add("show");document.querySelector("header").style.display="none";document.querySelector(".content").style.display="none";document.querySelector(".tabbar").style.display="none";toast("Sesion cerrada");}
+
+function renderPerfil(){
+  var p=getPerfil();var el=document.getElementById("perfil-body");if(!el)return;
+  if(!p){
+    el.innerHTML='<div class="hero" style="margin-bottom:14px"><div class="ball"></div><h2>Crea tu perfil ATMAS</h2><p>Registrate para reservar canchas e inscribirte en torneos.</p></div><div class="infobox"><div class="field"><label>Nombre completo</label><input id="reg-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>RUT</label><input id="reg-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)"></div><div class="field"><label>Fecha de nacimiento</label><input id="reg-fnac" type="date"></div><div class="field"><label>Telefono</label><input id="reg-tel" type="tel" placeholder="+569 XXXX XXXX"></div><button class="btn" onclick="registrarPerfil()">Crear mi perfil</button></div>';
+    return;
+  }
+  if(esAdmin(p.nombre)){adminUnlocked=true;renderPerfilAdmin(p,el);return;}
+  var jugador=rankingData.find(function(j){return j[0].toLowerCase()===p.nombre.toLowerCase();});
+  var pos=jugador?rankingData.indexOf(jugador)+1:null;
+  var ini=initials(p.nombre);var col=avatarColor(p.nombre);
+  var socioTag=p.socio?'<span class="cupos" style="background:#ffd700;color:#7a5c00">SOCIO</span>':'<span class="cupos">Sin membresia</span>';
+  var statsHtml=jugador?'<div class="mycard" style="margin-bottom:14px"><div class="pos">Posicion #'+pos+' &middot; Escalerilla ATMAS</div><div class="name">'+p.nombre+'</div><div class="row"><div><span class="big">'+jugador[1]+'</span><span class="cap">Puntos</span></div><div><span class="big">'+jugador[3]+'</span><span class="cap">Ganados</span></div><div><span class="big">'+jugador[4]+'</span><span class="cap">Perdidos</span></div></div></div>':'<div class="aviso">Aun no tienes partidos en la escalerilla. Juega y sube tu ranking!</div>';
+  el.innerHTML='<div style="display:flex;align-items:center;gap:13px;background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><div class="avatar" style="background:'+col+';width:54px;height:54px;font-size:19px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div style="font-weight:800;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;color:var(--suave)">RUT: '+p.rut+'</div><div style="font-size:12px;color:var(--suave);margin-top:2px">'+(p.tel||"")+' </div></div>'+socioTag+'</div>'+statsHtml+'<div class="section-title">Mis proximas reservas</div><div id="mis-reservas-list"><p style="color:var(--suave);font-size:13px;padding:8px 4px">Cargando...</p></div><button class="btn" onclick="openModal(\'partido\')">+ Registrar partido</button><button class="btn dark" style="margin-top:8px" onclick="openModal(\'socio\')">Membresia ATMAS</button><button class="btn sec" style="margin-top:8px" onclick="go(\'cancha\')">Reservar cancha</button><button class="btn sec" style="margin-top:8px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesion</button><p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
+  cargarMisReservas(p.nombre);
+}
+
+async function cargarMisReservas(nombre){
+  var el=document.getElementById("mis-reservas-list");if(!el)return;
+  var hoy=new Date().toISOString().split("T")[0];
+  try{
+    var snap=await db.collection("reservas").where("nombre","==",nombre).get();
+    var proximas=[];
+    snap.forEach(function(doc){var d=doc.data();if(d.fecha>=hoy)proximas.push(d);});
+    proximas.sort(function(a,b){return(a.fecha+a.hora)<(b.fecha+b.hora)?-1:1;});
+    if(proximas.length===0){el.innerHTML='<p style="color:var(--suave);font-size:13px;padding:8px 4px">No tienes reservas proximas.</p>';return;}
+    var h="";
+    proximas.forEach(function(r){
+      var fechaFmt=r.fecha?r.fecha.split("-").reverse().join("/"):"-";
+      h+='<div class="lcard" style="flex-direction:column;align-items:flex-start;gap:4px"><div style="display:flex;justify-content:space-between;width:100%"><div style="font-weight:800;font-size:14px">'+(r.cancha||"Cancha")+' &middot; '+(r.hora||"")+' </div><span class="cupos" style="background:#dcfce7;color:#15803d">Conf.</span></div><div style="font-size:12px;color:var(--suave)">'+fechaFmt+' &middot; '+(r.duracion||"1 hora")+' &middot; $'+(r.monto||0).toLocaleString("es-CL")+'</div></div>';
+    });
+    el.innerHTML=h;
+  }catch(e){el.innerHTML='<p style="color:var(--suave);font-size:13px;padding:8px 4px">No se pudieron cargar las reservas.</p>';}
+}
+
+async function renderPerfilAdmin(p,el){
+  var hoy=new Date().toISOString().split("T")[0];
+  el.innerHTML='<div style="background:linear-gradient(135deg,var(--verde-osc),var(--verde-mid));border-radius:20px;padding:18px;color:#fff;margin-bottom:14px"><div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><div class="avatar" style="background:rgba(255,255,255,.25);width:54px;height:54px;font-size:19px;flex-shrink:0">'+initials(p.nombre)+'</div><div style="flex:1"><div style="font-weight:900;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;opacity:.85">Director &middot; ATMAS</div></div><span style="background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700">ADMIN</span></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center"><div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 4px"><div style="font-size:22px;font-weight:800" id="pa-res-hoy">...</div><div style="font-size:10px;opacity:.85">Reservas hoy</div></div><div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 4px"><div style="font-size:22px;font-weight:800" id="pa-insc">...</div><div style="font-size:10px;opacity:.85">Inscripciones</div></div><div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 4px"><div style="font-size:18px;font-weight:800" id="pa-total">...</div><div style="font-size:10px;opacity:.85">Recaudado hoy</div></div></div></div><div class="section-title">MIS OPCIONES</div><div style="display:flex;flex-direction:column;gap:8px"><button class="btn" style="font-size:15px;padding:14px" onclick="go(\'admin\')">&#128197; Gestionar actividades del dia</button><button class="btn dark" onclick="openModal(\'jugador\')">+ Agregar jugador al ranking</button><button class="btn dark" onclick="openModal(\'partido\')">+ Registrar partido</button><button class="btn sec" onclick="go(\'cancha\')">Reservar cancha</button><button class="btn sec" style="font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesion</button></div><p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
+  try{
+    var snapHoy=await db.collection("reservas").where("fecha","==",hoy).get();
+    var resHoy=[];snapHoy.forEach(function(d){resHoy.push(d.data());});
+    document.getElementById("pa-res-hoy").textContent=resHoy.length;
+    document.getElementById("pa-total").textContent="$"+resHoy.reduce(function(s,r){return s+(r.monto||0);},0).toLocaleString("es-CL");
+  }catch(e){}
+  try{
+    var snap3=await db.collection("inscripciones_atmas").get();
+    document.getElementById("pa-insc").textContent=snap3.size;
+  }catch(e){}
+}
+
+/* ─── TORNEOS ─────────────────────────────────────────────────── */
+const torneos=[
+  {n:"Torneo Novicios 4",f:"11 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"6 cupos",monto:20000},
+  {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"16 cupos",monto:15000},
+  {n:"Nueva Escalerilla Jun-Ago",f:"Series A y B &middot; $15.000 por partido",p:"$35.000",c:"4 cupos",monto:35000}
+];
+var th="";torneos.forEach(function(t,i){th+='<div class="tcard"><div class="tn">'+t.n+'</div><div class="tm">'+t.f+'</div><div class="trow"><span class="price">'+t.p+'</span><span class="cupos">'+t.c+'</span><button class="mini wa" onclick="openModal(\'torneo\','+i+')">Inscribirme</button></div></div>';});
+document.getElementById("torneos-list").innerHTML=th;
+
+async function cargarInscripciones(){
+  var el=document.getElementById("novicios-list");if(!el)return;
+  try{
+    var snap=await db.collection("inscripciones_atmas").where("torneo","==","Torneo Novicios 4").get();
+    var inscritos=[];snap.forEach(function(doc){inscritos.push(doc.data().nombre);});
+    var nh="";
+    inscritos.forEach(function(n){var col=avatarColor(n);var ini=initials(n);nh+='<div class="lcard"><div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div class="nm">'+n+'</div></div><span>OK</span></div>';});
+    for(var i=inscritos.length;i<16;i++)nh+='<div class="lcard"><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--suave)">'+(i+1)+'</div><div style="flex:1"><div class="ds">Cupo disponible</div></div><button class="mini" onclick="openModal(\'torneo\',0)">Unirme</button></div>';
+    el.innerHTML=nh;
+  }catch(e){}
+}
+cargarInscripciones();
+
+/* ─── PARTIDOS: GUARDAR CON TRANSACCION ATOMICA ──────────────── */
+async function guardarPartido(){
+  var yo=(document.getElementById("pt-yo").value||"").trim();
+  var rival=document.getElementById("pt-rival").value;
+  var resultado=document.getElementById("pt-resultado").value;
+  var s1=document.getElementById("pt-s1").value||"";
+  var s2=document.getElementById("pt-s2").value||"";
+  var s3=document.getElementById("pt-s3").value||"";
+  var cancha=document.getElementById("pt-cancha").value;
+  var fecha=document.getElementById("pt-fecha").value;
+  if(!yo){toast("Escribe tu nombre");return;}
+  var ganador=resultado==="gane"?yo:rival;
+  var perdedor=resultado==="gane"?rival:yo;
+  var sets=[s1,s2,s3].filter(function(s){return s&&s!=="--";}).join(", ");
+  try{
+    var ganRef=db.collection("ranking_atmas").doc(slugify(ganador));
+    var perRef=db.collection("ranking_atmas").doc(slugify(perdedor));
+    await db.runTransaction(async function(tx){
+      var ganDoc=await tx.get(ganRef);
+      var perDoc=await tx.get(perRef);
+      var gd=ganDoc.exists?ganDoc.data():{nombre:ganador,pts:0,jugados:0,ganados:0,perdidos:0,pct:0};
+      var pd=perDoc.exists?perDoc.data():{nombre:perdedor,pts:0,jugados:0,ganados:0,perdidos:0,pct:0};
+      gd.pts+=5;gd.jugados+=1;gd.ganados+=1;gd.pct=Math.round(gd.ganados/gd.jugados*100);
+      pd.pts+=1;pd.jugados+=1;pd.perdidos+=1;pd.pct=Math.round((pd.ganados||0)/pd.jugados*100);
+      tx.set(ganRef,gd);
+      tx.set(perRef,pd);
+    });
+    await db.collection("partidos_atmas").add({jugador1:yo,jugador2:rival,ganador:ganador,perdedor:perdedor,sets:sets,cancha:cancha,fecha:fecha,ts:firebase.firestore.FieldValue.serverTimestamp()});
+    closeModal();go("escalerilla");setVista("rank");
+    toast("Partido guardado &middot; "+ganador+" +5 pts &middot; "+perdedor+" +1 pt");
+  }catch(e){
+    console.warn("guardarPartido error:",e);
+    toast("Error al guardar. Intenta de nuevo.");
+  }
+}
+
+/* ─── CANCHA: CALENDARIO + RESERVAS ──────────────────────────── */
+var calMes=new Date().getMonth();
+var calAnio=new Date().getFullYear();
+var calFechaSel=null;
+var calConteo={};
+var slotSeleccionado=null;var slotDurHrs=1;var slotMonto=15000;
+
+async function renderCalendario(){
+  var el=document.getElementById("cal-container");if(!el)return;
+  var mes2=String(calMes+1).padStart(2,"0");
+  var ult=new Date(calAnio,calMes+1,0).getDate();
+  var inicio=calAnio+"-"+mes2+"-01";
+  var fin=calAnio+"-"+mes2+"-"+String(ult).padStart(2,"0");
+  calConteo={};
+  try{var snap=await db.collection("reservas").where("fecha",">=",inicio).where("fecha","<=",fin).get();snap.forEach(function(d){var f=d.data().fecha;calConteo[f]=(calConteo[f]||0)+1;});}catch(e){}
+  var meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  var dh=["D","L","M","M","J","V","S"];
+  var hoy=new Date().toISOString().split("T")[0];
+  var primerDia=new Date(calAnio,calMes,1).getDay();
+  var h='<div class="cal-nav"><button onclick="calMover(-1)" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--verde-osc);line-height:1">&#8249;</button><div style="font-weight:800;font-size:15px">'+meses[calMes]+" "+calAnio+'</div><button onclick="calMover(1)" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--verde-osc);line-height:1">&#8250;</button></div><div class="cal-grid">';
+  dh.forEach(function(d){h+='<div class="cal-hdr">'+d+'</div>';});
+  for(var i=0;i<primerDia;i++)h+='<div class="cal-cell vacio"></div>';
+  for(var d=1;d<=ult;d++){
+    var fs=calAnio+"-"+mes2+"-"+String(d).padStart(2,"0");
+    var esHoy=fs===hoy;var esPas=fs<hoy;var cnt=calConteo[fs]||0;var esSel=fs===calFechaSel;
+    var cls="cal-cell"+(esHoy?" hoy":esPas?" pasado":cnt>0?" tiene":"");
+    if(esSel&&!esHoy)cls+=" sel";
+    var click=esPas?"":"onclick=\"calDia('"+fs+"')\"";
+    h+='<div class="'+cls+'" '+click+'>'+d+(cnt>0&&!esHoy?'<span style="font-size:7px;display:block">'+cnt+'</span>':'')+'</div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+}
+function calMover(dir){calMes+=dir;if(calMes>11){calMes=0;calAnio++;}if(calMes<0){calMes=11;calAnio--;}calFechaSel=null;renderCalendario();document.getElementById("slots-container").innerHTML='<p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Toca un dia del calendario</p>';document.getElementById("can-form").style.display="none";}
+function calDia(fecha){calFechaSel=fecha;var cp=getPerfil()||{};document.getElementById("can-nombre").value=cp.nombre||"";document.getElementById("can-tel").value=cp.tel||"";renderCalendario();slotSeleccionado=null;document.getElementById("can-form").style.display="none";cargarSlots(fecha);}
+
+function slotsDelDia(fecha){var d=new Date(fecha+"T12:00:00");var dia=d.getDay();var esFS=(dia===0||dia===6);var slots=[];if(!esFS){for(var h=8;h<=17;h++)slots.push({hora:String(h).padStart(2,"0")+":00",durHrs:1,monto:15000});}else{[[8,10],[10,12],[12,14]].forEach(function(rng){slots.push({hora:String(rng[0]).padStart(2,"0")+":00",durHrs:2,monto:25000});});for(var h=14;h<=20;h++)slots.push({hora:String(h).padStart(2,"0")+":00",durHrs:1,monto:15000});}return slots;}
+
+async function cargarSlots(fecha){
+  if(!fecha)fecha=calFechaSel;
+  if(!fecha)return;
+  var cont=document.getElementById("slots-container");
+  cont.innerHTML='<p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Cargando disponibilidad...</p>';
+  try{
+    var snap=await db.collection("reservas").where("fecha","==",fecha).get();
+    var ocupadas={};snap.forEach(function(doc){var h=doc.data().hora;ocupadas[h]=(ocupadas[h]||0)+1;});
+    var slots=slotsDelDia(fecha);
+    var html='<p style="font-size:12px;color:var(--suave);margin-bottom:6px">Toca un horario disponible:</p><div class="slot-grid">';
+    slots.forEach(function(slot){
+      var count=ocupadas[slot.hora]||0;var libre=count<4;var sel=slotSeleccionado===slot.hora;
+      var cls="slot"+(sel?" sel":!libre?" lleno":"");
+      var libres=libre?(4-count)+" libre"+(4-count!==1?"s":""):"Sin cupo";
+      html+='<button class="'+cls+'" '+(libre?'onclick="seleccionarSlot(\''+slot.hora+'\','+slot.durHrs+','+slot.monto+')"':' disabled')+'>'+slot.hora+'<span class="sub">'+(slot.durHrs===2?'2 hrs':'1 hr')+' &middot; '+libres+'</span></button>';
+    });
+    html+='</div>';
+    cont.innerHTML=html;
+    document.getElementById("can-form").style.display=slotSeleccionado?"block":"none";
+  }catch(e){cont.innerHTML='<p style="color:#e74c3c;font-size:13px;padding:12px 0">Error al cargar disponibilidad.</p>';}
+}
+function seleccionarSlot(hora,durHrs,monto){slotSeleccionado=hora;slotDurHrs=durHrs;slotMonto=monto;document.getElementById("can-form").style.display="block";cargarSlots(calFechaSel);actualizarPagoCancha();}
+function actualizarPagoCancha(){var monto=slotMonto||15000;var mpLink=monto===15000?MP.cancha1hr:MP.cancha2hrs;var el=document.getElementById("can-pago");if(el)el.innerHTML=pagoHTML(monto,"arriendo de cancha",mpLink);}
+
+async function reservarCancha(){
+  var nombre=(document.getElementById("can-nombre").value||"").trim();
+  var tel=(document.getElementById("can-tel").value||"").trim();
+  var fecha=calFechaSel;
+  var cancha=document.getElementById("can-cancha").value;
+  var monto=slotMonto||15000;var durHrs=slotDurHrs||1;
+  var durText=durHrs===2?"2 horas - $25.000":"1 hora - $15.000";
+  if(!nombre){toast("Escribe tu nombre");return;}
+  if(!slotSeleccionado){toast("Selecciona un horario");return;}
+  var hIni=parseInt(slotSeleccionado.split(":")[0]);
+  var horaFin=String(hIni+durHrs).padStart(2,"0")+":00";
+  var fechaFmt=fecha?fecha.split("-").reverse().join("/"):"-";
+  try{
+    await db.collection("reservas").add({nombre:nombre,tel:tel,fecha:fecha,hora:slotSeleccionado,horaFin:horaFin,cancha:cancha,duracion:durText,durHrs:durHrs,monto:monto,ts:firebase.firestore.FieldValue.serverTimestamp()});
+    var horaConf=slotSeleccionado;
+    slotSeleccionado=null;slotDurHrs=1;slotMonto=15000;calFechaSel=null;
+    renderCalendario();
+    document.getElementById("slots-container").innerHTML='<div style="text-align:center;padding:16px 0"><div style="font-size:48px">&#127937;</div><div style="font-weight:900;color:var(--verde-osc);font-size:17px;margin:8px 0">Cancha reservada!</div><div style="font-size:13px;color:var(--suave)">'+fechaFmt+' &middot; '+horaConf+' - '+horaFin+'<br>'+cancha+'</div></div>'+pagoHTML(monto,"arriendo de cancha",monto===15000?MP.cancha1hr:MP.cancha2hrs);
+    document.getElementById("can-form").style.display="none";
+  }catch(e){toast("Error al reservar. Intenta de nuevo.");}
+}
+
+/* ─── MODALES ─────────────────────────────────────────────────── */
+function openModal(tipo,idx){
+  var html="";
+  if(tipo==="torneo"){
+    var t=torneos[idx];var perfil=getPerfil()||{};
+    var turnoField=t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select id="ti-turno"><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':"";
+    var mpLink=t.monto===20000?MP.torneo20:t.monto===15000?MP.torneo15:MP.escalerilla;
+    html='<h3>Inscripcion &middot; '+t.n+'</h3><div class="field"><label>Tu nombre</label><input id="ti-nombre" placeholder="Ej: Juan Perez" value="'+(perfil.nombre||"")+'"></div><div class="field"><label>Telefono</label><input id="ti-tel" type="tel" placeholder="+569 XXXX XXXX" value="'+(perfil.tel||"")+'"></div>'+turnoField+'<button class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:4px">Confirmar inscripcion</button>'+pagoHTML(t.monto,t.n,mpLink)+'<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
+  }else if(tipo==="clase"){
+    var planes={iniciacion:{t:"Iniciacion - Sabados",opciones:[{l:"1 dia - Sabados",v:60000}]},intermedio:{t:"Intermedios",opciones:[{l:"1 dia",v:70000},{l:"2 dias",v:120000},{l:"3 dias",v:150000}]},avanzado:{t:"Avanzados",opciones:[{l:"1 dia",v:80000},{l:"2 dias",v:120000},{l:"3 dias",v:150000}]},individual:{t:"Clases individuales",opciones:[{l:"4 clases",v:120000},{l:"8 clases",v:200000}]}};
+    var plan=planes[idx]||planes.individual;
+    var optsHtml=plan.opciones.map(function(o){return'<option value="'+o.v+'">'+o.l+' &middot; $'+o.v.toLocaleString("es-CL")+'</option>';}).join("");
+    html='<h3>Inscripcion &middot; '+plan.t+'</h3><div class="field"><label>Nombre</label><input id="cls-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>Plan</label><select id="cls-plan" onchange="actualizarPagoClase()">'+optsHtml+'</select></div><div id="cls-pago"></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';setTimeout(actualizarPagoClase,50);
+  }else if(tipo==="encordado"){
+    html='<h3>Solicitar encordado ATMAS</h3><div class="field"><label>Tu nombre</label><input id="enc-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>Tipo</label><select id="enc-tipo"><option>Control</option><option>Competencia</option><option>Potencia</option><option>Hibrido</option></select></div><button class="btn wa" onclick="enviarEncordadoWA()">Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
+  }else if(tipo==="partido"){
+    var perfil=getPerfil();var miNombre=perfil?perfil.nombre:"";
+    var oh="";rankingData.forEach(function(p){if(p[0]!==miNombre)oh+='<option>'+p[0]+'</option>';});
+    html='<h3>Registrar partido</h3><div class="field"><label>Tu nombre</label><input id="pt-yo" value="'+miNombre+'" placeholder="Tu nombre"'+(miNombre?' readonly style="background:#f4f5f7"':'')+' ></div><div class="field"><label>Oponente</label><select id="pt-rival">'+oh+'</select></div><div class="field"><label>Resultado</label><select id="pt-resultado"><option value="gane">Gane</option><option value="perdi">Perdi</option></select></div><div class="field"><label>Sets</label><div class="sets"><input id="pt-s1" placeholder="6-3"><input id="pt-s2" placeholder="4-6"><input id="pt-s3" placeholder="--"></div></div><div class="field"><label>Cancha</label><select id="pt-cancha"><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Fecha</label><input id="pt-fecha" type="date" value="'+new Date().toISOString().split("T")[0]+'"></div><button class="btn" onclick="guardarPartido()">Guardar partido</button><button class="btn sec" onclick="closeModal()">Cancelar</button>';
+  }else if(tipo==="socio"){openSocioModal();return;
+  }else if(tipo==="jugador"){
+    html='<h3>Agregar jugador</h3><div class="field"><label>Nombre</label><input id="jg-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>Puntos iniciales</label><input id="jg-pts" type="number" value="0"></div><button class="btn" onclick="confirmarJugador()">Agregar a la escalerilla</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
+  }
+  document.getElementById("sheet-content").innerHTML=html;
+  document.getElementById("modal").classList.add("show");
+}
+
+function actualizarPagoClase(){var sel=document.getElementById("cls-plan");if(!sel)return;var monto=parseInt(sel.value);document.getElementById("cls-pago").innerHTML=pagoHTML(monto,"inscripcion academia",MP.inscripcion);}
+function enviarEncordadoWA(){var nombre=(document.getElementById("enc-nombre").value||"").trim();var tipo=document.getElementById("enc-tipo").value;var msg=encodeURIComponent("Hola ATMAS! Quiero solicitar encordado. Nombre: "+(nombre||"sin indicar")+" Tipo: "+tipo);closeModal();window.open("https://wa.me/56956343558?text="+msg,"_blank");}
+
+async function confirmarJugador(){
+  var nombre=(document.getElementById("jg-nombre").value||"").trim();
+  var pts=parseInt(document.getElementById("jg-pts").value||"0",10)||0;
+  if(!nombre){toast("Escribe el nombre del jugador");return;}
+  try{
+    await db.collection("ranking_atmas").doc(slugify(nombre)).set({nombre:nombre,pts:pts,jugados:0,ganados:0,perdidos:0,pct:0},{merge:true});
+    closeModal();toast("Jugador agregado al ranking");
+  }catch(e){
+    toast("Error al agregar jugador");
+  }
+}
+
+async function inscribirTorneo(idx){
+  var nombre=(document.getElementById("ti-nombre").value||"").trim();
+  var tel=(document.getElementById("ti-tel").value||"").trim();
+  var turnoEl=document.getElementById("ti-turno");var turno=turnoEl?turnoEl.value:"";
+  var t=torneos[idx];
+  if(!nombre){toast("Escribe tu nombre");return;}
+  try{
+    var existe=await db.collection("inscripciones_atmas").where("torneo","==",t.n).where("nombre","==",nombre).get();
+    if(!existe.empty){toast("Ya estas inscrito en este torneo");return;}
+    await db.collection("inscripciones_atmas").add({nombre:nombre,tel:tel,torneo:t.n,turno:turno,monto:t.monto,estado:"pendiente_pago",ts:firebase.firestore.FieldValue.serverTimestamp()});
+    toast("Inscripcion registrada - Ahora completa el pago");
+  }catch(e){toast("Error al inscribir. Intenta de nuevo.");}
+}
+
+/* ─── MEMBRESIA ───────────────────────────────────────────────── */
+const MESES_INSCRIPCION=["Marzo","Junio","Septiembre","Diciembre"];
+function openSocioModal(){var html='<h3>Membresia ATMAS</h3><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia" style="font-weight:800">Inscripcion trimestral</span><span class="hrs" style="color:var(--verde-osc);font-weight:800">$30.000</span></div><div style="font-size:12px;color:var(--suave);padding:4px 0">Se paga en: '+MESES_INSCRIPCION.join(' &middot; ')+'</div></div><div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"><button class="btn" onclick="pagarMembresia(\'mensualidad\',90000)">Mensualidad socio &middot; $90.000/mes</button><button class="btn sec" onclick="pagarMembresia(\'inscripcion\',30000)">Inscripcion trimestral &middot; $30.000</button></div><button class="btn sec" onclick="closeModal()">Cerrar</button>';document.getElementById("sheet-content").innerHTML=html;document.getElementById("modal").classList.add("show");}
+function pagarMembresia(tipo,monto){var label=tipo==="mensualidad"?"mensualidad socio ATMAS":"inscripcion trimestral ATMAS";var mpLink=tipo==="mensualidad"?MP.socio:MP.inscripcion;document.getElementById("sheet-content").innerHTML='<h3>Pago '+tipo+'</h3>'+pagoHTML(monto,label,mpLink)+'<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';}
+document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});
+
+/* ─── ADMIN PIN ───────────────────────────────────────────────── */
+const ADMIN_PIN="2025";var adminUnlocked=false;var pinBuffer="";
+function abrirAdmin(){if(adminUnlocked){go("admin");return;}pinBuffer="";document.getElementById("sheet-content").innerHTML='<h3 style="text-align:center">Panel de administracion</h3><div class="pin-wrap"><p style="color:var(--suave);font-size:13px">Ingresa el PIN de acceso</p><div class="pin-dots" id="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div><div class="pin-pad">'+[1,2,3,4,5,6,7,8,9,"",0,"X"].map(function(k){var kTxt=(k===""?"&nbsp;":String(k));return'<button class="pin-btn" onclick="pinPress(\''+k+'\')">'+ kTxt+'</button>';}).join('')+'</div><p id="pin-err" style="color:#b91c1c;font-size:12px;min-height:16px"></p></div>';document.getElementById("modal").classList.add("show");}
+function pinPress(k){if(k==="X"){pinBuffer=pinBuffer.slice(0,-1);}else if(pinBuffer.length<4&&k!==""){pinBuffer+=k;}for(var i=0;i<4;i++){var d=document.getElementById("pd"+i);if(d)d.classList.toggle("filled",i<pinBuffer.length);}if(pinBuffer.length===4){if(pinBuffer===ADMIN_PIN){adminUnlocked=true;closeModal();go("admin");}else{document.getElementById("pin-err").textContent="PIN incorrecto";pinBuffer="";for(var i=0;i<4;i++){var d=document.getElementById("pd"+i);if(d)d.classList.remove("filled");}}}}
+
+/* ─── ADMIN PANEL ─────────────────────────────────────────────── */
+async function renderAdmin(){
+  var el=document.getElementById("admin-body");if(!el)return;
+  var hoy=new Date().toISOString().split("T")[0];
+  el.innerHTML='<div class="admin-header"><div><h2>Panel Admin</h2><p>Club Las Avestruces &middot; ATMAS</p></div><button onclick="adminUnlocked=false;go(\'inicio\')" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer">Salir</button></div><div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"><div class="admin-stat"><div class="n" id="a-res-count">...</div><div class="l">Reservas hoy</div></div><div class="admin-stat"><div class="n" id="a-insc-count">...</div><div class="l">Inscripciones</div></div><div class="admin-stat"><div class="n" id="a-total">...</div><div class="l">Total semana</div></div></div><div class="admin-section"><div class="section-title">Proximas reservas</div><div id="a-reservas"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Inscripciones torneo</div><div id="a-inscripciones"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div><button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div><div style="height:20px"></div>';
+  try{
+    var snap=await db.collection("reservas").where("fecha",">=",hoy).get();
+    var docs=[];snap.forEach(function(d){docs.push(d.data());});
+    docs.sort(function(a,b){return(a.fecha+a.hora)<(b.fecha+b.hora)?-1:1;});
+    document.getElementById("a-res-count").textContent=docs.filter(function(r){return r.fecha===hoy;}).length;
+    var fin=new Date();fin.setDate(fin.getDate()+7);var finStr=fin.toISOString().split("T")[0];
+    document.getElementById("a-total").textContent="$"+docs.filter(function(r){return r.fecha<=finStr;}).reduce(function(s,r){return s+(r.monto||0);},0).toLocaleString("es-CL");
+    if(docs.length===0){document.getElementById("a-reservas").innerHTML='<p style="color:var(--suave);font-size:13px">Sin reservas proximas</p>';}
+    else{var h="";docs.slice(0,20).forEach(function(r){var fd=r.fecha?r.fecha.split("-").reverse().join("/"):"-";var esHoy=r.fecha===hoy;h+='<div class="res-card" style="border-color:'+(esHoy?"var(--verde-osc)":"var(--verde)")+'"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+' </span><span class="rc-date">'+fd+' '+(r.hora||"")+' </span></div><div class="rc-sub">'+(r.cancha||"")+' &middot; '+(r.duracion||"1 hora")+' &middot; $'+(r.monto||0).toLocaleString("es-CL")+(esHoy?" &middot; <b>HOY</b>":"")+' </div></div>';});document.getElementById("a-reservas").innerHTML=h;}
+  }catch(e){document.getElementById("a-reservas").innerHTML='<p style="color:var(--suave);font-size:13px">Error al cargar reservas</p>';}
+  try{
+    var snap2=await db.collection("inscripciones_atmas").orderBy("ts","desc").limit(40).get();
+    document.getElementById("a-insc-count").textContent=snap2.size;
+    if(snap2.size===0){document.getElementById("a-inscripciones").innerHTML='<p style="color:var(--suave);font-size:13px">Sin inscripciones</p>';}
+    else{var h2="";snap2.forEach(function(doc){var r=doc.data();h2+='<div class="res-card" style="border-color:#6366f1"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+' </span><span style="font-size:11px;color:var(--suave)">'+(r.torneo||r.categoria||"")+' </span></div><div class="rc-sub">'+(r.tel||"")+' &middot; '+(r.estado||"pendiente")+' </div></div>';});document.getElementById("a-inscripciones").innerHTML=h2;}
+  }catch(e){}
+  var rh="";rankingData.slice(0,10).forEach(function(p,i){rh+='<div class="lcard"><div class="rank-pos" style="width:24px;font-size:12px">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+p[0]+'</div><div class="ds">'+p[1]+' pts &middot; '+p[3]+'G '+p[4]+'P</div></div></div>';});
+  document.getElementById("a-ranking-admin").innerHTML=rh||'<p style="color:var(--suave);font-size:13px">Cargando ranking...</p>';
+}
+
+/* ─── CUADROS ─────────────────────────────────────────────────── */
+function generarYRenderCuadros(){cuadros=generarCuadros();renderBracket("oro");}
+
+/* ─── INICIO ──────────────────────────────────────────────────── */
+(function(){
+  seedRankingIfEmpty().then(function(){iniciarRankingLive();generarYRenderCuadros();});
+  var p=getPerfil();
+  if(p){mostrarApp();renderPerfil();}
+  else{document.getElementById("login-screen").classList.add("show");document.querySelector("header").style.display="none";document.querySelector(".content").style.display="none";document.querySelector(".tabbar").style.display="none";}
+})();
