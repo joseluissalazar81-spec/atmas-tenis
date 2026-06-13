@@ -18,7 +18,6 @@ function initials(n){return n.split(" ").slice(0,2).map(function(x){return x[0];
 function avatarColor(n){var h=0;for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%avatarColors.length;return avatarColors[h];}
 function slugify(n){return n.toLowerCase().replace(/[^a-z0-9]/g,"_");}
 
-/* ─── DATOS INICIALES (solo para semilla) ─────────────────────── */
 var SEED_PLAYERS=[
   ["Rodrigo Bernal",66,14,13,1,92.86],["Mauricio Morales",64,16,12,4,75],
   ["Felipe Munoz",60,13,11,2,84.62],["Jonathan Munoz",59,16,11,5,68.75],
@@ -37,7 +36,6 @@ var SEED_PLAYERS=[
   ["Waldo Escalona",6,6,0,6,0],["Cesar Moreno",6,6,0,6,0]
 ];
 
-/* ─── RANKING LIVE DESDE FIRESTORE ───────────────────────────── */
 var rankingData=[];
 var rankingListener=null;
 
@@ -51,7 +49,6 @@ async function seedRankingIfEmpty(){
       batch.set(ref,{nombre:p[0],pts:p[1],jugados:p[2],ganados:p[3],perdidos:p[4],pct:p[5]},{merge:true});
     });
     await batch.commit();
-    console.log("Ranking sembrado en Firestore");
   }catch(e){console.warn("Seed error:",e);}
 }
 
@@ -65,10 +62,8 @@ function iniciarRankingLive(){
         rankingData.push([d.nombre,d.pts||0,d.jugados||0,d.ganados||0,d.perdidos||0,d.pct||0,doc.id]);
       });
       if(rankingData.length===0)rankingData=SEED_PLAYERS.map(function(p){return p.slice();});
-      renderRanking();
-      actualizarStats();
+      renderRanking();actualizarStats();
     },function(e){
-      console.warn("Ranking listener error:",e);
       rankingData=SEED_PLAYERS.map(function(p){return p.slice();});
       renderRanking();
     });
@@ -106,7 +101,6 @@ function tie(a,b,w){function c(x){return x?(x===w?"p w":"p"):"p tbd";}return '<d
 function renderBracket(k){var bk='<div class="round"><h4>Ronda 16</h4>';cuadros[k].forEach(function(t){bk+=tie(t[0],t[1],t[2]);});bk+='</div><div class="round"><h4>Cuartos</h4>';for(var i=0;i<4;i++)bk+=tie(null,null);bk+='</div><div class="round"><h4>Semifinal</h4>';for(var i=0;i<2;i++)bk+=tie(null,null);bk+='</div><div class="round"><h4>Final</h4>'+tie(null,null)+'</div>';document.getElementById("bracket").innerHTML=bk;}
 function setCuadro(k){renderBracket(k);document.getElementById("segOro").classList.toggle("on",k==="oro");document.getElementById("segPlata").classList.toggle("on",k==="plata");}
 
-/* ─── PROFESORES ──────────────────────────────────────────────── */
 const profesores=[{nombre:"Marcelo Escalona G.",rol:"Director ATMAS &middot; Profesor de Tenis",bio:"Entrenador certificado con mas de 15 anos de experiencia en formacion y competencia. Director de ATMAS Academia de Tenis AT+ en el Club Las Avestruces, Quilicura. Especialista en desarrollo de jugadores desde iniciacion hasta alto rendimiento.",certs:{"PTR":["Nivel 1","Nivel 2","Nivel 3","High Performance"],"ITF":["Nivel 1","Nivel 2","Play and Stay"],"PST":["Nivel 1 Entrenador Nacional","Nivel 2"],"Play Tenis":["Profesor de Tenis","Pelota Roja","Pelota Naranja"]}}];
 
 function renderProfesores(){
@@ -124,7 +118,6 @@ function renderProfesores(){
 }
 renderProfesores();
 
-/* ─── VERDADES INCOMODAS ──────────────────────────────────────── */
 const verdades=[
   {n:1,t:"Quieres mejorar tu tenis?",url:"https://youtube.com/watch?v=jhkxConxVxU&feature=shared"},
   {n:2,t:"El pasapelotas no te gana.",url:null},
@@ -138,15 +131,16 @@ function renderVerdades(){
   var el=document.getElementById("vi-list");if(!el)return;
   var h="";
   verdades.forEach(function(v){
-    var row='<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)"><div style="background:var(--lima);color:var(--negro);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">'+v.n+'</div><div style="flex:1;font-size:14px;font-weight:600;color:#fff">'+v.t+'</div><div style="font-size:18px;color:rgba(255,255,255,.4)">&#9654;</div></div>';
-    if(v.url){h+='<a href="'+v.url+'" target="_blank" style="text-decoration:none;display:block">'+row+'</a>';}
-    else{h+='<div style="opacity:.75;cursor:pointer" onclick="toast(\'Video proximamente...\')">'+row+'</div>';}
+    if(v.url){
+      h+='<a href="'+v.url+'" target="_blank" rel="noopener" style="text-decoration:none;display:block"><div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)"><div style="background:var(--lima);color:var(--negro);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">'+v.n+'</div><div style="flex:1"><div style="font-size:14px;font-weight:600;color:#fff">'+v.t+'</div><div style="font-size:10px;color:var(--lima);font-weight:700;margin-top:2px">&#9654; Ver en YouTube</div></div><div style="background:var(--lima);color:var(--negro);border-radius:20px;padding:3px 8px;font-size:10px;font-weight:800;white-space:nowrap">NUEVO</div></div></a>';
+    }else{
+      h+='<div style="opacity:.55;display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)"><div style="background:rgba(255,255,255,.15);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">'+v.n+'</div><div style="flex:1;font-size:14px;font-weight:600;color:#fff">'+v.t+'</div><div style="font-size:10px;color:rgba(255,255,255,.4);white-space:nowrap">Proximo</div></div>';
+    }
   });
   el.innerHTML=h;
 }
 renderVerdades();
 
-/* ─── MERCADO PAGO ────────────────────────────────────────────── */
 const MP={cancha1hr:"https://mpago.li/2Up5tJ7",cancha2hrs:"https://mpago.la/1JgQ4Y5",torneo20:"https://mpago.la/REEMPLAZAR_T20",torneo15:"https://mpago.la/REEMPLAZAR_T15",escalerilla:"https://mpago.la/REEMPLAZAR_ESC",socio:"https://mpago.la/REEMPLAZAR_SOCIO",inscripcion:"https://mpago.la/REEMPLAZAR_INSC"};
 function pagoHTML(monto,label,link){
   var t=PAGO;
@@ -154,7 +148,6 @@ function pagoHTML(monto,label,link){
 }
 function registrarIntentoPago(label,monto){try{db.collection("pagos_mp").add({label:label,monto:monto,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}}
 
-/* ─── AUTH ────────────────────────────────────────────────────── */
 var auth=null;
 try{auth=firebase.auth();}catch(e){console.warn("Auth no disponible:",e);}
 
@@ -162,7 +155,7 @@ function getPerfil(){try{return JSON.parse(localStorage.getItem("atmas_perfil")|
 function savePerfil(p){
   localStorage.setItem("atmas_perfil",JSON.stringify(p));
   var uid=auth&&auth.currentUser?auth.currentUser.uid:null;
-  var docId=uid||(p.rut?p.rut.replace(/\./g,"").replace("-",""):null);
+  var docId=uid||(p.rut?p.rut.replace(/\./g,"").replace(/-/g,""):null);
   if(docId){try{db.collection("jugadores").doc(docId).set(p,{merge:true});}catch(e){}}
 }
 function esAdmin(nombre){if(!nombre)return false;var n=nombre.toLowerCase().trim();return n.includes("marcelo")&&n.includes("escalona");}
@@ -171,14 +164,18 @@ function formatRut(el){var v=el.value.replace(/[^0-9kK]/g,"");if(v.length>1){var
 function showAuthStep1(){document.getElementById("auth-step1").style.display="";document.getElementById("auth-email").style.display="none";document.getElementById("auth-rut").style.display="none";document.getElementById("auth-step2").style.display="none";}
 function showAuthEmail(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-email").style.display="";}
 function showAuthRut(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-rut").style.display="";}
-function showAuthStep2(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-email").style.display="none";document.getElementById("auth-step2").style.display="";}
+function showAuthStep2(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-email").style.display="none";document.getElementById("auth-rut").style.display="none";document.getElementById("auth-step2").style.display="";}
 
 async function loginGoogle(){
   if(!auth){toast("Auth no disponible");return;}
   try{
     var provider=new firebase.auth.GoogleAuthProvider();
     await auth.signInWithPopup(provider);
-  }catch(e){toast("Error al iniciar con Google: "+e.message);}
+  }catch(e){
+    if(e.code==="auth/configuration-not-found"||e.code==="auth/internal-error"){
+      toast("Google Auth no activado aun. Usa RUT por ahora.");showAuthRut();
+    }else{toast("Error Google: "+e.message);}
+  }
 }
 
 async function loginEmail(){
@@ -188,7 +185,13 @@ async function loginEmail(){
   if(!em||!pw){toast("Ingresa email y contrasena");return;}
   try{
     await auth.signInWithEmailAndPassword(em,pw);
-  }catch(e){toast("Error: "+e.message);}
+  }catch(e){
+    if(e.code==="auth/configuration-not-found"||e.code==="auth/internal-error"){
+      toast("Email Auth no activado aun. Usa RUT por ahora.");showAuthRut();
+    }else if(e.code==="auth/user-not-found"||e.code==="auth/wrong-password"){
+      toast("Email o contrasena incorrectos");
+    }else{toast("Error: "+e.message);}
+  }
 }
 
 async function registrarEmail(){
@@ -199,7 +202,11 @@ async function registrarEmail(){
   if(pw.length<6){toast("Minimo 6 caracteres");return;}
   try{
     await auth.createUserWithEmailAndPassword(em,pw);
-  }catch(e){toast("Error: "+e.message);}
+  }catch(e){
+    if(e.code==="auth/configuration-not-found"||e.code==="auth/internal-error"){
+      toast("Email Auth no activado aun. Usa RUT por ahora.");showAuthRut();
+    }else{toast("Error: "+e.message);}
+  }
 }
 
 async function onAuthStateChanged(user){
@@ -241,16 +248,37 @@ async function completarPerfil(){
 }
 
 async function recuperarPerfil(){
-  var rut=(document.getElementById("rec-rut").value||"").trim();
+  var rutEl=document.getElementById("rec-rut");
+  var rut=(rutEl?rutEl.value||"": "").trim();
   if(!rut){toast("Ingresa tu RUT");return;}
   toast("Buscando perfil...");
   try{
+    var rutNorm=rut.replace(/\./g,"").replace(/-/g,"");
+    var direct=await db.collection("jugadores").doc(rutNorm).get();
+    if(direct.exists&&direct.data().nombre){
+      var p=direct.data();
+      savePerfil(p);mostrarApp();renderPerfil();go("inicio");
+      toast("Bienvenido de vuelta, "+p.nombre+"!");return;
+    }
     var snap=await db.collection("jugadores").where("rut","==",rut).limit(1).get();
-    if(snap.empty){toast("RUT no encontrado. Usa Google o Email.");return;}
-    var p=snap.docs[0].data();
-    savePerfil(p);mostrarApp();renderPerfil();go("inicio");
-    toast("Bienvenido de vuelta, "+p.nombre+"!");
-  }catch(e){toast("Error al buscar perfil.");}
+    if(!snap.empty){
+      var p=snap.docs[0].data();
+      savePerfil(p);mostrarApp();renderPerfil();go("inicio");
+      toast("Bienvenido de vuelta, "+p.nombre+"!");return;
+    }
+    toast("RUT no encontrado. Crea tu perfil.");
+    showAuthStep2();
+    var rEl=document.getElementById("reg-rut");if(rEl)rEl.value=rut;
+  }catch(e){
+    var msg=e.message||"";
+    if(msg.includes("permission")||msg.includes("Missing or insufficient")||(e.code&&e.code.includes("permission"))){
+      toast("Sin acceso al servidor. Crea tu perfil nuevamente.");
+      showAuthStep2();
+      var rEl2=document.getElementById("reg-rut");if(rEl2)rEl2.value=rut;
+    }else{
+      toast("Error de conexion. Verifica tu red.");
+    }
+  }
 }
 
 function registrarPerfil(){completarPerfil();}
@@ -278,14 +306,11 @@ function renderPerfil(){
   var ini=initials(p.nombre);var col=avatarColor(p.nombre);
   var socioTag=p.socio?'<span class="cupos" style="background:#ffd700;color:#7a5c00">SOCIO</span>':'<span class="cupos">Sin membresia</span>';
   var pct=jugador?jugador[5]:0;
-  var racha=jugador?Math.max(0,jugador[3]-jugador[4]):0;
   var statsHtml=jugador?'<div class="mycard" style="margin-bottom:14px"><div class="pos">Posicion #'+pos+' &middot; Escalerilla ATMAS</div><div class="name">'+p.nombre+'</div><div class="row"><div><span class="big">'+jugador[1]+'</span><span class="cap">Puntos</span></div><div><span class="big">'+jugador[3]+'</span><span class="cap">Ganados</span></div><div><span class="big">'+jugador[4]+'</span><span class="cap">Perdidos</span></div><div><span class="big">'+pct+'%</span><span class="cap">Rendimiento</span></div></div></div>':'<div class="aviso">Aun no tienes partidos en la escalerilla. Juega y sube tu ranking!</div>';
   var estiloTag=(p.estilo||p.golpe)?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+[p.estilo,p.golpe,p.superficie].filter(Boolean).map(function(x){return'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600">'+x+'</span>';}).join('')+'</div>':"";
   el.innerHTML='<div style="display:flex;align-items:center;gap:13px;background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><div class="avatar" style="background:'+col+';width:54px;height:54px;font-size:19px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div style="font-weight:800;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;color:var(--suave)">RUT: '+p.rut+'</div><div style="font-size:12px;color:var(--suave);margin-top:2px">'+(p.tel||"")+' </div>'+estiloTag+'</div>'+socioTag+'</div>'+statsHtml+'<div id="mis-partidos-pend"></div><div class="section-title">Mis ultimos partidos</div><div id="historial-list"><p style="color:var(--suave);font-size:13px;padding:8px 4px">Cargando...</p></div><div class="section-title">Mis proximas reservas</div><div id="mis-reservas-list"><p style="color:var(--suave);font-size:13px;padding:8px 4px">Cargando...</p></div><button class="btn" onclick="openModal(\'partido\')">+ Registrar partido</button><button class="btn sec" style="margin-top:8px" onclick="openModal(\'caracteristicas\')">Mi estilo de juego</button><button class="btn dark" style="margin-top:8px" onclick="openModal(\'socio\')">Membresia ATMAS</button><button class="btn sec" style="margin-top:8px" onclick="go(\'cancha\')">Reservar cancha</button><button class="btn sec" style="margin-top:8px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesion</button><p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
   cargarMisReservas(p.nombre);cargarPartidosPendientes(p.nombre);cargarHistorial(p.nombre);mostrarPopupTorneos();
 }
-
-
 
 async function cargarHistorial(nombre){
   var el=document.getElementById("historial-list");if(!el)return;
@@ -396,7 +421,6 @@ async function renderPerfilAdmin(p,el){
   }catch(e){}
 }
 
-/* ─── TORNEOS ─────────────────────────────────────────────────── */
 const torneos=[
   {n:"Torneo Novicios 4",f:"11 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"6 cupos",monto:20000},
   {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"16 cupos",monto:15000},
@@ -418,7 +442,6 @@ async function cargarInscripciones(){
 }
 cargarInscripciones();
 
-/* ─── PARTIDOS: GUARDAR CON TRANSACCION ATOMICA ──────────────── */
 async function guardarPartido(){
   var yo=(document.getElementById("pt-yo").value||"").trim();
   var rival=document.getElementById("pt-rival").value;
@@ -442,7 +465,6 @@ async function guardarPartido(){
     document.getElementById("sheet-content").innerHTML='<div style="text-align:center;padding:16px 0"><div style="font-size:48px">&#128203;</div><div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido enviado</div><div style="font-size:13px;color:var(--suave);line-height:1.6">Enviado al rival para confirmar.<br>Si disputa el resultado, Marcelo Escalona decide.<br>Los puntos se suman una vez confirmado.</div></div><button class="btn sec" style="margin-top:16px" onclick="closeModal()">Entendido</button>';
     document.getElementById("modal").classList.add("show");
   }catch(e){
-    console.warn("guardarPartido error:",e);
     toast("Error al guardar. Intenta de nuevo.");
   }
 }
@@ -477,7 +499,6 @@ async function rechazarPartido(docId){
   }catch(e){toast("Error al rechazar partido.");}
 }
 
-/* ─── CANCHA: CALENDARIO + RESERVAS ──────────────────────────── */
 var calMes=new Date().getMonth();
 var calAnio=new Date().getFullYear();
 var calFechaSel=null;
@@ -561,7 +582,6 @@ async function reservarCancha(){
   }catch(e){toast("Error al reservar. Intenta de nuevo.");}
 }
 
-/* ─── MODALES ─────────────────────────────────────────────────── */
 function openModal(tipo,idx){
   var html="";
   if(tipo==="torneo"){
@@ -601,9 +621,7 @@ async function confirmarJugador(){
   try{
     await db.collection("ranking_atmas").doc(slugify(nombre)).set({nombre:nombre,pts:pts,jugados:0,ganados:0,perdidos:0,pct:0},{merge:true});
     closeModal();toast("Jugador agregado al ranking");
-  }catch(e){
-    toast("Error al agregar jugador");
-  }
+  }catch(e){toast("Error al agregar jugador");}
 }
 
 async function inscribirTorneo(idx){
@@ -620,18 +638,15 @@ async function inscribirTorneo(idx){
   }catch(e){toast("Error al inscribir. Intenta de nuevo.");}
 }
 
-/* ─── MEMBRESIA ───────────────────────────────────────────────── */
 const MESES_INSCRIPCION=["Marzo","Junio","Septiembre","Diciembre"];
 function openSocioModal(){var html='<h3>Membresia ATMAS</h3><div class="infobox" style="margin-bottom:12px"><div class="hrow"><span class="dia" style="font-weight:800">Inscripcion trimestral</span><span class="hrs" style="color:var(--verde-osc);font-weight:800">$30.000</span></div><div style="font-size:12px;color:var(--suave);padding:4px 0">Se paga en: '+MESES_INSCRIPCION.join(' &middot; ')+'</div></div><div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"><button class="btn" onclick="pagarMembresia(\'mensualidad\',90000)">Mensualidad socio &middot; $90.000/mes</button><button class="btn sec" onclick="pagarMembresia(\'inscripcion\',30000)">Inscripcion trimestral &middot; $30.000</button></div><button class="btn sec" onclick="closeModal()">Cerrar</button>';document.getElementById("sheet-content").innerHTML=html;document.getElementById("modal").classList.add("show");}
 function pagarMembresia(tipo,monto){var label=tipo==="mensualidad"?"mensualidad socio ATMAS":"inscripcion trimestral ATMAS";var mpLink=tipo==="mensualidad"?MP.socio:MP.inscripcion;document.getElementById("sheet-content").innerHTML='<h3>Pago '+tipo+'</h3>'+pagoHTML(monto,label,mpLink)+'<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';}
 document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});
 
-/* ─── ADMIN PIN ───────────────────────────────────────────────── */
 const ADMIN_PIN="2025";var adminUnlocked=false;var pinBuffer="";
 function abrirAdmin(){if(adminUnlocked){go("admin");return;}pinBuffer="";document.getElementById("sheet-content").innerHTML='<h3 style="text-align:center">Panel de administracion</h3><div class="pin-wrap"><p style="color:var(--suave);font-size:13px">Ingresa el PIN de acceso</p><div class="pin-dots" id="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div><div class="pin-pad">'+[1,2,3,4,5,6,7,8,9,"",0,"X"].map(function(k){var kTxt=(k===""?"&nbsp;":String(k));return'<button class="pin-btn" onclick="pinPress(\''+k+'\')">'+ kTxt+'</button>';}).join('')+'</div><p id="pin-err" style="color:#b91c1c;font-size:12px;min-height:16px"></p></div>';document.getElementById("modal").classList.add("show");}
 function pinPress(k){if(k==="X"){pinBuffer=pinBuffer.slice(0,-1);}else if(pinBuffer.length<4&&k!==""){pinBuffer+=k;}for(var i=0;i<4;i++){var d=document.getElementById("pd"+i);if(d)d.classList.toggle("filled",i<pinBuffer.length);}if(pinBuffer.length===4){if(pinBuffer===ADMIN_PIN){adminUnlocked=true;closeModal();go("admin");}else{document.getElementById("pin-err").textContent="PIN incorrecto";pinBuffer="";for(var i=0;i<4;i++){var d=document.getElementById("pd"+i);if(d)d.classList.remove("filled");}}}}
 
-/* ─── ADMIN PANEL ─────────────────────────────────────────────── */
 async function renderAdmin(){
   var el=document.getElementById("admin-body");if(!el)return;
   var hoy=new Date().toISOString().split("T")[0];
@@ -675,10 +690,8 @@ async function renderAdmin(){
   document.getElementById("a-ranking-admin").innerHTML=rh||'<p style="color:var(--suave);font-size:13px">Cargando ranking...</p>';
 }
 
-/* ─── CUADROS ─────────────────────────────────────────────────── */
 function generarYRenderCuadros(){cuadros=generarCuadros();renderBracket("oro");}
 
-/* ─── CUADRO TORNEO NOVICIOS 3 ─────────────────────────────────── */
 var NOVICIOS3_SEED={
   nombre:"Torneo Novicios 3",fecha:"Sabado 13 Junio 2026",
   octavos:[
@@ -790,7 +803,6 @@ async function guardarGanadorPartido(slot){
   }catch(e){toast("Error al guardar ganador.");}
 }
 
-/* ─── INICIO ──────────────────────────────────────────────────── */
 (function(){
   seedRankingIfEmpty().then(function(){iniciarRankingLive();generarYRenderCuadros();});
   seedCuadroNovicios3().then(function(){iniciarCuadroLive();});
