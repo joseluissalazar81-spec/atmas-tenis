@@ -140,7 +140,7 @@ function renderVerdades(){
   verdades.forEach(function(v){
     var row='<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)"><div style="background:var(--lima);color:var(--negro);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">'+v.n+'</div><div style="flex:1;font-size:14px;font-weight:600;color:#fff">'+v.t+'</div><div style="font-size:18px;color:rgba(255,255,255,.4)">&#9654;</div></div>';
     if(v.url){h+='<a href="'+v.url+'" target="_blank" style="text-decoration:none;display:block">'+row+'</a>';}
-    else{h+='<div style="opacity:.75;cursor:pointer" onclick="toast(\'Video proximamente...\')">'+row+'</div>';}
+    else{h+='<div style="opacity:.75;cursor:pointer" onclick="toast(\'Video proximamente\')">'+row+'</div>';}
   });
   el.innerHTML=h;
 }
@@ -258,8 +258,27 @@ async function guardarPartido(){
   var perdedor=resultado==="gane"?rival:yo;
   var sets=[s1,s2,s3].filter(function(s){return s&&s!=="--";}).join(", ");
   try{
+    await db.collection("partidos_atmas").add({
+      jugador1:yo,jugador2:rival,ganador:ganador,perdedor:perdedor,
+      sets:sets,cancha:cancha,fecha:fecha,estado:"pendiente",
+      ts:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeModal();
+    document.getElementById("sheet-content").innerHTML='<div style="text-align:center;padding:16px 0"><div style="font-size:48px">&#128203;</div><div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido enviado</div><div style="font-size:13px;color:var(--suave);line-height:1.6">El resultado quedara <b>pendiente de validacion</b>.<br>Marcelo Escalona revisara y aprobara el partido.<br>Los puntos se suman cuando sea aprobado.</div></div><button class="btn sec" style="margin-top:16px" onclick="closeModal()">Entendido</button>';
+    document.getElementById("modal").classList.add("show");
+  }catch(e){
+    console.warn("guardarPartido error:",e);
+    toast("Error al guardar. Intenta de nuevo.");
+  }
+}
+
+function pendAprobar(i){var q=window._pendQ[i];if(q)aprobarPartido(q.id,q.gan,q.per);}
+function pendRechazar(i){var q=window._pendQ[i];if(q)rechazarPartido(q.id);}
+async function aprobarPartido(docId,ganador,perdedor){
+  try{
     var ganRef=db.collection("ranking_atmas").doc(slugify(ganador));
     var perRef=db.collection("ranking_atmas").doc(slugify(perdedor));
+    var partRef=db.collection("partidos_atmas").doc(docId);
     await db.runTransaction(async function(tx){
       var ganDoc=await tx.get(ganRef);
       var perDoc=await tx.get(perRef);
@@ -267,16 +286,20 @@ async function guardarPartido(){
       var pd=perDoc.exists?perDoc.data():{nombre:perdedor,pts:0,jugados:0,ganados:0,perdidos:0,pct:0};
       gd.pts+=5;gd.jugados+=1;gd.ganados+=1;gd.pct=Math.round(gd.ganados/gd.jugados*100);
       pd.pts+=1;pd.jugados+=1;pd.perdidos+=1;pd.pct=Math.round((pd.ganados||0)/pd.jugados*100);
-      tx.set(ganRef,gd);
-      tx.set(perRef,pd);
+      tx.set(ganRef,gd);tx.set(perRef,pd);
+      tx.update(partRef,{estado:"aprobado"});
     });
-    await db.collection("partidos_atmas").add({jugador1:yo,jugador2:rival,ganador:ganador,perdedor:perdedor,sets:sets,cancha:cancha,fecha:fecha,ts:firebase.firestore.FieldValue.serverTimestamp()});
-    closeModal();go("escalerilla");setVista("rank");
-    toast("Partido guardado &middot; "+ganador+" +5 pts &middot; "+perdedor+" +1 pt");
-  }catch(e){
-    console.warn("guardarPartido error:",e);
-    toast("Error al guardar. Intenta de nuevo.");
-  }
+    toast("Partido aprobado. Puntos sumados.");
+    renderAdmin();
+  }catch(e){toast("Error al aprobar partido.");}
+}
+
+async function rechazarPartido(docId){
+  try{
+    await db.collection("partidos_atmas").doc(docId).update({estado:"rechazado"});
+    toast("Partido rechazado.");
+    renderAdmin();
+  }catch(e){toast("Error al rechazar partido.");}
 }
 
 /* ─── CANCHA: CALENDARIO + RESERVAS ──────────────────────────── */
@@ -434,7 +457,7 @@ function pinPress(k){if(k==="X"){pinBuffer=pinBuffer.slice(0,-1);}else if(pinBuf
 async function renderAdmin(){
   var el=document.getElementById("admin-body");if(!el)return;
   var hoy=new Date().toISOString().split("T")[0];
-  el.innerHTML='<div class="admin-header"><div><h2>Panel Admin</h2><p>Club Las Avestruces &middot; ATMAS</p></div><button onclick="adminUnlocked=false;go(\'inicio\')" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer">Salir</button></div><div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"><div class="admin-stat"><div class="n" id="a-res-count">...</div><div class="l">Reservas hoy</div></div><div class="admin-stat"><div class="n" id="a-insc-count">...</div><div class="l">Inscripciones</div></div><div class="admin-stat"><div class="n" id="a-total">...</div><div class="l">Total semana</div></div></div><div class="admin-section"><div class="section-title">Proximas reservas</div><div id="a-reservas"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Inscripciones torneo</div><div id="a-inscripciones"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div><button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div><div style="height:20px"></div>';
+  el.innerHTML='<div class="admin-header"><div><h2>Panel Admin</h2><p>Club Las Avestruces &middot; ATMAS</p></div><button onclick="adminUnlocked=false;go(\'inicio\')" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer">Salir</button></div><div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"><div class="admin-stat"><div class="n" id="a-res-count">...</div><div class="l">Reservas hoy</div></div><div class="admin-stat"><div class="n" id="a-insc-count">...</div><div class="l">Inscripciones</div></div><div class="admin-stat"><div class="n" id="a-total">...</div><div class="l">Total semana</div></div></div><div class="admin-section"><div class="section-title">Proximas reservas</div><div id="a-reservas"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title" style="color:#b45309">Partidos pendientes de aprobacion</div><div id="a-pendientes"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Inscripciones torneo</div><div id="a-inscripciones"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div><button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div><div style="height:20px"></div>';
   try{
     var snap=await db.collection("reservas").where("fecha",">=",hoy).get();
     var docs=[];snap.forEach(function(d){docs.push(d.data());});
@@ -451,6 +474,25 @@ async function renderAdmin(){
     if(snap2.size===0){document.getElementById("a-inscripciones").innerHTML='<p style="color:var(--suave);font-size:13px">Sin inscripciones</p>';}
     else{var h2="";snap2.forEach(function(doc){var r=doc.data();h2+='<div class="res-card" style="border-color:#6366f1"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+' </span><span style="font-size:11px;color:var(--suave)">'+(r.torneo||r.categoria||"")+' </span></div><div class="rc-sub">'+(r.tel||"")+' &middot; '+(r.estado||"pendiente")+' </div></div>';});document.getElementById("a-inscripciones").innerHTML=h2;}
   }catch(e){}
+  try{
+    var snapPend=await db.collection("partidos_atmas").where("estado","==","pendiente").orderBy("ts","desc").limit(20).get();
+    if(snapPend.empty){document.getElementById("a-pendientes").innerHTML='<p style="color:var(--suave);font-size:13px">Sin partidos pendientes</p>';}
+    else{
+      window._pendQ=[];
+      var hp="";
+      snapPend.forEach(function(doc){
+        var r=doc.data();var qi=window._pendQ.length;
+        window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});
+        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' gano</span><span class="rc-date">'+(r.fecha||"")+"</span></div>";
+        hp+='<div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div>';
+        hp+='<div style="display:flex;gap:8px;margin-top:8px">';
+        hp+='<button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">Aprobar +5/+1</button>';
+        hp+='<button class="btn sec" style="flex:1;padding:8px;font-size:12px" onclick="pendRechazar('+qi+')">Rechazar</button>';
+        hp+='</div></div>';
+      });
+      document.getElementById("a-pendientes").innerHTML=hp;
+    }
+  }catch(e){document.getElementById("a-pendientes").innerHTML='<p style="color:var(--suave);font-size:13px">Error al cargar pendientes</p>';}
   var rh="";rankingData.slice(0,10).forEach(function(p,i){rh+='<div class="lcard"><div class="rank-pos" style="width:24px;font-size:12px">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+p[0]+'</div><div class="ds">'+p[1]+' pts &middot; '+p[3]+'G '+p[4]+'P</div></div></div>';});
   document.getElementById("a-ranking-admin").innerHTML=rh||'<p style="color:var(--suave);font-size:13px">Cargando ranking...</p>';
 }
