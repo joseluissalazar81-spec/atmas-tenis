@@ -1,0 +1,18 @@
+name: Verify JS antes de deploy
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar sintaxis JavaScript
+        run: node --check app.js
+      - name: Confirmar archivos presentes
+        run: |
+          test -f index.html && echo OK index.html
+          test -f style.css && echo OK style.css
+          test -f app.js && echo OK app.js
