@@ -173,7 +173,7 @@ function formatRut(el){var v=el.value.replace(/[^0-9kK]/g,"");if(v.length>1){var
 
 function showAuthStep1(){document.getElementById("auth-step1").style.display="";document.getElementById("auth-email").style.display="none";document.getElementById("auth-rut").style.display="none";document.getElementById("auth-step2").style.display="none";}
 function showAuthEmail(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-email").style.display="";}
-function showAuthRut(){document.getElementById("auth-step1").style.display="none";var rutBox=document.getElementById("auth-rut");rutBox.style.display="";rutBox.innerHTML='<div style="font-size:18px;font-weight:800;margin-bottom:16px">Ingresar con RUT</div><div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div><button class="btn" onclick="recuperarPerfil()">Buscar mi perfil</button><div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>';}
+function showAuthRut(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-step2").style.display="none";var rutBox=document.getElementById("auth-rut");rutBox.style.display="";rutBox.innerHTML='<div style="font-size:18px;font-weight:800;margin-bottom:16px">Ingresar con RUT</div><div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div><button class="btn" onclick="recuperarPerfil()">Buscar mi perfil</button><div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>';}
 function showAuthStep2(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-email").style.display="none";document.getElementById("auth-step2").style.display="";}
 
 async function loginGoogle(){
@@ -537,8 +537,8 @@ async function renderCalendario(){
     var esHoy=fs===hoy;var esPas=fs<hoy;var cnt=calConteo[fs]||0;var esSel=fs===calFechaSel;
     var cls="cal-cell"+(esHoy?" hoy":esPas?" pasado":cnt>0?" tiene":"");
     if(esSel&&!esHoy)cls+=" sel";
-    var click=esPas?"":"onclick=\"calDia('" +fs+"')\"";
-    h+='<div class="'+cls+'" '+click+'>'+d+(cnt>0&&!esHoy?'<span style="font-size:7px;display:block">'+cnt+'</span>':'')+' </div>';
+    var click=esPas?"":"onclick=\"calDia('"+fs+"')\"";
+    h+='<div class="'+cls+'" '+click+'>'+d+(cnt>0&&!esHoy?'<span style="font-size:7px;display:block">'+cnt+'</span>':'')+'</div>';
   }
   h+='</div>';
   el.innerHTML=h;
@@ -646,6 +646,8 @@ async function inscribirTorneo(idx){
   var t=torneos[idx];
   if(!nombre){toast("Escribe tu nombre");return;}
   try{
+    var totalSnap=await db.collection("inscripciones_atmas").where("torneo","==",t.n).get();
+    if(totalSnap.size>=16){toast("Torneo completo. No hay mas cupos.");return;}
     var existe=await db.collection("inscripciones_atmas").where("torneo","==",t.n).where("nombre","==",nombre).get();
     if(!existe.empty){toast("Ya estas inscrito en este torneo");return;}
     await db.collection("inscripciones_atmas").add({nombre:nombre,tel:tel,torneo:t.n,turno:turno,monto:t.monto,estado:"pendiente_pago",ts:firebase.firestore.FieldValue.serverTimestamp()});
@@ -661,7 +663,7 @@ document.getElementById("modal").addEventListener("click",function(e){if(e.targe
 
 /* ─── ADMIN PIN ───────────────────────────────────────────────── */
 const ADMIN_PIN="2025";var adminUnlocked=false;var pinBuffer="";
-function abrirAdmin(){if(adminUnlocked){go("admin");return;}pinBuffer="";document.getElementById("sheet-content").innerHTML='<h3 style="text-align:center">Panel de administracion</h3><div class="pin-wrap"><p style="color:var(--suave);font-size:13px">Ingresa el PIN de acceso</p><div class="pin-dots" id="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div><div class="pin-pad">'+[1,2,3,4,5,6,7,8,9,"",0,"X"].map(function(k){var kTxt=(k===""?"&nbsp;": String(k));return'<button class="pin-btn" onclick="pinPress(\''+k+'\')">'+ kTxt+'</button>';}).join('')+'</div><p id="pin-err" style="color:#b91c1c;font-size:12px;min-height:16px"></p></div>';document.getElementById("modal").classList.add("show");}
+function abrirAdmin(){if(adminUnlocked){go("admin");return;}pinBuffer="";document.getElementById("sheet-content").innerHTML='<h3 style="text-align:center">Panel de administracion</h3><div class="pin-wrap"><p style="color:var(--suave);font-size:13px">Ingresa el PIN de acceso</p><div class="pin-dots" id="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div><div class="pin-pad">'+[1,2,3,4,5,6,7,8,9,"",0,"X"].map(function(k){var kTxt=(k===""?"&nbsp;":String(k));return'<button class="pin-btn" onclick="pinPress(\''+k+'\')">'+ kTxt+'</button>';}).join('')+'</div><p id="pin-err" style="color:#b91c1c;font-size:12px;min-height:16px"></p></div>';document.getElementById("modal").classList.add("show");}
 function pinPress(k){if(k==="X"){pinBuffer=pinBuffer.slice(0,-1);}else if(pinBuffer.length<4&&k!==""){pinBuffer+=k;}for(var i=0;i<4;i++){var d=document.getElementById("pd"+i);if(d)d.classList.toggle("filled",i<pinBuffer.length);}if(pinBuffer.length===4){if(pinBuffer===ADMIN_PIN){adminUnlocked=true;closeModal();go("admin");}else{document.getElementById("pin-err").textContent="PIN incorrecto";pinBuffer="";for(var i=0;i<4;i++){var d=document.getElementById("pd"+i);if(d)d.classList.remove("filled");}}}}
 
 /* ─── ADMIN PANEL ─────────────────────────────────────────────── */
