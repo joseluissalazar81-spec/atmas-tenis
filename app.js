@@ -259,7 +259,7 @@ async function completarPerfil(){
 
 async function recuperarPerfil(){
   var rutEl=document.getElementById("rec-rut");
-  var rut=(rutEl?rutEl.value||"":"").trim();
+  var rut=(rutEl?rutEl.value||"": "").trim();
   if(!rut){toast("Ingresa tu RUT");return;}
   toast("Buscando perfil...");
   try{
@@ -325,8 +325,8 @@ async function cargarHistorial(nombre){
     var snap1=await db.collection("partidos_atmas").where("ganador","==",nombre).where("estado","==","aprobado").orderBy("ts","desc").limit(5).get();
     var snap2=await db.collection("partidos_atmas").where("perdedor","==",nombre).where("estado","==","aprobado").orderBy("ts","desc").limit(5).get();
     var docs=[];
-    snap1.forEach(function(d){docs.push(Object.assign({},d.data(),{_gane:true,_fecha:d.data().fecha||""}));});
-    snap2.forEach(function(d){docs.push(Object.assign({},d.data(),{_gane:false,_fecha:d.data().fecha||""}));});
+    snap1.forEach(function(d){docs.push(Object.assign({},d.data(),{_gane:true,_fecha:d.data().fecha||""});});
+    snap2.forEach(function(d){docs.push(Object.assign({},d.data(),{_gane:false,_fecha:d.data().fecha||""});});
     docs.sort(function(a,b){return a._fecha<b._fecha?1:-1;});
     docs=docs.slice(0,6);
     if(docs.length===0){el.innerHTML='<p style="color:var(--suave);font-size:13px">Aun no tienes partidos registrados.</p>';return;}
@@ -538,7 +538,7 @@ async function renderCalendario(){
     var cls="cal-cell"+(esHoy?" hoy":esPas?" pasado":cnt>0?" tiene":"");
     if(esSel&&!esHoy)cls+=" sel";
     var click=esPas?"":"onclick=\"calDia('"+fs+"')\"";
-    h+='<div class="'+cls+'" '+click+'>'+d+(cnt>0&&!esHoy?'<span style="font-size:7px;display:block">'+cnt+'</span>':'')+'</div>';
+    h+='<div class="'+cls+'" '+click+'>'+d+(cnt>0&&!esHoy?'<span style="font-size:7px;display:block">'+cnt+'</span>':'')+' </div>';
   }
   h+='</div>';
   el.innerHTML=h;
@@ -561,7 +561,7 @@ async function cargarSlots(fecha){
     slots.forEach(function(slot){
       var count=ocupadas[slot.hora]||0;var libre=count<4;var sel=slotSeleccionado===slot.hora;
       var cls="slot"+(sel?" sel":!libre?" lleno":"");
-      var libres=libre?(4-count)+" libre"+(4-count!==1?"s":""):"Sin cupo";
+      var libres=libre?(4-count)+" libre"+(4-count!==1?"s":""): "Sin cupo";
       html+='<button class="'+cls+'" '+(libre?'onclick="seleccionarSlot(\''+slot.hora+'\','+slot.durHrs+','+slot.monto+')"':' disabled')+'>'+slot.hora+'<span class="sub">'+(slot.durHrs===2?'2 hrs':'1 hr')+' &middot; '+libres+'</span></button>';
     });
     html+='</div>';
@@ -696,7 +696,7 @@ async function renderAdmin(){
       snapPend.forEach(function(doc){
         var r=doc.data();var qi=window._pendQ.length;
         window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});
-        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' gano</span><span class="rc-date">'+(r.fecha||'')+'</span></div>';
+        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' gano</span><span class="rc-date">'+(r.fecha||"")+'</span></div>';
         hp+='<div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div>';
         hp+='<div style="display:flex;gap:8px;margin-top:8px">';
         hp+='<button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">Aprobar +5/+1</button>';
@@ -837,3 +837,4 @@ async function guardarGanadorPartido(slot){
     if(p){mostrarApp();renderPerfil();}
     else{document.getElementById("login-screen").classList.add("show");document.querySelector("header").style.display="none";document.querySelector(".content").style.display="none";document.querySelector(".tabbar").style.display="none";}
   }
+})();
