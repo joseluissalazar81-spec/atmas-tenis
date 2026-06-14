@@ -173,7 +173,7 @@ function formatRut(el){var v=el.value.replace(/[^0-9kK]/g,"");if(v.length>1){var
 
 function showAuthStep1(){document.getElementById("auth-step1").style.display="";document.getElementById("auth-email").style.display="none";document.getElementById("auth-rut").style.display="none";document.getElementById("auth-step2").style.display="none";}
 function showAuthEmail(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-email").style.display="";}
-function showAuthRut(){document.getElementById("auth-step1").style.display="none";var rutBox=document.getElementById("auth-rut");rutBox.style.display="";rutBox.innerHTML='<div style="font-size:18px;font-weight:800;margin-bottom:16px">Ingresar con RUT</div><div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div><button class="btn" onclick="recuperarPerfil()">Buscar mi perfil</button><div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>';}
+function showAuthRut(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-step2").style.display="none";var rutBox=document.getElementById("auth-rut");rutBox.style.display="";rutBox.innerHTML='<div style="font-size:18px;font-weight:800;margin-bottom:16px">Ingresar con RUT</div><div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div><button class="btn" onclick="recuperarPerfil()">Buscar mi perfil</button><div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>';}
 function showAuthStep2(){document.getElementById("auth-step1").style.display="none";document.getElementById("auth-email").style.display="none";document.getElementById("auth-step2").style.display="";}
 
 async function loginGoogle(){
@@ -259,7 +259,7 @@ async function completarPerfil(){
 
 async function recuperarPerfil(){
   var rutEl=document.getElementById("rec-rut");
-  var rut=(rutEl?rutEl.value||""):"").trim();
+  var rut=(rutEl?rutEl.value||"":"").trim();
   if(!rut){toast("Ingresa tu RUT");return;}
   toast("Buscando perfil...");
   try{
@@ -366,7 +366,7 @@ async function cargarPartidosPendientes(nombre){
       var r=doc.data();var qi=window._misPendQ.length;
       window._misPendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});
       h+='<div class="res-card" style="border-color:#f59e0b;margin-bottom:8px">';
-      h+='<div class="rc-top"><span class="rc-name">'+r.ganador+' declara victoria</span><span class="rc-date">'+(r.fecha||"")+' </span></div>';
+      h+='<div class="rc-top"><span class="rc-name">'+r.ganador+' declara victoria</span><span class="rc-date">'+(r.fecha||'')+'</span></div>';
       h+='<div class="rc-sub">Sets: '+(r.sets||"sin sets indicados")+'</div>';
       h+='<div style="display:flex;gap:8px;margin-top:8px">';
       h+='<button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="miConfirmar('+qi+')">Es correcto &#10003;</button>';
@@ -434,7 +434,8 @@ const torneos=[
   {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"Cerrado",monto:15000},
   {n:"Nueva Escalerilla Jun-Ago",f:"Series A y B &middot; $15.000 por partido",p:"$35.000",c:"4 cupos",monto:35000}
 ];
-var th="";torneos.forEach(function(t,i){var bloqueado=t.c==="Cerrado";th+='<div class="tcard"><div class="tn">'+t.n+'</div><div class="tm">'+t.f+'</div><div class="trow"><span class="price">'+t.p+'</span><span class="cupos" style="'+(bloqueado?'background:#fee2e2;color:#b91c1c':'')+'">'+t.c+'</span>'+(bloqueado?'<button class="mini" disabled style="opacity:.4">Cerrado</button>':'<button class="mini wa" onclick="openModal(\'torneo\','+i+')">Inscribirme</button>')+'</div></div>';});document.getElementById("torneos-list").innerHTML=th;
+var th="";torneos.forEach(function(t,i){var bloqueado=t.c==="Cerrado";th+='<div class="tcard"><div class="tn">'+t.n+'</div><div class="tm">'+t.f+'</div><div class="trow"><span class="price">'+t.p+'</span><span class="cupos" style="'+(bloqueado?'background:#fee2e2;color:#b91c1c':'')+'">'+t.c+'</span>'+(bloqueado?'<button class="mini" disabled style="opacity:.4">Cerrado</button>':'<button class="mini wa" onclick="openModal(\'torneo\','+i+')">Inscribirme</button>')+'</div></div>';});
+document.getElementById("torneos-list").innerHTML=th;
 
 async function cargarInscripciones(){
   var el=document.getElementById("novicios-list");if(!el)return;
@@ -662,7 +663,7 @@ document.getElementById("modal").addEventListener("click",function(e){if(e.targe
 
 /* ─── ADMIN PIN ───────────────────────────────────────────────── */
 const ADMIN_PIN="2025";var adminUnlocked=false;var pinBuffer="";
-function abrirAdmin(){if(adminUnlocked){go("admin");return;}pinBuffer="";document.getElementById("sheet-content").innerHTML='<h3 style="text-align:center">Panel de administracion</h3><div class="pin-wrap"><p style="color:var(--suave);font-size:13px">Ingresa el PIN de acceso</p><div class="pin-dots" id="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div><div class="pin-pad">'+[1,2,3,4,5,6,7,8,9,"",0,"X"].map(function(k){var kTxt=(k===""?"&nbsp;":String(k));return'<button class="pin-btn" onclick="pinPress(\''+k+'\')">'+kTxt+'</button>';}).join('')+'</div><p id="pin-err" style="color:#b91c1c;font-size:12px;min-height:16px"></p></div>';document.getElementById("modal").classList.add("show");}
+function abrirAdmin(){if(adminUnlocked){go("admin");return;}pinBuffer="";document.getElementById("sheet-content").innerHTML='<h3 style="text-align:center">Panel de administracion</h3><div class="pin-wrap"><p style="color:var(--suave);font-size:13px">Ingresa el PIN de acceso</p><div class="pin-dots" id="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div><div class="pin-pad">'+[1,2,3,4,5,6,7,8,9,"",0,"X"].map(function(k){var kTxt=(k===""?"&nbsp;":String(k));return'<button class="pin-btn" onclick="pinPress(\''+k+'\')">'+ kTxt+'</button>';}).join('')+'</div><p id="pin-err" style="color:#b91c1c;font-size:12px;min-height:16px"></p></div>';document.getElementById("modal").classList.add("show");}
 function pinPress(k){if(k==="X"){pinBuffer=pinBuffer.slice(0,-1);}else if(pinBuffer.length<4&&k!==""){pinBuffer+=k;}for(var i=0;i<4;i++){var d=document.getElementById("pd"+i);if(d)d.classList.toggle("filled",i<pinBuffer.length);}if(pinBuffer.length===4){if(pinBuffer===ADMIN_PIN){adminUnlocked=true;closeModal();go("admin");}else{document.getElementById("pin-err").textContent="PIN incorrecto";pinBuffer="";for(var i=0;i<4;i++){var d=document.getElementById("pd"+i);if(d)d.classList.remove("filled");}}}}
 
 /* ─── ADMIN PANEL ─────────────────────────────────────────────── */
@@ -695,7 +696,7 @@ async function renderAdmin(){
       snapPend.forEach(function(doc){
         var r=doc.data();var qi=window._pendQ.length;
         window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});
-        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' gano</span><span class="rc-date">'+(r.fecha||"")+' </span></div>';
+        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' gano</span><span class="rc-date">'+(r.fecha||'')+'</span></div>';
         hp+='<div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div>';
         hp+='<div style="display:flex;gap:8px;margin-top:8px">';
         hp+='<button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">Aprobar +5/+1</button>';
@@ -828,9 +829,11 @@ async function guardarGanadorPartido(slot){
 (function(){
   seedRankingIfEmpty().then(function(){iniciarRankingLive();generarYRenderCuadros();});
   seedCuadroNovicios3().then(function(){iniciarCuadroLive();});
+  if(auth){
+    auth.signInAnonymously().catch(function(){});
+  }
   if(!auth){
     var p=getPerfil();
     if(p){mostrarApp();renderPerfil();}
     else{document.getElementById("login-screen").classList.add("show");document.querySelector("header").style.display="none";document.querySelector(".content").style.display="none";document.querySelector(".tabbar").style.display="none";}
   }
-})();
