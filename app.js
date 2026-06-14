@@ -23,20 +23,20 @@ function el(id){return document.getElementById(id);}
 /* ─── DATOS INICIALES (solo para semilla) ─────────────────────── */
 var SEED_PLAYERS=[
   ["Rodrigo Bernal",66,14,13,1,92.86],["Mauricio Morales",64,16,12,4,75],
-  ["Felipe Munoz",60,13,11,2,84.62],["Jonathan Munoz",59,16,11,5,68.75],
-  ["Matias Cordova",58,14,11,3,78.57],["Juan Pablo Vera",54,14,10,4,71.43],
+  ["Felipe Muñoz",60,13,11,2,84.62],["Jonathan Muñoz",59,16,11,5,68.75],
+  ["Matías Córdova",58,14,11,3,78.57],["Juan Pablo Vera",54,14,10,4,71.43],
   ["Juan Carlos Abarca",52,14,10,4,71.43],["Mauricio Melo",51,14,9,5,64.29],
   ["Cristian Valdes",49,16,9,7,56.25],["Ignacio Cofre",46,14,8,6,57.14],
-  ["Rodrigo Araya",44,13,8,5,61.54],["Andres Beltran",42,14,8,6,57.14],
-  ["Juan David Vera",40,12,7,5,58.33],["Nicolas Tapia",38,12,7,5,58.33],
-  ["Felipe Alvarado",36,14,6,8,42.86],["Sebastian Rojas",34,13,6,7,46.15],
-  ["Alvaro Espinoza",32,12,6,6,50],["Claudio Saavedra",30,12,6,6,50],
-  ["Maximo Escalona",28,11,5,6,45.45],["Cristian Valdes B",26,11,5,6,45.45],
-  ["Fabian Araneda",24,10,4,6,40],["Franco Gutierrez",22,10,4,6,40],
-  ["Andres Gutierrez",20,10,4,6,40],["Benjamin Diaz",18,8,3,5,37.5],
-  ["Nicolas Martinez",16,8,3,5,37.5],["Alex Berrocal",14,8,2,6,25],
+  ["Rodrigo Araya",44,13,8,5,61.54],["Andrés Beltrán",42,14,8,6,57.14],
+  ["Juan David Vera",40,12,7,5,58.33],["Nicolás Tapia",38,12,7,5,58.33],
+  ["Felipe Alvarado",36,14,6,8,42.86],["Sebastián Rojas",34,13,6,7,46.15],
+  ["Álvaro Espinoza",32,12,6,6,50],["Claudio Saavedra",30,12,6,6,50],
+  ["Máximo Escalona",28,11,5,6,45.45],["Cristian Valdes B",26,11,5,6,45.45],
+  ["Fabián Araneda",24,10,4,6,40],["Franco Gutiérrez",22,10,4,6,40],
+  ["Andrés Gutiérrez",20,10,4,6,40],["Benjamin Diaz",18,8,3,5,37.5],
+  ["Nicolás Martínez",16,8,3,5,37.5],["Alex Berrocal",14,8,2,6,25],
   ["Victor Saavedra",12,7,2,5,28.57],["Pablo Araneda",8,6,1,5,16.67],
-  ["Waldo Escalona",6,6,0,6,0],["Cesar Moreno",6,6,0,6,0]
+  ["Waldo Escalona",6,6,0,6,0],["César Moreno",6,6,0,6,0]
 ];
 
 /* ─── RANKING LIVE DESDE FIRESTORE ───────────────────────────── */
@@ -475,7 +475,7 @@ async function renderPerfilAdmin(p,pBody){
 }
 
 /* ─── TORNEOS ─────────────────────────────────────────────────── */
-const ZONA_NORTE_INSCRITOS=["Marcelo Escalona","Ariel Araya","Miguel Osores","Manuel Acuna","Osvaldo Valdivia","Flavio Ugarte","Nacho Flores","Marcos Carrasco","Ignacio Soto","Hipolito Bello"];
+const ZONA_NORTE_INSCRITOS=["Marcelo Escalona","Ariel Araya","Miguel Osores","Manuel Acuña","Osvaldo Valdivia","Flavio Ugarte","Nacho Flores","Marcos Carrasco","Ignacio Soto","Hipólito Bello"];
 const torneos=[
   {n:"Ranking Zona Norte - Sexta Fecha",f:"20 junio 2026 &middot; Full Tenis",p:"$20.000",c:"6 cupos",monto:20000},
   {n:"Torneo Novicios 4",f:"11 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"6 cupos",monto:20000},
@@ -828,19 +828,19 @@ function generarYRenderCuadros(){cuadros=generarCuadros();renderBracket("oro");}
 var NOVICIOS3_SEED={
   nombre:"Torneo Novicios 3",fecha:"Sabado 13 Junio 2026",
   octavos:[
-    {a:"Franco Gutierrez",b:"Seba Bustamante",hora:"16:00",gan:"Franco Gutierrez",res:"6/1 6/1"},
-    {a:"Pedro Gonzalez",b:"Claudio Rocha",hora:"17:30",gan:"Pedro Gonzalez",res:"6/3 3/6 10/8"},
-    {a:"Marcos Hernandez",b:"Vicente Rodriguez",hora:"16:00",gan:"Marcos Hernandez",res:"6/3 6/1"},
+    {a:"Franco Gutiérrez",b:"Seba Bustamante",hora:"16:00",gan:"Franco Gutiérrez",res:"6/1 6/1"},
+    {a:"Pedro González",b:"Claudio Rocha",hora:"17:30",gan:"Pedro González",res:"6/3 3/6 10/8"},
+    {a:"Marcos Hernández",b:"Vicente Rodríguez",hora:"16:00",gan:"Marcos Hernández",res:"6/3 6/1"},
     {a:"Fco. Morales",b:"Mauricio Melo",hora:"17:30",gan:"Mauricio Melo",res:"6/0 6/0"},
-    {a:"Maximo Escalona",b:"Daniel Rojas",hora:"16:00",gan:"Maximo Escalona",res:"6/0 6/4"},
-    {a:"Rafa Zarate",b:"Matias Cordova",hora:"16:00",gan:"Matias Cordova",res:"6/3 6/1"},
+    {a:"Máximo Escalona",b:"Daniel Rojas",hora:"16:00",gan:"Máximo Escalona",res:"6/0 6/4"},
+    {a:"Rafa Zarate",b:"Matías Córdova",hora:"16:00",gan:"Matías Córdova",res:"6/3 6/1"},
     {a:"Luis Irribarra",b:"Rodrigo Arancibia",hora:"17:30",gan:"Rodrigo Arancibia",res:"6/1 6/1"},
-    {a:"Andy Cespedes",b:"Fabian Araneda",hora:"17:30",gan:"Andy Cespedes",res:"6/4 7/5"}
+    {a:"Andy Cespedes",b:"Fabián Araneda",hora:"17:30",gan:"Andy Cespedes",res:"6/4 7/5"}
   ],
   cuartos:[
-    {a:"Franco Gutierrez",b:"Pedro Gonzalez",hora:"Por definir",gan:null},
-    {a:"Marcos Hernandez",b:"Mauricio Melo",hora:"Por definir",gan:null},
-    {a:"Maximo Escalona",b:"Matias Cordova",hora:"Por definir",gan:null},
+    {a:"Franco Gutiérrez",b:"Pedro González",hora:"Por definir",gan:null},
+    {a:"Marcos Hernández",b:"Mauricio Melo",hora:"Por definir",gan:null},
+    {a:"Máximo Escalona",b:"Matías Córdova",hora:"Por definir",gan:null},
     {a:"Rodrigo Arancibia",b:"Andy Cespedes",hora:"Por definir",gan:null}
   ],
   semis:[{a:null,b:null,hora:"Por definir",gan:null},{a:null,b:null,hora:"Por definir",gan:null}],
