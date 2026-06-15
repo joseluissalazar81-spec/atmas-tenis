@@ -220,11 +220,9 @@ async function loginGoogle(){
   if(!auth){toast("Auth no disponible");return;}
   try{
     var provider=new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
+    await auth.signInWithRedirect(provider);
   }catch(e){
-    if(e.code==="auth/configuration-not-found"||e.code==="auth/internal-error"){
-      toast("Google Auth no activado aun. Usa RUT por ahora.");showAuthRut();
-    }else{toast("Error Google: "+e.message);}
+    toast("Error Google: "+e.message);
   }
 }
 
@@ -946,11 +944,22 @@ async function guardarGanadorPartido(slot){
   try{seedRankingIfEmpty().then(function(){iniciarRankingLive();generarYRenderCuadros();});}catch(e){}
   try{seedCuadroNovicios3().then(function(){iniciarCuadroLive();});}catch(e){}
   if(auth){
-    auth.signInAnonymously().catch(function(e){
-      console.warn("signInAnonymously error:",e);
-      var p=getPerfil();
-      if(p){mostrarApp();renderPerfil();}
-      else{mostrarLogin();showAuthStep1();}
+    // Manejar resultado del redirect de Google antes de signInAnonymously
+    auth.getRedirectResult().then(function(result){
+      if(result&&result.user){
+        // El onAuthStateChanged lo maneja, no necesitamos hacer nada aquí
+        return;
+      }
+      // Solo iniciar anónimo si no hay redirect pendiente
+      auth.signInAnonymously().catch(function(e){
+        console.warn("signInAnonymously error:",e);
+        var p=getPerfil();
+        if(p){mostrarApp();renderPerfil();}
+        else{mostrarLogin();showAuthStep1();}
+      });
+    }).catch(function(e){
+      console.warn("getRedirectResult error:",e);
+      auth.signInAnonymously().catch(function(){});
     });
   }else{
     var p=getPerfil();
