@@ -203,10 +203,19 @@ function mostrarApp(){
   if(tb)tb.style.display="";
 }
 function showAuthStep1(){
-  var s1=el("auth-step1");var em=el("auth-email");var ru=el("auth-rut");var s2=el("auth-step2");
-  if(s1)s1.style.display="";if(em)em.style.display="none";if(ru)ru.style.display="none";if(s2)s2.style.display="none";
+  ["auth-step1","auth-crear","auth-entrar","auth-step2","auth-email","auth-rut"].forEach(function(id){var e=el(id);if(e)e.style.display="none";});
+  var s1=el("auth-step1");if(s1)s1.style.display="";
 }
-function showAuthEmail(){var s1=el("auth-step1");var em=el("auth-email");if(s1)s1.style.display="none";if(em)em.style.display="";}
+function showCrearPerfil(){
+  ["auth-step1","auth-entrar","auth-step2","auth-email","auth-rut"].forEach(function(id){var e=el(id);if(e)e.style.display="none";});
+  var c=el("auth-crear");if(c)c.style.display="";
+}
+function showEntrarEmail(){
+  ["auth-step1","auth-crear","auth-step2","auth-email","auth-rut"].forEach(function(id){var e=el(id);if(e)e.style.display="none";});
+  var e=el("auth-entrar");if(e)e.style.display="";
+}
+function showAuthEmail(){showEntrarEmail();}
+function showAuthRut(){showAuthStep1();}
 function showAuthRut(){
   var s1=el("auth-step1");var s2=el("auth-step2");var rutBox=el("auth-rut");
   if(s1)s1.style.display="none";if(s2)s2.style.display="none";
@@ -226,18 +235,39 @@ async function loginGoogle(){
   }
 }
 
+async function crearCuenta(){
+  if(!auth){toast("Auth no disponible");return;}
+  var nombre=((el("crear-nombre")||{}).value||"").trim();
+  var rut=((el("crear-rut")||{}).value||"").trim();
+  var em=((el("crear-em")||{}).value||"").trim();
+  var pw=((el("crear-pw")||{}).value||"").trim();
+  if(!nombre||!rut){toast("Nombre y RUT son obligatorios");return;}
+  if(!em||!pw){toast("Email y contraseña son obligatorios");return;}
+  if(pw.length<6){toast("Contraseña: mínimo 6 caracteres");return;}
+  try{
+    var cred=await auth.createUserWithEmailAndPassword(em,pw);
+    var p={nombre:nombre,rut:rut,tel:"",fnac:"",socio:false,email:em};
+    savePerfil(p);mostrarApp();renderPerfil();go("inicio");
+    toast("Bienvenido/a "+nombre+"!");
+  }catch(e){
+    if(e.code==="auth/email-already-in-use"){toast("Ese email ya tiene cuenta. Usa 'Ya tengo cuenta'.");}
+    else if(e.code==="auth/weak-password"){toast("Contraseña muy débil.");}
+    else{toast("Error: "+e.message);}
+  }
+}
+
 async function loginEmail(){
   if(!auth){toast("Auth no disponible");return;}
-  var em=(el("auth-em")?el("auth-em").value||"":"").trim();
-  var pw=(el("auth-pw")?el("auth-pw").value||"":"").trim();
+  var emEl=el("entrar-em")||el("auth-em");
+  var pwEl=el("entrar-pw")||el("auth-pw");
+  var em=(emEl?emEl.value||"":"").trim();
+  var pw=(pwEl?pwEl.value||"":"").trim();
   if(!em||!pw){toast("Ingresa email y contrasena");return;}
   try{
     await auth.signInWithEmailAndPassword(em,pw);
   }catch(e){
-    if(e.code==="auth/configuration-not-found"||e.code==="auth/internal-error"){
-      toast("Email Auth no activado aun. Usa RUT por ahora.");showAuthRut();
-    }else if(e.code==="auth/user-not-found"||e.code==="auth/wrong-password"){
-      toast("Email o contrasena incorrectos");
+    if(e.code==="auth/user-not-found"||e.code==="auth/wrong-password"||e.code==="auth/invalid-credential"){
+      toast("Email o contraseña incorrectos");
     }else{toast("Error: "+e.message);}
   }
 }
