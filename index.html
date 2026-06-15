@@ -24,52 +24,69 @@
       <div style="color:rgba(255,255,255,.8);font-size:13px;margin-top:4px">Academia de Tenis AT+</div>
       <div style="color:rgba(255,255,255,.65);font-size:12px">Club Las Avestruces &middot; Quilicura</div>
     </div>
+
     <!-- PASO 1: elegir metodo -->
     <div id="auth-step1" style="background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
       <div style="font-size:20px;font-weight:800;margin-bottom:4px">Bienvenido/a! &#127934;</div>
-      <div style="font-size:13px;color:#6b7280;margin-bottom:20px">Elige como ingresar</div>
-      <button class="btn" onclick="loginGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px">
+      <div style="font-size:13px;color:#6b7280;margin-bottom:20px">Elige c&oacute;mo ingresar</div>
+      <button class="btn" onclick="loginGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.34-8.16 2.34-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
         Entrar con Google
       </button>
-      <div style="text-align:center;color:#9ca3af;font-size:12px;margin:10px 0">o con email</div>
-      <button class="btn sec" onclick="showAuthEmail()">Entrar con Email</button>
-      <div style="text-align:center;margin-top:14px;font-size:12px;color:#9ca3af">
-        <span onclick="showAuthRut()" style="cursor:pointer;text-decoration:underline">Ya tengo perfil &middot; ingresar con RUT</span>
-      </div>
-      <div style="border-top:1px solid #f3f4f6;margin-top:16px;padding-top:14px;text-align:center">
-        <div style="font-size:12px;color:#9ca3af;margin-bottom:8px">&iquest;Primera vez en el club?</div>
-        <button class="btn" onclick="showAuthStep2()" style="background:var(--negro);font-size:14px">Crear mi perfil</button>
+      <button class="btn" style="background:var(--negro);margin-bottom:16px" onclick="showCrearPerfil()">Crear mi perfil</button>
+      <div style="text-align:center;border-top:1px solid #f3f4f6;padding-top:14px">
+        <span onclick="showEntrarEmail()" style="font-size:13px;color:var(--verde-mid);font-weight:700;cursor:pointer;text-decoration:underline">Ya tengo cuenta &middot; Ingresar</span>
       </div>
     </div>
-    <!-- PASO 1b: email -->
-    <div id="auth-email" style="display:none;background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
-      <div style="font-size:18px;font-weight:800;margin-bottom:16px">&#9993; Ingresar con Email</div>
-      <div class="field"><label>Email</label><input id="auth-em" type="email" placeholder="tucorreo@gmail.com" autocomplete="email"></div>
-      <div class="field"><label>Contrasena</label><input id="auth-pw" type="password" placeholder="Minimo 6 caracteres" autocomplete="current-password"></div>
-      <button class="btn" onclick="loginEmail()" style="margin-bottom:8px">Ingresar</button>
-      <button class="btn sec" onclick="registrarEmail()">Crear cuenta nueva</button>
-      <div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>
+
+    <!-- PASO 2a: crear perfil nuevo -->
+    <div id="auth-crear" style="display:none;background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <span onclick="showAuthStep1()" style="font-size:20px;cursor:pointer;color:var(--suave)">&#8592;</span>
+        <div style="font-size:18px;font-weight:800">Crear perfil</div>
+      </div>
+      <div class="field"><label>Nombre completo</label><input id="crear-nombre" placeholder="Juan P&eacute;rez" autocomplete="name"></div>
+      <div class="field"><label>RUT</label><input id="crear-rut" placeholder="12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div>
+      <div class="field"><label>Email</label><input id="crear-em" type="email" placeholder="tu@email.com" autocomplete="email"></div>
+      <div class="field"><label>Contrase&ntilde;a</label><input id="crear-pw" type="password" placeholder="M&iacute;nimo 6 caracteres" autocomplete="new-password"></div>
+      <button class="btn" onclick="crearCuenta()">Crear cuenta</button>
+      <div style="text-align:center;margin-top:12px">
+        <span onclick="loginGoogle()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">O entrar con Google</span>
+      </div>
     </div>
-    <!-- PASO 1c: RUT legacy -->
-    <div id="auth-rut" style="display:none;background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
-      <div style="font-size:18px;font-weight:800;margin-bottom:16px">Ingresar con RUT</div>
-      <div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div>
-      <button class="btn" onclick="recuperarPerfil()">Buscar mi perfil</button>
-      <div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>
+
+    <!-- PASO 2b: ya tengo cuenta -->
+    <div id="auth-entrar" style="display:none;background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <span onclick="showAuthStep1()" style="font-size:20px;cursor:pointer;color:var(--suave)">&#8592;</span>
+        <div style="font-size:18px;font-weight:800">Ingresar</div>
+      </div>
+      <div class="field"><label>Email</label><input id="entrar-em" type="email" placeholder="tu@email.com" autocomplete="email"></div>
+      <div class="field"><label>Contrase&ntilde;a</label><input id="entrar-pw" type="password" placeholder="Tu contrase&ntilde;a" autocomplete="current-password"></div>
+      <button class="btn" onclick="loginEmail()">Entrar</button>
+      <div style="text-align:center;margin-top:12px">
+        <span onclick="loginGoogle()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">O entrar con Google</span>
+      </div>
     </div>
-    <!-- PASO 2: completar perfil (primera vez) -->
+
+    <!-- PASO 3: completar perfil tras Google (sin datos aun) -->
     <div id="auth-step2" style="display:none;background:#fff;border-radius:22px;padding:22px 20px 28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
       <div style="font-size:18px;font-weight:800;margin-bottom:4px">&#127934; Completa tu perfil</div>
       <div style="font-size:13px;color:#6b7280;margin-bottom:16px">Solo una vez para identificarte en el club</div>
-      <div class="field"><label>Nombre completo *</label><input id="reg-nombre" placeholder="Ej: Juan Perez" autocomplete="name"></div>
-      <div class="field"><label>RUT *</label><input id="reg-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div>
-      <div class="field"><label>Telefono</label><input id="reg-tel" type="tel" placeholder="+569 XXXX XXXX"></div>
+      <div class="field"><label>Nombre completo *</label><input id="reg-nombre" placeholder="Juan P&eacute;rez" autocomplete="name"></div>
+      <div class="field"><label>RUT *</label><input id="reg-rut" placeholder="12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div>
+      <div class="field"><label>Tel&eacute;fono</label><input id="reg-tel" type="tel" placeholder="+569 XXXX XXXX"></div>
       <div class="field"><label>Fecha de nacimiento</label><input id="reg-fnac" type="date"></div>
       <button class="btn" onclick="completarPerfil()">Guardar y entrar</button>
     </div>
+
+    <!-- legacy hidden -->
+    <div id="auth-email" style="display:none"></div>
+    <div id="auth-rut" style="display:none"></div>
+
     <p style="text-align:center;font-size:11px;color:rgba(255,255,255,.45);margin-top:18px">Tus datos se guardan de forma segura &middot; ATMAS</p>
   </div>
+
   <header>
     <img src="icon.png" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0">
     <div style="min-width:0"><h1>ATMAS &middot; Tenis AT+</h1><p>Club Las Avestruces &middot; Quilicura</p></div>
