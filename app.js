@@ -317,9 +317,10 @@ async function onAuthStateChanged(user){
       mostrarApp();renderPerfil();go("inicio");
       toast("Bienvenido, "+p.nombre+"!");
     }else{
-      mostrarLogin();showAuthStep2();
-      var nameEl=el("reg-nombre");
-      if(nameEl&&user.displayName)nameEl.value=user.displayName;
+      // Usuario Google sin perfil: crear uno con sus datos de Google y entrar directo
+      var p={nombre:user.displayName||user.email||"Usuario",rut:"",tel:"",fnac:"",socio:false,email:user.email||""};
+      savePerfil(p);mostrarApp();renderPerfil();go("perfil");
+      toast("Bienvenido! Completa tu RUT en Mi Perfil.");
     }
   }catch(e){
     console.warn("onAuthStateChanged error:",e);
