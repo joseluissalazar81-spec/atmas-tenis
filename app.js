@@ -250,8 +250,16 @@ async function crearCuenta(){
     savePerfil(p);mostrarApp();renderPerfil();go("inicio");
     toast("Bienvenido/a "+nombre+"!");
   }catch(e){
-    if(e.code==="auth/email-already-in-use"){toast("Ese email ya tiene cuenta. Usa 'Ya tengo cuenta'.");}
-    else if(e.code==="auth/weak-password"){toast("Contraseña muy débil.");}
+    if(e.code==="auth/email-already-in-use"){
+      // Si es Gmail, probablemente ya tiene cuenta Google
+      if(em.endsWith("@gmail.com")){
+        toast("Ese Gmail ya está registrado. Usa 'Entrar con Google'.");
+        setTimeout(function(){showAuthStep1();},1500);
+      }else{
+        toast("Ese email ya tiene cuenta. Usa 'Ya tengo cuenta · Ingresar'.");
+        setTimeout(function(){showEntrarEmail();var f=el("entrar-em");if(f)f.value=em;},1500);
+      }
+    }else if(e.code==="auth/weak-password"){toast("Contraseña muy débil.");}
     else{toast("Error: "+e.message);}
   }
 }
