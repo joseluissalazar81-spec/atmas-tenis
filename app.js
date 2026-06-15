@@ -228,11 +228,11 @@ function showAuthStep2(){var s1=el("auth-step1");var em=el("auth-email");var s2=
 async function loginGoogle(){
   if(!auth){toast("Auth no disponible");return;}
   try{
-    sessionStorage.setItem("_gRedirect","1");
+    localStorage.setItem("_gRedirect","1");
     var provider=new firebase.auth.GoogleAuthProvider();
     await auth.signInWithRedirect(provider);
   }catch(e){
-    sessionStorage.removeItem("_gRedirect");
+    localStorage.removeItem("_gRedirect");
     toast("Error Google: "+e.message);
   }
 }
@@ -301,7 +301,7 @@ async function registrarEmail(){
 async function onAuthStateChanged(user){
   try{
     if(!user){
-      if(sessionStorage.getItem("_gRedirect")){return;}
+      if(localStorage.getItem("_gRedirect")){return;}
       var p=getPerfil();
       if(p){mostrarApp();renderPerfil();return;}
       mostrarLogin();showAuthStep1();
@@ -991,7 +991,7 @@ async function guardarGanadorPartido(slot){
   if(auth){
     // Manejar resultado del redirect de Google antes de signInAnonymously
     auth.getRedirectResult().then(function(result){
-      sessionStorage.removeItem("_gRedirect");
+      localStorage.removeItem("_gRedirect");
       if(result&&result.user){
         return;
       }
