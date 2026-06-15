@@ -227,13 +227,22 @@ function showAuthStep2(){var s1=el("auth-step1");var em=el("auth-email");var s2=
 
 async function loginGoogle(){
   if(!auth){toast("Auth no disponible");return;}
+  var provider=new firebase.auth.GoogleAuthProvider();
   try{
-    localStorage.setItem("_gRedirect","1");
-    var provider=new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithRedirect(provider);
+    var result=await auth.signInWithPopup(provider);
+    if(result&&result.user)return;
   }catch(e){
-    localStorage.removeItem("_gRedirect");
-    toast("Error Google: "+e.message);
+    if(e.code==="auth/popup-blocked"||e.code==="auth/popup-closed-by-user"||e.code==="auth/cancelled-popup-request"){
+      try{
+        localStorage.setItem("_gRedirect","1");
+        await auth.signInWithRedirect(provider);
+      }catch(e2){
+        localStorage.removeItem("_gRedirect");
+        toast("Error Google: "+e2.message);
+      }
+    }else{
+      toast("Error Google: "+e.message);
+    }
   }
 }
 
