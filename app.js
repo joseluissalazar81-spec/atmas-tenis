@@ -1055,24 +1055,52 @@ async function guardarGanadorPartido(slot){
    ═══════════════════════════════════════════════════════════════ */
 
 var CONFIG_RES={
-  tarifas:{socio_mensual:0,socio_partido:3000,invitado:5000,arriendo:5000,academia_individual:15000,academia_grupal:8000},
+  tarifa1h:{socio_mensual:0,socio_partido:15000,invitado:15000,arriendo:15000,academia_individual:15000,academia_grupal:15000},
+  tarifa2h:{socio_mensual:0,socio_partido:25000,invitado:25000,arriendo:25000,academia_individual:25000,academia_grupal:25000},
   canchas:[
     {id:1,nombre:"Cancha 1",tipos:["socio_mensual","socio_partido"]},
     {id:2,nombre:"Cancha 2",tipos:["socio_mensual","socio_partido"]},
     {id:3,nombre:"Cancha 3",tipos:["invitado","arriendo","academia"]},
     {id:4,nombre:"Cancha 4",tipos:["invitado","arriendo","academia"]}
   ],
-  horaInicio:8,horaFin:22,bloqueMin:90,
+  // Lun-Vie: horas de inicio disponibles (bloques 1h)
+  horasLV:[8,9,10,11,12,13,14,15,16,17],
+  // Sáb-Dom: bloques fijos 2h mañana, luego 1h libre desde las 14h
+  bloquesFijosFDS:[[8,10],[10,12],[12,14]],
+  horasLibresFDS:[14,15,16,17],
   labelTipo:{socio_mensual:"Socio mensualidad",socio_partido:"Socio paga partido",invitado:"Invitado",arriendo:"Arriendo",academia:"Academia"}
 };
 
-var resState={tipo:null,fecha:null,canchaId:null,horaInicio:null,horaFin:null};
+var resState={tipo:null,fecha:null,canchaId:null,horaInicio:null,horaFin:null,duracion:1};
 
 function canchasPermitidas(tipo){
   if(tipo==="admin")return CONFIG_RES.canchas;
   return CONFIG_RES.canchas.filter(function(c){return c.tipos.indexOf(tipo)!==-1;});
 }
-function tarifaTipo(tipo){return CONFIG_RES.tarifas[tipo]||0;}
+function tarifaTipo(tipo,duracion){
+  if(duracion===2)return CONFIG_RES.tarifa2h[tipo]||0;
+  return CONFIG_RES.tarifa1h[tipo]||0;
+}
+function esFDS(fecha){
+  var d=new Date(fecha+"T12:00");var dow=d.getDay();return dow===0||dow===6;
+}
+function getSlotsParaDia(fecha){
+  // Retorna array de {hi, hf, fijo2h}
+  var slots=[];
+  if(esFDS(fecha)){
+    CONFIG_RES.bloquesFijosFDS.forEach(function(b){
+      slots.push({hi:padH(b[0])+":00",hf:padH(b[1])+":00",fijo2h:true});
+    });
+    CONFIG_RES.horasLibresFDS.forEach(function(h){
+      slots.push({hi:padH(h)+":00",hf:padH(h+1)+":00",fijo2h:false});
+    });
+  }else{
+    CONFIG_RES.horasLV.forEach(function(h){
+      slots.push({hi:padH(h)+":00",hf:padH(h+1)+":00",fijo2h:false});
+    });
+  }
+  return slots;
+}
 
 function renderCalendario(){
   handlePaymentReturn();
@@ -1106,8 +1134,9 @@ function setTipoReserva(tipo){
 
 function actualizarLabelTipo(){
   var lbl=el("res-tipo-label");if(!lbl)return;
-  var tarifa=tarifaTipo(resState.tipo);
-  lbl.textContent=(CONFIG_RES.labelTipo[resState.tipo]||resState.tipo)+(tarifa>0?" — $"+tarifa.toLocaleString("es-CL"):" — incluido");
+  var t1=tarifaTipo(resState.tipo,1),t2=tarifaTipo(resState.tipo,2);
+  var precio=t1>0?"$"+t1.toLocaleString("es-CL")+"/hr · $"+t2.toLocaleString("es-CL")+"/2hr":"incluido";
+  lbl.textContent=(CONFIG_RES.labelTipo[resState.tipo]||resState.tipo)+" — "+precio;
 }
 
 function renderDayStrip(){
@@ -1168,22 +1197,39 @@ async function renderSlots(){
       .where("estado","in",["confirmada","confirmada_pagada","pendiente_pago"])
       .get();
     var ocupadas={};
-    snap.forEach(function(doc){ocupadas[doc.data().horaInicio]=true;});
-    var ahora=new Date();var slots=[];
-    var h=CONFIG_RES.horaInicio;
-    while(h<CONFIG_RES.horaFin){
-      var hFin=h+CONFIG_RES.bloqueMin/60;if(hFin>CONFIG_RES.horaFin)break;
-      var hi=padH(h)+":00";var hf=padH(Math.floor(hFin))+(hFin%1===0.5?":30":":00");
-      var slotDt=new Date(resState.fecha+"T"+hi);
-      slots.push({hi:hi,hf:hf,ocupada:!!ocupadas[hi],pasado:slotDt<ahora});
-      h+=CONFIG_RES.bloqueMin/60;
-    }
+    snap.forEach(function(doc){
+      var r=doc.data();
+      ocupadas[r.horaInicio]=true;
+      // marcar también la segunda hora si fue reserva de 2h
+      if(r.duracion===2||r.horaFin){
+        var h2=parseInt(r.horaInicio)+1;
+        if(h2<10)ocupadas["0"+h2+":00"]=true;
+        else ocupadas[h2+":00"]=true;
+      }
+    });
+    var ahora=new Date();
+    var slots=getSlotsParaDia(resState.fecha);
     if(!slots.length){cont.innerHTML='<p class="hint">Sin horarios configurados</p>';return;}
     var htmlS='<div class="slot-grid">';
     slots.forEach(function(s){
-      var cls="slot-block"+(s.pasado||s.ocupada?" ocupado":resState.horaInicio===s.hi?" seleccionado":" libre");
-      var click=(!s.pasado&&!s.ocupada)?'onclick="selectSlotRes(\''+s.hi+'\',\''+s.hf+'\')"':'';
-      htmlS+='<div class="'+cls+'" '+click+'><div class="sl-h">'+s.hi+'</div><div class="sl-f">'+s.hf+'</div><div class="sl-e">'+(s.pasado?"Pasado":s.ocupada?"Ocupado":"Libre")+'</div></div>';
+      var slotDt=new Date(resState.fecha+"T"+s.hi);
+      var pasado=slotDt<ahora;
+      // Para slot fijo 2h: verificar que ambas horas estén libres
+      var ocup=!!ocupadas[s.hi];
+      if(s.fijo2h){
+        var h2=parseInt(s.hi)+1;
+        var hi2=(h2<10?"0"+h2:h2)+":00";
+        ocup=ocup||!!ocupadas[hi2];
+      }
+      var sel=resState.horaInicio===s.hi;
+      var cls="slot-block"+(pasado||ocup?" ocupado":sel?" seleccionado":" libre");
+      var durLabel=s.fijo2h?"2 hrs":"1 hr";
+      var click=(!pasado&&!ocup)?'onclick="selectSlotRes(\''+s.hi+'\',\''+s.hf+'\','+(s.fijo2h?2:1)+')"':'';
+      htmlS+='<div class="'+cls+'" '+click+'>'+
+        '<div class="sl-h">'+s.hi+'</div>'+
+        '<div class="sl-f">'+s.hf+'</div>'+
+        '<div class="sl-e">'+(pasado?"Pasado":ocup?"Ocupado":durLabel)+'</div>'+
+        '</div>';
     });
     htmlS+='</div>';
     cont.innerHTML=htmlS;
@@ -1192,8 +1238,8 @@ async function renderSlots(){
 
 function padH(h){return h<10?"0"+Math.floor(h):String(Math.floor(h));}
 
-function selectSlotRes(hi,hf){
-  resState.horaInicio=hi;resState.horaFin=hf;
+function selectSlotRes(hi,hf,dur){
+  resState.horaInicio=hi;resState.horaFin=hf;resState.duracion=dur||1;
   renderSlots();mostrarFormRes();
 }
 
@@ -1202,14 +1248,38 @@ function mostrarFormRes(){
   form.style.display="";
   var p=getPerfil();
   if(p){var nb=el("res-nombre");if(nb&&!nb.value)nb.value=p.nombre||"";var tb=el("res-tel");if(tb&&!tb.value)tb.value=p.tel||"";}
-  var cancha=CONFIG_RES.canchas.find(function(c){return c.id===resState.canchaId;});
-  var fechaFmt=new Date(resState.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});
-  var rs=el("res-resumen");if(rs)rs.innerHTML='<b>'+(cancha?cancha.nombre:"Cancha "+resState.canchaId)+'</b> &middot; '+fechaFmt+'<br>'+resState.horaInicio+' &ndash; '+resState.horaFin;
-  var tarifa=tarifaTipo(resState.tipo);
-  var md=el("res-monto");if(md)md.textContent=tarifa>0?"Total: $"+tarifa.toLocaleString("es-CL"):"Sin costo adicional";
-  var btn=el("res-btn");if(btn)btn.textContent=tarifa>0?"Pagar con MercadoPago — $"+tarifa.toLocaleString("es-CL"):"Confirmar reserva";
+  actualizarResumenForm();
   setTimeout(function(){form.scrollIntoView({behavior:"smooth",block:"nearest"});},100);
 }
+
+function actualizarResumenForm(){
+  var cancha=CONFIG_RES.canchas.find(function(c){return c.id===resState.canchaId;});
+  var fechaFmt=new Date(resState.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});
+  // Calcular hora fin según duración seleccionada
+  var hIni=parseInt(resState.horaInicio);
+  var hFinNum=hIni+resState.duracion;
+  var horaFinStr=(hFinNum<10?"0"+hFinNum:hFinNum)+":00";
+  resState.horaFin=horaFinStr;
+  var rs=el("res-resumen");if(rs)rs.innerHTML='<b>'+(cancha?cancha.nombre:"Cancha "+resState.canchaId)+'</b> &middot; '+fechaFmt+'<br>'+resState.horaInicio+' &ndash; '+horaFinStr+' ('+resState.duracion+'h)';
+  // Opción de duración solo si el slot no es fijo 2h (weekday o FDS libre)
+  var durDiv=el("res-duracion");
+  if(durDiv){
+    var esFijo=esFDS(resState.fecha)&&hIni<14;
+    if(esFijo){
+      durDiv.innerHTML='';// fijo 2h, no mostrar selector
+    }else{
+      durDiv.innerHTML='<div style="display:flex;gap:8px;margin-bottom:10px">'+
+        '<button class="mini'+(resState.duracion===1?" on":"")+'" style="flex:1;padding:8px 0" onclick="cambiarDuracion(1)">1 hora — $'+(tarifaTipo(resState.tipo,1)||0).toLocaleString("es-CL")+'</button>'+
+        '<button class="mini'+(resState.duracion===2?" on":"")+'" style="flex:1;padding:8px 0" onclick="cambiarDuracion(2)">2 horas — $'+(tarifaTipo(resState.tipo,2)||0).toLocaleString("es-CL")+'</button>'+
+        '</div>';
+    }
+  }
+  var tarifa=tarifaTipo(resState.tipo,resState.duracion);
+  var md=el("res-monto");if(md)md.textContent=tarifa>0?"Total: $"+tarifa.toLocaleString("es-CL"):"Sin costo adicional";
+  var btn=el("res-btn");if(btn)btn.textContent=tarifa>0?"Pagar con MercadoPago — $"+tarifa.toLocaleString("es-CL"):"Confirmar reserva";
+}
+
+function cambiarDuracion(d){resState.duracion=d;actualizarResumenForm();}
 
 function ocultarFormRes(){var f=el("res-form");if(f)f.style.display="none";}
 function cancelarSeleccionRes(){resState.horaInicio=null;resState.horaFin=null;renderSlots();ocultarFormRes();}
@@ -1248,7 +1318,7 @@ async function confirmarReserva(){
   var tel=((el("res-tel")||{}).value||"").trim()||(p&&p.tel)||"";
   if(!nombre){toast("Ingresa tu nombre");return;}
   if(!resState.fecha||!resState.canchaId||!resState.horaInicio){toast("Selecciona un horario");return;}
-  var tarifa=tarifaTipo(resState.tipo);
+  var tarifa=tarifaTipo(resState.tipo,resState.duracion);
   var cancha=CONFIG_RES.canchas.find(function(c){return c.id===resState.canchaId;});
   var btn=el("res-btn");if(btn){btn.disabled=true;btn.textContent="Procesando...";}
   try{
