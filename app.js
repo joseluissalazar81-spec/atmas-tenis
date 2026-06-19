@@ -196,7 +196,7 @@ function renderVerdades(){
 renderVerdades();
 
 /* ─── MERCADO PAGO ────────────────────────────────────────────── */
-const MP={cancha1hr:"https://mpago.li/2Up5tJ7",cancha2hrs:"https://mpago.la/1JgQ4Y5",torneo20:"https://mpago.la/REEMPLAZAR_T20",torneo15:"https://mpago.la/REEMPLAZAR_T15",escalerilla:"https://mpago.la/REEMPLAZAR_ESC",socio:"https://mpago.la/REEMPLAZAR_SOCIO",inscripcion:"https://mpago.la/REEMPLAZAR_INSC"};
+const MP={cancha1hr:"https://mpago.la/2JDpPFu",cancha2hrs:"https://mpago.la/1m28aAc",torneo20:"https://mpago.la/REEMPLAZAR_T20",torneo15:"https://mpago.la/REEMPLAZAR_T15",escalerilla:"https://mpago.la/REEMPLAZAR_ESC",socio:"https://mpago.la/REEMPLAZAR_SOCIO",inscripcion:"https://mpago.la/REEMPLAZAR_INSC"};
 function pagoHTML(monto,label,link){
   var t=PAGO;
   function _fila(k,v){return '<div class="pagobox row"><span class="k">'+k+':</span><span class="v">'+v+'</span></div>';}
