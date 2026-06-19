@@ -178,10 +178,8 @@ function renderProfesores(){
     var h="";
     profesores.forEach(function(prof){
       var ini=initials(prof.nombre);var col=avatarColor(prof.nombre);
-      var certsH="";
-      Object.entries(prof.certs).forEach(function(ent){
-        certsH+='<div style="margin-top:12px"><div style="font-size:10px;font-weight:800;color:var(--lima);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">'+ent[0]+'</div><div style="display:flex;flex-wrap:wrap;gap:4px 12px">'+ent[1].map(function(i){return'<span style="color:rgba(255,255,255,.88);font-size:14px;font-weight:400">'+i+'</span>';}).join('')+'</div></div>';
-      });
+      var certParts=Object.entries(prof.certs).map(function(ent){return ent[0]+' ('+ent[1].join(', ')+')';});
+      var certsH='<p style="font-size:13px;color:rgba(255,255,255,.88);line-height:1.7;margin:0">'+certParts.join(' · ')+'</p>';
       h+=
         '<div style="background:#fff;border-radius:20px;margin-bottom:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1)">'+
           // Header verde degradado
