@@ -756,6 +756,7 @@ async function guardarPartido(){
       sets:sets,cancha:cancha,fecha:fecha,contexto:contexto,estado:"pendiente_rival",
       ts:firebase.firestore.FieldValue.serverTimestamp()
     });
+    notificarMarcelo("🎾 Partido registrado\n"+ganador+" ganó a "+perdedor+"\nSets: "+sets+"\nCancha: "+cancha+" · "+fecha+"\n⏳ Pendiente confirmación de "+perdedor);
     closeModal();
     var sc=el("sheet-content");var mo=el("modal");
     if(sc)sc.innerHTML='<div style="text-align:center;padding:16px 0"><div style="font-size:48px">&#128203;</div><div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido enviado</div><div style="font-size:13px;color:var(--suave);line-height:1.6">Enviado al rival para confirmar.<br>Si disputa el resultado, Marcelo Escalona decide.<br>Los puntos se suman una vez confirmado.</div></div><button class="btn sec" style="margin-top:16px" onclick="closeModal()">Entendido</button>';
