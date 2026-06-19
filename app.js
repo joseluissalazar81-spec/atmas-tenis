@@ -2744,22 +2744,32 @@ async function cargarPlanillaResultados(){
   var cont=el("admin-planilla-cont");if(!cont)return;
   cont.innerHTML='<p class="hint">Cargando...</p>';
   try{
-    var snap=await db.collection("partidos_atmas").where("estado","==","aprobado").orderBy("ts","desc").limit(100).get();
+    var snap=await db.collection("partidos_atmas").orderBy("ts","desc").limit(150).get();
     if(snap.empty){cont.innerHTML='<p class="hint">Sin partidos registrados aún</p>';return;}
     var filas="";var n=0;
     snap.forEach(function(doc){
       n++;var r=doc.data();
       var fechaFmt=r.fecha?r.fecha.split("-").reverse().join("/"):"-";
       var bgRow=n%2===0?"#f9fafb":"#fff";
-      filas+='<div style="display:grid;grid-template-columns:24px 1fr 1fr auto;gap:6px;align-items:center;padding:8px 10px;background:'+bgRow+';border-radius:8px;margin-bottom:3px">'+
-        '<div style="font-size:11px;color:var(--suave);font-weight:600">'+n+'</div>'+
-        '<div><div style="font-size:12px;font-weight:700">'+r.ganador+'</div><div style="font-size:10px;color:var(--suave)">vs '+r.perdedor+'</div></div>'+
-        '<div style="font-size:11px;color:#444">'+(r.sets||"—")+'<br><span style="color:var(--suave)">'+fechaFmt+'</span></div>'+
-        '<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#15803d;border-radius:6px;padding:2px 6px">W</span>'+
+      var estadoColor=r.estado==="aprobado"?"#15803d":r.estado==="archivado"?"#9ca3af":r.estado==="pendiente_admin"?"#b45309":"#6b7280";
+      var estadoLabel=r.estado==="aprobado"?"✓":r.estado==="archivado"?"arc":r.estado==="pendiente_admin"?"⏳":"?";
+      filas+='<div style="display:grid;grid-template-columns:20px 1fr auto auto;gap:6px;align-items:center;padding:8px 10px;background:'+bgRow+';border-radius:8px;margin-bottom:3px">'+
+        '<div style="font-size:10px;color:var(--suave)">'+n+'</div>'+
+        '<div><div style="font-size:12px;font-weight:700">'+r.ganador+'</div><div style="font-size:10px;color:var(--suave)">vs '+r.perdedor+' · '+(r.sets||"—")+' · '+fechaFmt+'</div></div>'+
+        '<span style="font-size:10px;font-weight:700;color:'+estadoColor+'">'+estadoLabel+'</span>'+
+        '<button onclick="eliminarPartido(\''+doc.id+'\')" style="background:none;border:none;color:#dc2626;font-size:16px;cursor:pointer;padding:2px 4px">&times;</button>'+
         '</div>';
     });
-    cont.innerHTML='<div style="font-size:11px;color:var(--suave);margin-bottom:8px">'+n+' partidos aprobados</div>'+filas;
+    cont.innerHTML='<div style="font-size:11px;color:var(--suave);margin-bottom:8px">'+n+' partidos totales</div>'+filas;
   }catch(e){if(cont)cont.innerHTML='<p class="hint">Error al cargar</p>';}
+}
+async function eliminarPartido(docId){
+  if(!confirm("¿Eliminar este partido? Los puntos NO se revierten automáticamente."))return;
+  try{
+    await db.collection("partidos_atmas").doc(docId).delete();
+    toast("Partido eliminado");
+    cargarPlanillaResultados();
+  }catch(e){toast("Error: "+e.message);}
 }
 
 /* ─── CATÁLOGO DE PROGRAMAS FORMATIVOS ───────────────────────── */
