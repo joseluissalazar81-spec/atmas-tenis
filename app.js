@@ -109,10 +109,11 @@ async function actualizarStats(){
   try{var snap=await db.collection("partidos_atmas").get();var elP=el("stat-partidos");if(elP)elP.textContent=snap.size;}catch(e){}
 }
 
+var CAT_A=["Mauricio Morales","Sebastián Brito","Osvaldo Valdivia","Emilio Alzérreca","Oscar Henríquez","Patricio Chamorro","Rodrigo Bernal","Hipólito Bello","Edgardo Pacheco","Pablo Ortiz","Rodrigo Navarro","Carlos Tapia","Néstor Zárate","Pablo Concha"];
+var CAT_B=["Manuel Illanes","Andy Cespedes","Ignacio Peyresblanque","Felipe Martínez","Aurelio Saavedra","Felipe Miño","César Moreno","Alfredo Muñoz"];
 function generarCuadros(){
-  var lista=rankingData.slice().sort(function(a,b){return b[1]-a[1];});
-  function buildMatches(start){var ps=lista.slice(start,start+16);var n=ps.length;var matches=[];for(var i=0;i<8;i++){var a=ps[i]?ps[i][0]:null;var b=ps[n-1-i]?ps[n-1-i][0]:null;matches.push([a,b,null]);}return matches;}
-  return{oro:buildMatches(0),plata:buildMatches(16)};
+  function buildFromList(ps){var n=ps.length;var matches=[];for(var i=0;i<8;i++){var a=ps[i]||null;var b=ps[n-1-i]||null;matches.push([a,b,null]);}return matches;}
+  return{oro:buildFromList(CAT_A),plata:buildFromList(CAT_B)};
 }
 var cuadros={oro:[],plata:[]};
 function tie(a,b,w){function c(x){return x?(x===w?"p w":"p"):"p tbd";}return '<div class="tie"><div class="'+c(a)+'">'+(a||"Por definir")+'</div><div class="'+c(b)+'">'+(b||"Por definir")+'</div></div>';}
