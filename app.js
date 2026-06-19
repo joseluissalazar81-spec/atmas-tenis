@@ -139,7 +139,7 @@ function renderProfesores(){
       var ini=initials(prof.nombre);var col=avatarColor(prof.nombre);
       var certsH="";
       Object.entries(prof.certs).forEach(function(ent){
-        certsH+='<div style="margin-top:12px"><div style="font-size:10px;font-weight:800;color:var(--verde-osc);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">'+ent[0]+'</div><div style="display:flex;flex-wrap:wrap;gap:5px">'+ent[1].map(function(i){return'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:20px;padding:3px 10px;font-size:13px;font-weight:400">'+i+'</span>';}).join('')+'</div></div>';
+        certsH+='<div style="margin-top:12px"><div style="font-size:10px;font-weight:800;color:var(--lima);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">'+ent[0]+'</div><div style="display:flex;flex-wrap:wrap;gap:4px 12px">'+ent[1].map(function(i){return'<span style="color:rgba(255,255,255,.88);font-size:14px;font-weight:400">'+i+'</span>';}).join('')+'</div></div>';
       });
       h+=
         '<div style="background:#fff;border-radius:20px;margin-bottom:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1)">'+
@@ -158,7 +158,7 @@ function renderProfesores(){
             '<div style="font-size:10px;font-weight:800;color:var(--lima);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">Sobre el entrenador</div>'+
             '<p style="font-size:14px;color:rgba(255,255,255,.88);line-height:1.65;margin:0 0 18px">'+prof.bio+'</p>'+
             '<div style="font-size:10px;font-weight:800;color:var(--lima);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px">Certificaciones</div>'+
-            certsH.replace(/color:var\(--verde-osc\)/g,'color:var(--lima)').replace(/background:var\(--verde-claro\);color:var\(--verde-osc\)/g,'background:transparent;color:rgba(255,255,255,.9);border:1px solid rgba(255,255,255,.35)')+
+            certsH+
           '</div>'+
         '</div>';
     });
