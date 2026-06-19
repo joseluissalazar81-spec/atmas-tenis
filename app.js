@@ -92,7 +92,7 @@ var rankingListener=null;
 async function resetearRankingFirestore(){
   try{
     // Verificar si ya se hizo el reset de temporada Jun-Ago 2026
-    var flagSnap=await db.collection("config_app").doc("reset_jun2026").get();
+    var flagSnap=await db.collection("config_app").doc("reset_jun2026_v2").get();
     if(flagSnap.exists)return; // Ya se hizo, no repetir
     // Resetear todos los jugadores a cero
     var snap=await db.collection("ranking_atmas").get();
@@ -118,7 +118,7 @@ async function resetearRankingFirestore(){
       await batch3.commit();
     }
     // Marcar como hecho para no repetir
-    await db.collection("config_app").doc("reset_jun2026").set({done:true,fecha:new Date().toISOString()});
+    await db.collection("config_app").doc("reset_jun2026_v2").set({done:true,fecha:new Date().toISOString()});
   }catch(e){console.warn("resetearRankingFirestore error:",e);}
 }
 
