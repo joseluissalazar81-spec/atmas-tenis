@@ -979,7 +979,7 @@ async function renderAdmin(){
   eab.innerHTML=h;
   renderAdminReservas();
   loadAdminTorneos();
-  var rh="";rankingData.slice(0,10).forEach(function(p,i){rh+='<div class="lcard"><div class="rank-pos" style="width:24px;font-size:12px">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+p[0]+'</div><div class="ds">'+p[1]+' pts &middot; '+p[3]+'G '+p[4]+'P</div></div></div>';});
+  var rh="";rankingData.forEach(function(p,i){rh+='<div class="lcard"><div class="rank-pos" style="width:24px;font-size:12px">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+p[0]+'</div><div class="ds">'+p[1]+' pts &middot; '+p[3]+'G '+p[4]+'P</div></div><button class="mini" style="color:#dc2626" onclick="eliminarJugador(\''+p[0].replace(/'/g,"\\'")+'\')">&times;</button></div>';});
   var ara=el("a-ranking-admin");if(ara)ara.innerHTML=rh||'<p class="hint">Cargando ranking...</p>';
 }
 
@@ -1044,12 +1044,36 @@ async function cargarListaTorneos(){
           '<span style="font-size:11px;font-weight:700;color:'+(t.activo?"#16a34a":"#9ca3af")+'">'+(t.activo?"ACTIVO":"INACTIVO")+'</span>'+
           '<button class="mini" style="color:#dc2626" onclick="toggleTorneo(\''+doc.id+'\','+(t.activo?'false':'true')+')">'+( t.activo?"Desactivar":"Activar")+'</button>'+
           '<button class="mini" onclick="editarCuposTorneo(\''+doc.id+'\','+t.cuposDisp+')">Cupos</button>'+
+          '<button class="mini" style="color:#dc2626;font-weight:800" onclick="eliminarTorneo(\''+doc.id+'\',\''+t.nombre.replace(/'/g,"\\'")+'\')">&times; Eliminar</button>'+
         '</div></div></div>';
     });
     cont.innerHTML=h;
   }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
 }
 
+async function eliminarTorneo(id,nombre){
+  if(!confirm("¿Eliminar torneo \""+nombre+"\"? Esta acción no se puede deshacer."))return;
+  try{await db.collection("torneos_app").doc(id).delete();toast("Torneo eliminado");cargarListaTorneos();}
+  catch(e){toast("Error: "+e.message);}
+}
+async function eliminarInscripcion(id,nombre){
+  if(!confirm("¿Eliminar inscripción de \""+nombre+"\"?"))return;
+  try{await db.collection("inscripciones_atmas").doc(id).delete();toast("Inscripción eliminada");loadAdminTorneos();}
+  catch(e){toast("Error: "+e.message);}
+}
+async function eliminarJugador(nombre){
+  if(!confirm("¿Eliminar jugador \""+nombre+"\" del ranking?"))return;
+  try{
+    var snap=await db.collection("ranking_atmas").where("nombre","==",nombre).get();
+    var batch=db.batch();snap.forEach(function(doc){batch.delete(doc.ref);});
+    await batch.commit();
+    rankingData=rankingData.filter(function(p){return p[0]!==nombre;});
+    renderRanking();
+    var ara=el("a-ranking-admin");
+    if(ara){var rh="";rankingData.forEach(function(p,i){rh+='<div class="lcard"><div class="rank-pos" style="width:24px;font-size:12px">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+p[0]+'</div><div class="ds">'+p[1]+' pts &middot; '+p[3]+'G '+p[4]+'P</div></div><button class="mini" style="color:#dc2626" onclick="eliminarJugador(\''+p[0].replace(/'/g,"\\'")+'\')">&times;</button></div>';});ara.innerHTML=rh;}
+    toast("Jugador eliminado: "+nombre);
+  }catch(e){toast("Error: "+e.message);}
+}
 async function toggleTorneo(id,activo){
   try{await db.collection("torneos_app").doc(id).update({activo:activo});toast(activo?"Torneo activado":"Torneo desactivado");cargarListaTorneos();}
   catch(e){toast("Error: "+e.message);}
@@ -1078,7 +1102,7 @@ async function loadAdminTorneos(){
     var snap2=await db.collection("inscripciones_atmas").orderBy("ts","desc").limit(40).get();
     var ai=el("a-inscripciones");
     if(!ai){}else if(snap2.empty){ai.innerHTML='<p class="hint">Sin inscripciones</p>';}
-    else{var h2="";snap2.forEach(function(doc){var r=doc.data();h2+='<div class="res-card" style="border-color:#6366f1"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+'</span><span style="font-size:11px;color:var(--suave)">'+(r.torneo||r.categoria||"")+'</span></div><div class="rc-sub">'+(r.tel||"")+' &middot; '+(r.estado||"pendiente")+'</div></div>';});ai.innerHTML=h2;}
+    else{var h2="";snap2.forEach(function(doc){var r=doc.data();h2+='<div class="res-card" style="border-color:#6366f1"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+'</span><span style="font-size:11px;color:var(--suave)">'+(r.torneo||r.categoria||"")+'</span></div><div class="rc-sub">'+(r.tel||"")+' &middot; '+(r.estado||"pendiente")+'</div><button class="mini" style="color:#dc2626;margin-top:6px" onclick="eliminarInscripcion(\''+doc.id+'\',\''+((r.nombre||"").replace(/'/g,"\\'"))+'\')">&times; Eliminar</button></div>';});ai.innerHTML=h2;}
   }catch(e){}
 }
 
