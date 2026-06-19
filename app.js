@@ -21,22 +21,34 @@ function slugify(n){if(!n)return"";return n.toLowerCase().replace(/[^a-z0-9]/g,"
 function el(id){return document.getElementById(id);}
 
 /* ─── DATOS INICIALES (solo para semilla) ─────────────────────── */
+// Escalerilla Jun-Ago 2026 — actualizado 19/06/2026
 var SEED_PLAYERS=[
-  ["Rodrigo Bernal",66,14,13,1,92.86],["Mauricio Morales",64,16,12,4,75],
-  ["Felipe Muñoz",60,13,11,2,84.62],["Jonathan Muñoz",59,16,11,5,68.75],
-  ["Matías Córdova",58,14,11,3,78.57],["Juan Pablo Vera",54,14,10,4,71.43],
-  ["Juan Carlos Abarca",52,14,10,4,71.43],["Mauricio Melo",51,14,9,5,64.29],
-  ["Cristian Valdes",49,16,9,7,56.25],["Ignacio Cofre",46,14,8,6,57.14],
-  ["Rodrigo Araya",44,13,8,5,61.54],["Andrés Beltrán",42,14,8,6,57.14],
-  ["Juan David Vera",40,12,7,5,58.33],["Nicolás Tapia",38,12,7,5,58.33],
-  ["Felipe Alvarado",36,14,6,8,42.86],["Sebastián Rojas",34,13,6,7,46.15],
-  ["Álvaro Espinoza",32,12,6,6,50],["Claudio Saavedra",30,12,6,6,50],
-  ["Máximo Escalona",28,11,5,6,45.45],["Cristian Valdes B",26,11,5,6,45.45],
-  ["Fabián Araneda",24,10,4,6,40],["Franco Gutiérrez",22,10,4,6,40],
-  ["Andrés Gutiérrez",20,10,4,6,40],["Benjamin Diaz",18,8,3,5,37.5],
-  ["Nicolás Martínez",16,8,3,5,37.5],["Alex Berrocal",14,8,2,6,25],
-  ["Victor Saavedra",12,7,2,5,28.57],["Pablo Araneda",8,6,1,5,16.67],
-  ["Waldo Escalona",6,6,0,6,0],["César Moreno",6,6,0,6,0]
+  ["Manuel Illanes",20,4,4,0,100],
+  ["Mauricio Morales",15,3,3,0,100],
+  ["Sebastián Brito",11,3,2,1,66.67],
+  ["Andy Cespedes",10,2,2,0,100],
+  ["Osvaldo Valdivia",10,2,2,0,100],
+  ["Rubén González",6,2,1,1,50],
+  ["Emilio Alzérreca",6,2,1,1,50],
+  ["Ignacio Peyresblanque",5,1,1,0,100],
+  ["Oscar Henríquez",5,1,1,0,100],
+  ["Nicolás Martínez",5,1,1,0,100],
+  ["Felipe Martínez",5,1,1,0,100],
+  ["Patricio Chamorro",5,1,1,0,100],
+  ["Marcelo Escalona",5,1,1,0,100],
+  ["Rodrigo Bernal",5,1,1,0,100],
+  ["Aurelio Saavedra",3,3,0,3,0],
+  ["Hipólito Bello",2,2,0,2,0],
+  ["Edgardo Pacheco",2,2,0,2,0],
+  ["Felipe Miño",2,2,0,2,0],
+  ["Vicente Rodríguez",1,1,0,1,0],
+  ["Pablo Ortiz",1,1,0,1,0],
+  ["Rodrigo Navarro",1,1,0,1,0],
+  ["César Moreno",1,1,0,1,0],
+  ["Alfredo Muñoz",1,1,0,1,0],
+  ["Carlos Tapia",1,1,0,1,0],
+  ["Néstor Zárate",1,1,0,1,0],
+  ["Pablo Concha",1,1,0,1,0]
 ];
 
 /* ─── RANKING LIVE DESDE FIRESTORE ───────────────────────────── */
