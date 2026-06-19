@@ -166,6 +166,7 @@ function renderProfesores(){
   }catch(e){console.warn("renderProfesores error:",e);}
 }
 renderProfesores();
+renderSociosBloques();
 
 /* ─── VERDADES INCOMODAS ──────────────────────────────────────── */
 const verdades=[
@@ -1876,6 +1877,65 @@ async function renderAdminSanciones(){
 }
 
 var _configCache=null;
+function getSocioTier(){return localStorage.getItem("atmas_socio_tier")||null;}
+async function validarCodigoSocio(){
+  var cod=((el("inp-cod-socio")||{}).value||"").trim().toUpperCase();
+  if(!cod){toast("Ingresa un código");return;}
+  var cfg={};
+  try{var snap=await db.collection("config_app").doc("precios").get();if(snap.exists)cfg=snap.data();}catch(e){}
+  var codAntiguo=(cfg.cod_antiguo||"ATMAS80").toUpperCase();
+  var codNuevo=(cfg.cod_nuevo||"ATMAS100").toUpperCase();
+  if(cod===codAntiguo){
+    localStorage.setItem("atmas_socio_tier","antiguo");
+    toast("✓ Código válido — Socio Antiguo desbloqueado");
+    renderSociosBloques();
+  }else if(cod===codNuevo){
+    localStorage.setItem("atmas_socio_tier","nuevo");
+    toast("✓ Código válido — Socio Nuevo desbloqueado");
+    renderSociosBloques();
+  }else{
+    toast("Código incorrecto");
+  }
+}
+function renderSociosBloques(){
+  var cont=el("socios-bloques");if(!cont)return;
+  var tier=getSocioTier();
+  var h='';
+  if(tier==="antiguo"||tier==="nuevo"){
+    var precio=tier==="antiguo"?"$80.000":"$100.000";
+    var label=tier==="antiguo"?"Socio Antiguo":"Socio Nuevo";
+    h+='<div style="background:linear-gradient(135deg,#0f3d08,#2f6b1a);border-radius:16px;padding:16px;margin-bottom:10px;color:#fff">'+
+      '<div style="font-size:10px;font-weight:800;color:var(--lima);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">✓ Desbloqueado</div>'+
+      '<div style="font-size:15px;font-weight:900;margin-bottom:10px">'+label+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.75);margin-bottom:4px">Inscripción</div>'+
+      '<div style="font-size:18px;font-weight:900;color:var(--lima);margin-bottom:8px">$30.000</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.75);margin-bottom:4px">Mensualidad</div>'+
+      '<div style="font-size:18px;font-weight:900;color:var(--lima);margin-bottom:12px">'+precio+'</div>'+
+      '<button class="btn" style="background:var(--lima);color:#1a2e1a;font-size:12px;padding:8px" onclick="openModal(\'socio\')">Inscribirse</button>'+
+      '</div>';
+  }
+  h+='<div style="background:linear-gradient(135deg,#7a3010,#b04a18);border-radius:16px;padding:16px;margin-bottom:10px;color:#fff">'+
+    '<div style="font-size:10px;font-weight:800;color:#ffd700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Por cancha</div>'+
+    '<div style="font-size:15px;font-weight:900;margin-bottom:10px">Socio Pago Cancha</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.75);margin-bottom:4px">Inscripción</div>'+
+    '<div style="font-size:18px;font-weight:900;color:#ffd700;margin-bottom:8px">$35.000</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.75);margin-bottom:4px">Por cancha/hr</div>'+
+    '<div style="font-size:18px;font-weight:900;color:#ffd700;margin-bottom:12px">$15.000</div>'+
+    '<button class="btn" style="background:#ffd700;color:#5c2e00;font-size:12px;padding:8px" onclick="openModal(\'socio\')">Inscribirse</button>'+
+    '</div>';
+  if(!tier){
+    h+='<div style="background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.07)">'+
+      '<div style="font-size:13px;font-weight:700;margin-bottom:6px">🔑 ¿Tienes un código de socio?</div>'+
+      '<div style="font-size:12px;color:var(--suave);margin-bottom:10px">Marcelo te entrega un código para acceder a la mensualidad.</div>'+
+      '<div style="display:flex;gap:8px">'+
+      '<input id="inp-cod-socio" placeholder="Ingresa tu código" style="flex:1;border:1.5px solid var(--gris);border-radius:10px;padding:10px;font-size:14px">'+
+      '<button class="btn" style="padding:10px 14px;font-size:13px" onclick="validarCodigoSocio()">OK</button>'+
+      '</div></div>';
+  }else{
+    h+='<div style="text-align:center;margin-top:4px"><button style="border:none;background:none;color:var(--suave);font-size:11px;text-decoration:underline;cursor:pointer" onclick="localStorage.removeItem(\'atmas_socio_tier\');renderSociosBloques()">Cerrar sesión de socio</button></div>';
+  }
+  cont.innerHTML=h;
+}
 async function renderAdminConfig(){
   var cont=el("admin-config-cont");if(!cont)return;
   cont.innerHTML='<p class="hint">Cargando...</p>';
@@ -1909,6 +1969,11 @@ async function renderAdminConfig(){
     fi("bemail","Email",bemail)+
     fi("wp","WhatsApp (sin +)",wp)+
     '</div>'+
+    '<div class="admin-section"><div class="section-title">🔑 Códigos de Socio Mensualidad</div>'+
+    '<p style="font-size:12px;color:var(--suave);margin-bottom:10px">Entrega estos códigos a jugadores que quieras convertir en socios. Cambia los códigos cuando quieras.</p>'+
+    fi("cod_antiguo","Código Socio Antiguo ($80.000/mes)",cfg.cod_antiguo||"ATMAS80")+
+    fi("cod_nuevo","Código Socio Nuevo ($100.000/mes)",cfg.cod_nuevo||"ATMAS100")+
+    '</div>'+
     '<button class="btn" onclick="guardarAdminConfig()">Guardar cambios</button>';
   cont.innerHTML=h;
 }
@@ -1919,7 +1984,8 @@ async function guardarAdminConfig(){
     cancha1h:parseInt(gv("c1h"))||15000,cancha2h:parseInt(gv("c2h"))||25000,
     academia_iniciacion:parseInt(gv("ac1"))||60000,academia_intermedio:parseInt(gv("ac2"))||70000,
     academia_avanzado:parseInt(gv("ac3"))||80000,academia_individual_4c:parseInt(gv("ac4"))||120000,academia_individual_8c:parseInt(gv("ac5"))||200000,
-    banco_nombre:gv("bnombre"),banco_rut:gv("brut"),banco_banco:gv("bbanco"),banco_tipo:gv("btipo"),banco_cuenta:gv("bcuenta"),banco_email:gv("bemail"),wp:gv("wp")
+    banco_nombre:gv("bnombre"),banco_rut:gv("brut"),banco_banco:gv("bbanco"),banco_tipo:gv("btipo"),banco_cuenta:gv("bcuenta"),banco_email:gv("bemail"),wp:gv("wp"),
+    cod_antiguo:gv("cod_antiguo")||"ATMAS80",cod_nuevo:gv("cod_nuevo")||"ATMAS100"
   };
   try{
     await db.collection("config_app").doc("precios").set(data,{merge:true});
