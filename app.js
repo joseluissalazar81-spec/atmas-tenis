@@ -1918,25 +1918,33 @@ async function reservarSlot(id,fecha,hora){
   var nombre=perfil?perfil.nombre:"";
   var tel=perfil?perfil.tel:"";
   var cont=el("slots-list");if(!cont)return;
+  var objetivos=['Servicio','Derecho','Revés','Volea','Smash','Resto','Juego de red','Táctica general','Otro'];
+  var objOpts=objetivos.map(function(o){return'<option>'+o+'</option>';}).join('');
   cont.innerHTML=
     '<div style="font-size:14px;font-weight:700;margin-bottom:12px">Confirmar reserva</div>'+
-    '<div style="background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:14px">'+
-      '<div style="font-weight:700;text-transform:capitalize">'+fecha+'</div>'+
-      '<div style="color:var(--verde-osc);font-weight:700">🕐 '+hora+'</div>'+
+    '<div style="background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:700;text-transform:capitalize">'+fecha+'</div>'+
+      '<div style="color:var(--verde-osc);font-weight:700">🕐 '+hora+'</div></div>'+
+      '<div style="text-align:right"><div style="font-size:11px;color:var(--suave)">Valor clase</div><div style="font-size:20px;font-weight:900;color:var(--verde-osc)">$30.000</div></div>'+
     '</div>'+
     '<div class="field"><label>Tu nombre</label><input id="slot-nombre" value="'+nombre+'" placeholder="Ej: Juan Pérez"></div>'+
     '<div class="field"><label>Teléfono</label><input id="slot-tel" value="'+tel+'" placeholder="+56 9 xxxx xxxx" type="tel"></div>'+
-    '<button class="btn" onclick="confirmarReservaSlot(\''+id+'\',\''+fecha+'\',\''+hora+'\')">✓ Confirmar reserva</button>'+
+    '<div class="field"><label>🎯 Objetivo de la clase</label><select id="slot-objetivo">'+objOpts+'</select></div>'+
+    '<div class="field"><label>Detalle adicional (opcional)</label><input id="slot-detalle" placeholder="Ej: quiero mejorar mi segundo servicio"></div>'+
+    '<button class="btn" onclick="confirmarReservaSlot(\''+id+'\',\''+fecha+'\',\''+hora+'\')">✓ Confirmar reserva · $30.000</button>'+
     '<button class="btn sec" style="margin-top:8px" onclick="cargarSlotsIndividuales()">← Volver</button>';
 }
 
 async function confirmarReservaSlot(id,fecha,hora){
   var nombre=((el("slot-nombre")||{}).value||"").trim();
   var tel=((el("slot-tel")||{}).value||"").trim();
+  var objetivo=(el("slot-objetivo")||{}).value||"";
+  var detalle=((el("slot-detalle")||{}).value||"").trim();
   if(!nombre){toast("Ingresa tu nombre");return;}
   try{
     await db.collection("slots_individuales").doc(id).update({
       estado:"reservado",nombre_reserva:nombre,tel_reserva:tel,
+      objetivo:objetivo,detalle:detalle,monto:30000,
       ts_reserva:firebase.firestore.FieldValue.serverTimestamp()
     });
     var cont=el("slots-list");
@@ -1975,7 +1983,7 @@ async function renderAdminSlots(){
       var s=doc.data();
       var fechaFmt=s.fecha?new Date(s.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"short",day:"numeric",month:"short"}):"";
       var estadoColor=s.estado==="reservado"?"#dc2626":"var(--verde-osc)";
-      var estadoLabel=s.estado==="reservado"?"Reservado · "+s.nombre_reserva:"Disponible";
+      var estadoLabel=s.estado==="reservado"?"Reservado · "+s.nombre_reserva+(s.objetivo?" · "+s.objetivo:""):"Disponible";
       h+='<div class="lcard"><div style="flex:1"><div class="nm" style="text-transform:capitalize">'+fechaFmt+' &middot; '+s.hora+'</div><div class="ds" style="color:'+estadoColor+'">'+estadoLabel+'</div></div>'+
         (s.estado==="reservado"?'<button class="mini" onclick="liberarSlot(\''+doc.id+'\')">Liberar</button>':'')+
         '<button class="mini" style="color:#dc2626" onclick="eliminarSlot(\''+doc.id+'\')">×</button></div>';
