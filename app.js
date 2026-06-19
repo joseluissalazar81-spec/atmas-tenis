@@ -1,4 +1,4 @@
-function toast(m){var t=document.getElementById("toast");if(!t)return;t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("show");},10000);}
+function toast(m){var t=document.getElementById("toast");if(!t)return;t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("show");},3000);}
 function go(s){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});var sc=document.getElementById(s);if(sc)sc.classList.add("active");document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.s===s);});var ct=document.querySelector(".content");if(ct)ct.scrollTop=0;if(s==="perfil")renderPerfil();if(s==="admin")renderAdmin();if(s==="cancha")renderCalendario();if(s==="mis-reservas")renderMisReservas();}
 function closeModal(){var m=document.getElementById("modal");if(m)m.classList.remove("show");}
 function setVista(v){var r=document.getElementById("vista-rank");var c=document.getElementById("vista-cuadro");if(r)r.style.display=v==="rank"?"block":"none";if(c)c.style.display=v==="cuadro"?"block":"none";var vr=document.getElementById("vRank");var vc=document.getElementById("vCuadro");if(vr)vr.classList.toggle("on",v==="rank");if(vc)vc.classList.toggle("on",v==="cuadro");}
@@ -455,11 +455,12 @@ function mostrarPopupTorneos(){
     setTimeout(function(){
       var t=torneosAbiertos[0];
       var sc=el("sheet-content");var mo=el("modal");
+
       if(!sc||!mo)return;
       sc.innerHTML='<div style="text-align:center;padding:8px 0"><div style="font-size:42px;margin-bottom:8px">&#127942;</div><div style="font-weight:900;font-size:17px;color:var(--verde-osc);margin-bottom:4px">Inscripciones abiertas</div><div style="font-weight:700;font-size:15px;margin-bottom:4px">'+t.n+'</div><div style="font-size:13px;color:var(--suave);margin-bottom:14px">'+t.f+' &middot; '+t.p+'</div><button class="btn" onclick="closeModal();go(&quot;torneos&quot;)">Ver torneos &rarr;</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Despues</button></div>';
       mo.classList.add("show");
-      setTimeout(function(){mo.classList.remove("show");},5000);
-    },1500);
+      setTimeout(function(){mo.classList.remove("show");},6000);
+    },4000);
   }catch(e){}
 }
 
