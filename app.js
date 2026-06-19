@@ -817,7 +817,7 @@ async function renderAdmin(){
   var ara=el("a-ranking-admin");if(ara)ara.innerHTML=rh||'<p class="hint">Cargando ranking...</p>';
 }
 
-function adminTab(tab){
+function adminTab(el_,tab){if(tab===undefined){tab=el_;}
   ["reservas","sanciones","torneos","ranking"].forEach(function(t){
     var div=el("admin-tab-"+t);if(div)div.style.display=t===tab?"":"none";
     var btn=el("atab-"+t);if(btn)btn.className=t===tab?"on":"";
