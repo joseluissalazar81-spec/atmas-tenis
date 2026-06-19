@@ -572,12 +572,21 @@ function guardarCaracteristicas(){
   }catch(e){toast("Error al guardar caracteristicas.");}
 }
 
-function miConfirmar(i){var q=window._misPendQ[i];if(q)aprobarPartido(q.id,q.gan,q.per);}
+async function miConfirmar(i){
+  var q=window._misPendQ[i];if(!q)return;
+  try{
+    await db.collection("partidos_atmas").doc(q.id).update({estado:"pendiente_admin",rivalConfirmo:true});
+    notificarMarcelo("✅ Partido confirmado por rival — pendiente tu validación\n"+q.gan+" ganó a "+q.per+"\n\nAbre el admin para aprobar y sumar los puntos.");
+    toast("Confirmado. Marcelo validará y sumará los puntos.");
+    cargarPartidosPendientes((getPerfil()||{}).nombre||"");
+  }catch(e){toast("Error al confirmar.");}
+}
 async function miDisputar(i){
   var q=window._misPendQ[i];if(!q)return;
   try{
-    await db.collection("partidos_atmas").doc(q.id).update({estado:"pendiente_admin"});
-    toast("Enviado a Marcelo Escalona para resolver");
+    await db.collection("partidos_atmas").doc(q.id).update({estado:"pendiente_admin",rivalConfirmo:false});
+    notificarMarcelo("⚠️ Partido EN DISPUTA — necesita tu resolución\n"+q.gan+" vs "+q.per+"\n\nEl rival no está de acuerdo con el resultado.");
+    toast("Disputado. Marcelo Escalona resolverá.");
     cargarPartidosPendientes((getPerfil()||{}).nombre||"");
   }catch(e){toast("Error al disputar.");}
 }
@@ -1202,7 +1211,9 @@ async function loadAdminTorneos(){
     if(!ap){}else if(snapPend.empty){ap.innerHTML='<p class="hint">Sin partidos pendientes</p>';}
     else{
       window._pendQ=[];var hp="";
-      snapPend.forEach(function(doc){var r=doc.data();var qi=window._pendQ.length;window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' ganó</span><span class="rc-date">'+(r.fecha||"")+'</span></div>'+(r.contexto?'<div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:2px">'+r.contexto+'</div>':'')+'<div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">Aprobar +5/+1</button><button class="btn sec" style="flex:1;padding:8px;font-size:12px" onclick="pendRechazar('+qi+')">Rechazar</button></div></div>';});
+      snapPend.forEach(function(doc){var r=doc.data();var qi=window._pendQ.length;window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});
+        var rivalTag=r.rivalConfirmo===true?'<span style="background:#dcfce7;color:#15803d;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700">✅ Rival confirmó</span>':r.rivalConfirmo===false?'<span style="background:#fee2e2;color:#b91c1c;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700">⚠️ En disputa</span>':'<span style="background:#fef3c7;color:#b45309;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700">⏳ Sin confirmar</span>';
+        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' ganó</span><span class="rc-date">'+(r.fecha||"")+'</span></div>'+rivalTag+(r.contexto?'<div style="font-size:11px;font-weight:700;color:#b45309;margin:4px 0">'+r.contexto+'</div>':'')+'<div class="rc-sub" style="margin-top:4px">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">✓ Aprobar +pts</button><button class="btn sec" style="flex:1;padding:8px;font-size:12px" onclick="pendRechazar('+qi+')">✗ Rechazar</button></div></div>';});
       ap.innerHTML=hp;
     }
   }catch(e){var ap2=el("a-pendientes");if(ap2)ap2.innerHTML='<p class="hint">Error</p>';}
