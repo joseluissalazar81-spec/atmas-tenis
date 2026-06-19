@@ -839,6 +839,9 @@ function openModal(tipo,idx){
         '<button class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:12px">✓ Confirmar inscripción</button>'+
         pagoHTML(t.monto,t.n,mpLink)+
         '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';
+    }else if(tipo==="clase"&&idx==="individual"){
+      html='<h3>📅 Clases Individuales</h3><div id="slots-list"><p style="text-align:center;padding:20px;color:var(--suave)">Cargando horarios...</p></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';
+      setTimeout(cargarSlotsIndividuales,50);
     }else if(tipo==="clase"){
       var planes={iniciacion:{t:"Iniciacion - Sabados",opciones:[{l:"1 dia - Sabados",v:60000}]},intermedio:{t:"Intermedios",opciones:[{l:"1 dia",v:70000},{l:"2 dias",v:120000},{l:"3 dias",v:150000}]},avanzado:{t:"Avanzados",opciones:[{l:"1 dia",v:80000},{l:"2 dias",v:120000},{l:"3 dias",v:150000}]},individual:{t:"Clases individuales",opciones:[{l:"4 clases",v:120000},{l:"8 clases",v:200000}]}};
       var plan=planes[idx]||planes.individual;
@@ -956,6 +959,7 @@ async function renderAdmin(){
   h+='<button id="atab-sanciones" onclick="adminTab(this,\'sanciones\')">Sanciones</button>';
   h+='<button id="atab-torneos" onclick="adminTab(this,\'torneos\')">Torneos</button>';
   h+='<button id="atab-ranking" onclick="adminTab(this,\'ranking\')">Ranking</button>';
+  h+='<button id="atab-agenda" onclick="adminTab(this,\'agenda\')">Agenda</button>';
   h+='<button id="atab-config" onclick="adminTab(this,\'config\')">Config</button>';
   h+='</div>';
   h+='<div id="admin-tab-reservas"><div class="section-title">Reservas de canchas</div><div id="admin-reservas-cont"><p class="hint">Cargando...</p></div></div>';
@@ -978,6 +982,7 @@ async function renderAdmin(){
   h+='</div>';
   h+='<div id="admin-tab-ranking" style="display:none"><div class="admin-section"><div class="section-title">Tipos de usuario</div><div id="admin-tipos-cont"><p class="hint">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div>';
   h+='<button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div></div>';
+  h+='<div id="admin-tab-agenda" style="display:none"><div class="admin-section"><div class="section-title">📅 Agenda Clases Individuales</div><div id="admin-slots-cont"><p class="hint">Cargando...</p></div></div></div>';
   h+='<div id="admin-tab-config" style="display:none"><div id="admin-config-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div style="height:20px"></div>';
   eab.innerHTML=h;
@@ -988,12 +993,13 @@ async function renderAdmin(){
 }
 
 function adminTab(el_,tab){if(tab===undefined){tab=el_;}
-  ["reservas","sanciones","torneos","ranking","config"].forEach(function(t){
+  ["reservas","sanciones","torneos","ranking","agenda","config"].forEach(function(t){
     var div=el("admin-tab-"+t);if(div)div.style.display=t===tab?"":"none";
     var btn=el("atab-"+t);if(btn)btn.className=t===tab?"on":"";
   });
   if(tab==="sanciones")renderAdminSanciones();
   if(tab==="ranking")renderAdminTipos();
+  if(tab==="agenda")renderAdminSlots();
   if(tab==="config")renderAdminConfig();
   if(tab==="torneos"){loadAdminTorneos();cargarListaTorneos();}
 }
@@ -1877,6 +1883,116 @@ async function renderAdminSanciones(){
 }
 
 var _configCache=null;
+/* ─── AGENDA CLASES INDIVIDUALES ──────────────────────────────── */
+async function cargarSlotsIndividuales(){
+  var cont=el("slots-list");if(!cont)return;
+  try{
+    var snap=await db.collection("slots_individuales")
+      .where("estado","==","disponible")
+      .orderBy("fecha").orderBy("hora")
+      .get();
+    if(snap.empty){cont.innerHTML='<div style="text-align:center;padding:24px"><div style="font-size:36px;margin-bottom:8px">📅</div><div style="font-size:14px;color:var(--suave)">No hay horarios disponibles.<br>Consulta a Marcelo.</div></div>';return;}
+    var h='<div style="font-size:12px;color:var(--suave);margin-bottom:12px">Elige un horario disponible:</div>';
+    snap.forEach(function(doc){
+      var s=doc.data();
+      var fechaFmt=s.fecha?new Date(s.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"}):"";
+      h+='<div style="background:#f0fdf4;border-radius:12px;padding:14px;margin-bottom:8px;border-left:4px solid var(--verde)">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between">'+
+          '<div>'+
+            '<div style="font-weight:800;font-size:14px;color:#1a2e1a;text-transform:capitalize">'+fechaFmt+'</div>'+
+            '<div style="font-size:13px;color:var(--verde-osc);font-weight:700;margin-top:2px">🕐 '+s.hora+'</div>'+
+            (s.nota?'<div style="font-size:11px;color:var(--suave);margin-top:2px">'+s.nota+'</div>':'')+
+          '</div>'+
+          '<button class="btn" style="padding:9px 14px;font-size:13px" onclick="reservarSlot(\''+doc.id+'\',\''+fechaFmt+'\',\''+s.hora+'\')">Reservar</button>'+
+        '</div>'+
+      '</div>';
+    });
+    cont.innerHTML=h;
+  }catch(e){cont.innerHTML='<p style="color:var(--suave);text-align:center">Error cargando horarios</p>';}
+}
+
+async function reservarSlot(id,fecha,hora){
+  var perfil=getPerfil();
+  var nombre=perfil?perfil.nombre:"";
+  var tel=perfil?perfil.tel:"";
+  var cont=el("slots-list");if(!cont)return;
+  cont.innerHTML=
+    '<div style="font-size:14px;font-weight:700;margin-bottom:12px">Confirmar reserva</div>'+
+    '<div style="background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:14px">'+
+      '<div style="font-weight:700;text-transform:capitalize">'+fecha+'</div>'+
+      '<div style="color:var(--verde-osc);font-weight:700">🕐 '+hora+'</div>'+
+    '</div>'+
+    '<div class="field"><label>Tu nombre</label><input id="slot-nombre" value="'+nombre+'" placeholder="Ej: Juan Pérez"></div>'+
+    '<div class="field"><label>Teléfono</label><input id="slot-tel" value="'+tel+'" placeholder="+56 9 xxxx xxxx" type="tel"></div>'+
+    '<button class="btn" onclick="confirmarReservaSlot(\''+id+'\',\''+fecha+'\',\''+hora+'\')">✓ Confirmar reserva</button>'+
+    '<button class="btn sec" style="margin-top:8px" onclick="cargarSlotsIndividuales()">← Volver</button>';
+}
+
+async function confirmarReservaSlot(id,fecha,hora){
+  var nombre=((el("slot-nombre")||{}).value||"").trim();
+  var tel=((el("slot-tel")||{}).value||"").trim();
+  if(!nombre){toast("Ingresa tu nombre");return;}
+  try{
+    await db.collection("slots_individuales").doc(id).update({
+      estado:"reservado",nombre_reserva:nombre,tel_reserva:tel,
+      ts_reserva:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    var cont=el("slots-list");
+    if(cont)cont.innerHTML=
+      '<div style="text-align:center;padding:24px">'+
+        '<div style="font-size:48px;margin-bottom:10px">✅</div>'+
+        '<div style="font-weight:800;font-size:16px;margin-bottom:6px">¡Reserva confirmada!</div>'+
+        '<div style="font-size:13px;color:var(--suave);text-transform:capitalize">'+fecha+'</div>'+
+        '<div style="font-size:15px;font-weight:700;color:var(--verde-osc);margin-top:4px">🕐 '+hora+'</div>'+
+        '<div style="font-size:12px;color:var(--suave);margin-top:12px">Marcelo se pondrá en contacto contigo.</div>'+
+      '</div>';
+    toast("Clase reservada ✓");
+  }catch(e){toast("Error: "+e.message);}
+}
+
+/* ─── ADMIN: GESTIONAR SLOTS ──────────────────────────────────── */
+async function renderAdminSlots(){
+  var cont=el("admin-slots-cont");if(!cont)return;
+  cont.innerHTML='<p class="hint">Cargando...</p>';
+  try{
+    var snap=await db.collection("slots_individuales").orderBy("fecha").orderBy("hora").limit(50).get();
+    var h='<div class="field"><label>Fecha</label><input id="ns-fecha" type="date"></div>'+
+      '<div class="field"><label>Hora</label><input id="ns-hora" placeholder="Ej: 10:00"></div>'+
+      '<div class="field"><label>Nota (opcional)</label><input id="ns-nota" placeholder="Ej: Cancha 1"></div>'+
+      '<button class="btn" onclick="crearSlot()" style="margin-bottom:16px">+ Agregar horario</button>'+
+      '<div class="section-title" style="margin-top:0">Horarios creados</div>';
+    if(snap.empty){h+='<p class="hint">Sin horarios creados</p>';}
+    snap.forEach(function(doc){
+      var s=doc.data();
+      var fechaFmt=s.fecha?new Date(s.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"short",day:"numeric",month:"short"}):"";
+      var estadoColor=s.estado==="reservado"?"#dc2626":"var(--verde-osc)";
+      var estadoLabel=s.estado==="reservado"?"Reservado · "+s.nombre_reserva:"Disponible";
+      h+='<div class="lcard"><div style="flex:1"><div class="nm" style="text-transform:capitalize">'+fechaFmt+' &middot; '+s.hora+'</div><div class="ds" style="color:'+estadoColor+'">'+estadoLabel+'</div></div>'+
+        (s.estado==="reservado"?'<button class="mini" onclick="liberarSlot(\''+doc.id+'\')">Liberar</button>':'')+
+        '<button class="mini" style="color:#dc2626" onclick="eliminarSlot(\''+doc.id+'\')">×</button></div>';
+    });
+    cont.innerHTML=h;
+    var fi=el("ns-fecha");if(fi&&!fi.value)fi.value=new Date().toISOString().split("T")[0];
+  }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
+}
+async function crearSlot(){
+  var fecha=((el("ns-fecha")||{}).value||"").trim();
+  var hora=((el("ns-hora")||{}).value||"").trim();
+  var nota=((el("ns-nota")||{}).value||"").trim();
+  if(!fecha||!hora){toast("Ingresa fecha y hora");return;}
+  try{
+    await db.collection("slots_individuales").add({fecha,hora,nota,estado:"disponible",ts:firebase.firestore.FieldValue.serverTimestamp()});
+    toast("Horario agregado ✓");["ns-hora","ns-nota"].forEach(function(id){var e=el(id);if(e)e.value="";});
+    renderAdminSlots();
+  }catch(e){toast("Error: "+e.message);}
+}
+async function liberarSlot(id){
+  try{await db.collection("slots_individuales").doc(id).update({estado:"disponible",nombre_reserva:"",tel_reserva:""});toast("Horario liberado");renderAdminSlots();}catch(e){toast("Error");}
+}
+async function eliminarSlot(id){
+  if(!confirm("¿Eliminar este horario?"))return;
+  try{await db.collection("slots_individuales").doc(id).delete();toast("Horario eliminado");renderAdminSlots();}catch(e){toast("Error");}
+}
 function getSocioTier(){return localStorage.getItem("atmas_socio_tier")||null;}
 async function validarCodigoSocio(){
   var cod=((el("inp-cod-socio")||{}).value||"").trim().toUpperCase();
