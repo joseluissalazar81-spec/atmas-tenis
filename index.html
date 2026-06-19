@@ -190,18 +190,60 @@
       <div id="mis-reservas-list"><p class="hint">Cargando...</p></div>
     </section>
     <section class="screen" id="academia">
+      <!-- HERO -->
+      <div style="background:linear-gradient(160deg,#0f3d08 0%,#1a5c0a 45%,#2f6b1a 100%);border-radius:22px;padding:26px 20px 22px;margin-bottom:14px;position:relative;overflow:hidden">
+        <!-- Pelota decorativa fondo -->
+        <div style="position:absolute;right:-24px;top:-24px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
+        <div style="position:absolute;right:20px;bottom:-30px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.04)"></div>
+        <!-- Logo AT+ -->
+        <div style="display:inline-block;background:var(--lima);color:var(--negro);font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:.5px;margin-bottom:14px">AT+ ATMAS</div>
+        <!-- Pregunta principal -->
+        <div style="font-size:11px;color:rgba(255,255,255,.65);font-weight:600;margin-bottom:2px;letter-spacing:.3px">&iquest;QUIERES APRENDER A JUGAR?</div>
+        <div style="font-size:28px;font-weight:900;color:#fff;line-height:1.1;margin-bottom:4px">TENIS</div>
+        <div style="font-size:13px;color:var(--lima);font-weight:700;margin-bottom:18px">Entrenamiento de alto nivel para adultos y j&oacute;venes.</div>
+        <!-- 4 chips -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
+          <div style="background:rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:18px">&#127934;</span>
+            <div><div style="font-size:12px;font-weight:800;color:#fff">Clases Individuales</div><div style="font-size:10px;color:rgba(255,255,255,.6)">A tu ritmo</div></div>
+          </div>
+          <div style="background:rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:18px">&#128101;</span>
+            <div><div style="font-size:12px;font-weight:800;color:#fff">Clases Grupales</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Aprende en equipo</div></div>
+          </div>
+          <div style="background:rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:18px">&#127942;</span>
+            <div><div style="font-size:12px;font-weight:800;color:#fff">Torneos Internos</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Competencia real</div></div>
+          </div>
+          <div style="background:rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:18px">&#129309;</span>
+            <div><div style="font-size:12px;font-weight:800;color:#fff">Interclubes</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Representa al club</div></div>
+          </div>
+        </div>
+        <!-- CTA + Instagram -->
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="openModal('clase','individual')" style="flex:1;padding:12px;font-size:13px;background:var(--lima);color:var(--negro);font-weight:800">&#127934; Quiero inscribirme</button>
+          <a href="https://www.instagram.com/atmas_tenis?igsh=ZjM2cTNiNnc1cjd1" target="_blank" rel="noopener" style="background:rgba(255,255,255,.15);border-radius:14px;padding:12px 14px;display:flex;align-items:center;text-decoration:none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg>
+          </a>
+        </div>
+      </div>
+      <!-- NUESTRO EQUIPO -->
       <div class="section-title">Nuestro Equipo</div>
       <div id="profes-list"></div>
-      <div class="section-title">Academia &middot; Todos los niveles</div>
-      <div class="lcard"><div class="ic">&#128118;</div><div style="flex:1"><div class="nm">Iniciacion &middot; 3 a 7 anos</div><div class="ds">Sabados &middot; $60.000/mes</div></div><button class="mini" onclick="openModal('clase','iniciacion')">Inscribir</button></div>
+      <!-- PLANES -->
+      <div class="section-title">Planes &middot; Todos los niveles</div>
+      <div class="lcard"><div class="ic">&#128118;</div><div style="flex:1"><div class="nm">Iniciacion &middot; 3 a 7 a&ntilde;os</div><div class="ds">S&aacute;bados &middot; $60.000/mes</div></div><button class="mini" onclick="openModal('clase','iniciacion')">Inscribir</button></div>
       <div class="lcard"><div class="ic">&#128101;</div><div style="flex:1"><div class="nm">Clases Intermedios</div><div class="ds">Sab/Mar/Jue &middot; desde $70.000</div></div><button class="mini" onclick="openModal('clase','intermedio')">Inscribir</button></div>
       <div class="lcard"><div class="ic">&#127942;</div><div style="flex:1"><div class="nm">Clases Avanzados</div><div class="ds">Sab/Lun/Mie &middot; desde $80.000</div></div><button class="mini" onclick="openModal('clase','avanzado')">Inscribir</button></div>
       <div class="lcard"><div class="ic">&#127934;</div><div style="flex:1"><div class="nm">Clases individuales</div><div class="ds">4 clases $120.000 &middot; 8 clases $200.000</div></div><button class="mini" onclick="openModal('clase','individual')">Inscribir</button></div>
+      <!-- VERDADES INCOMODAS -->
       <div style="background:var(--negro);border-radius:18px;padding:18px;margin-bottom:14px;color:#fff">
         <div style="font-size:11px;font-weight:700;color:var(--lima);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Serie &middot; 7 cap&iacute;tulos</div>
         <div style="font-size:19px;font-weight:900;line-height:1.2;margin-bottom:14px">Verdades Inc&oacute;modas<br>del Tenis</div>
         <div id="vi-list"></div>
       </div>
+      <!-- SERVICIOS -->
       <div class="section-title">Servicios ATMAS</div>
       <div class="lcard"><div class="ic">&#128299;</div><div style="flex:1"><div class="nm">Encordado profesional</div><div class="ds">Mano de obra + cuerdas</div></div><button class="mini" onclick="openModal('encordado')">Solicitar</button></div>
       <div class="lcard"><div class="ic">&#128316;</div><div style="flex:1"><div class="nm">Cambio de grip</div><div class="ds">Mayor comodidad y agarre</div></div><button class="mini" onclick="openModal('encordado')">Solicitar</button></div>

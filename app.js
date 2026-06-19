@@ -657,41 +657,21 @@ const torneos=[
     var cerrado=t.c==="Cerrado";
     var sinCupos=!cerrado&&t.c&&parseInt(t.c)===0;
     var bloqueado=cerrado||sinCupos;
-    // Estado visual
-    var estadoBg=bloqueado?"#f1f5f9":"var(--verde-claro)";
-    var estadoColor=bloqueado?"#94a3b8":"var(--verde-osc)";
     var estadoLabel=cerrado?"Cerrado":sinCupos?"Cupo completo":t.c;
-    var estadoDot=bloqueado?'#94a3b8':'#22c55e';
     th+=
-      '<div style="background:#fff;border-radius:20px;margin-bottom:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)">'+
-        // Franja de color superior según estado
-        '<div style="height:5px;background:'+(bloqueado?'#e2e8f0':'linear-gradient(90deg,var(--verde),var(--lima))')+'"></div>'+
-        '<div style="padding:18px">'+
-          // Encabezado: nombre + badge estado
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">'+
-            '<div style="font-weight:900;font-size:16px;color:var(--texto);line-height:1.25;flex:1">'+t.n+'</div>'+
-            '<span style="background:'+estadoBg+';color:'+estadoColor+';font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;display:flex;align-items:center;gap:5px">'+
-              '<span style="width:6px;height:6px;border-radius:50%;background:'+estadoDot+';display:inline-block"></span>'+estadoLabel+
-            '</span>'+
-          '</div>'+
-          // Fecha e info
-          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:14px">'+
-            '<span style="font-size:15px">📅</span>'+
-            '<span style="font-size:13px;color:var(--suave)">'+t.f+'</span>'+
-          '</div>'+
-          // Separador
-          '<div style="border-top:1px solid var(--linea);margin-bottom:14px"></div>'+
-          // Precio + botón
-          '<div style="display:flex;align-items:center;justify-content:space-between">'+
-            '<div>'+
-              '<div style="font-size:11px;color:var(--suave);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Inscripción</div>'+
-              '<div style="font-size:22px;font-weight:900;color:var(--verde-osc)">'+t.p+'</div>'+
-            '</div>'+
-            (bloqueado
-              ? '<span style="background:#f1f5f9;color:#94a3b8;font-size:13px;font-weight:700;padding:12px 20px;border-radius:14px">'+(cerrado?"Cerrado":"Sin cupos")+'</span>'
-              : '<button class="mini wa" style="padding:12px 20px;font-size:14px;border-radius:14px" onclick="openModal(\'torneo\','+i+')">Inscribirme →</button>'
-            )+
-          '</div>'+
+      '<div class="tcard" '+(bloqueado
+        ?'style="opacity:.6;border-left-color:#cbd5e1;pointer-events:none"'
+        :'onclick="openModal(\'torneo\','+i+')" style="cursor:pointer" ontouchstart="this.style.opacity=\'.8\'" ontouchend="this.style.opacity=\'1\'"'
+      )+'>'+
+        '<div class="tn">'+t.n+'</div>'+
+        '<div class="tm">&#128197; '+t.f+'</div>'+
+        '<div class="trow">'+
+          '<span class="price">'+t.p+'</span>'+
+          (bloqueado
+            ?'<span class="cupos" style="background:#f1f5f9;color:#94a3b8">'+estadoLabel+'</span>'
+            :'<span class="cupos">'+estadoLabel+'</span>'
+          )+
+          (bloqueado?'':'<button class="mini wa" style="margin-left:auto;pointer-events:none">Ver m&aacute;s &rarr;</button>')+
         '</div>'+
       '</div>';
   });
@@ -827,7 +807,26 @@ function openModal(tipo,idx){
       var t=torneos[idx];if(!t)return;var perfil=getPerfil()||{};
       var turnoField=t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select id="ti-turno"><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':"";
       var mpLink=t.monto===20000?MP.torneo20:t.monto===15000?MP.torneo15:MP.escalerilla;
-      html='<h3>Inscripcion &middot; '+t.n+'</h3><div class="field"><label>Tu nombre</label><input id="ti-nombre" placeholder="Ej: Juan Perez" value="'+(perfil.nombre||"")+'"></div><div class="field"><label>Telefono</label><input id="ti-tel" type="tel" placeholder="+569 XXXX XXXX" value="'+(perfil.tel||"")+'"></div>'+turnoField+'<button class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:4px">Confirmar inscripcion</button>'+pagoHTML(t.monto,t.n,mpLink)+'<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
+      var cuposNum=t.c==="Cerrado"?0:parseInt(t.c)||0;
+      var cuposTag=t.c==="Cerrado"?'<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">Cerrado</span>':cuposNum===0?'<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">Sin cupos</span>':'<span style="background:var(--verde-claro);color:var(--verde-osc);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+t.c+'</span>';
+      html=
+        // Hero del torneo
+        '<div style="background:linear-gradient(135deg,var(--verde-osc),var(--verde-mid));border-radius:16px;padding:18px;margin-bottom:16px;color:#fff">'+
+          '<div style="font-size:10px;font-weight:700;color:var(--lima);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">&#127942; ATMAS Torneos</div>'+
+          '<div style="font-size:18px;font-weight:900;line-height:1.2;margin-bottom:10px">'+t.n+'</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="font-size:14px">📅</span><span style="font-size:13px;opacity:.9">'+t.f+'</span></div>'+
+          '<div style="display:flex;align-items:center;justify-content:space-between">'+
+            '<div><div style="font-size:10px;opacity:.7;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Inscripción</div><div style="font-size:26px;font-weight:900;color:var(--lima)">'+t.p+'</div></div>'+
+            cuposTag+
+          '</div>'+
+        '</div>'+
+        // Formulario
+        '<div class="field"><label>Tu nombre</label><input id="ti-nombre" placeholder="Ej: Juan Pérez" value="'+(perfil.nombre||'')+'"></div>'+
+        '<div class="field"><label>Teléfono</label><input id="ti-tel" type="tel" placeholder="+569 XXXX XXXX" value="'+(perfil.tel||'')+'"></div>'+
+        turnoField+
+        '<button class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:12px">✓ Confirmar inscripción</button>'+
+        pagoHTML(t.monto,t.n,mpLink)+
+        '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';
     }else if(tipo==="clase"){
       var planes={iniciacion:{t:"Iniciacion - Sabados",opciones:[{l:"1 dia - Sabados",v:60000}]},intermedio:{t:"Intermedios",opciones:[{l:"1 dia",v:70000},{l:"2 dias",v:120000},{l:"3 dias",v:150000}]},avanzado:{t:"Avanzados",opciones:[{l:"1 dia",v:80000},{l:"2 dias",v:120000},{l:"3 dias",v:150000}]},individual:{t:"Clases individuales",opciones:[{l:"4 clases",v:120000},{l:"8 clases",v:200000}]}};
       var plan=planes[idx]||planes.individual;
