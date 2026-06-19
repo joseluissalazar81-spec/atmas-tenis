@@ -1,7 +1,13 @@
 function toast(m){var t=document.getElementById("toast");if(!t)return;t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("show");},3000);}
 function go(s){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});var sc=document.getElementById(s);if(sc)sc.classList.add("active");document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.s===s);});var ct=document.querySelector(".content");if(ct)ct.scrollTop=0;if(s==="perfil")renderPerfil();if(s==="admin")renderAdmin();if(s==="cancha")renderCalendario();if(s==="mis-reservas")renderMisReservas();}
 function closeModal(){var m=document.getElementById("modal");if(m)m.classList.remove("show");}
-function setVista(v){var r=document.getElementById("vista-rank");var c=document.getElementById("vista-cuadro");if(r)r.style.display=v==="rank"?"block":"none";if(c)c.style.display=v==="cuadro"?"block":"none";var vr=document.getElementById("vRank");var vc=document.getElementById("vCuadro");if(vr)vr.classList.toggle("on",v==="rank");if(vc)vc.classList.toggle("on",v==="cuadro");}
+function setVista(v){
+  ["rank","h2h","cuadro"].forEach(function(k){
+    var d=document.getElementById("vista-"+k);if(d)d.style.display=v===k?"block":"none";
+    var b=document.getElementById("v"+k.charAt(0).toUpperCase()+k.slice(1));if(b)b.classList.toggle("on",v===k);
+  });
+  if(v==="h2h")initH2H();
+}
 
 /* ─── FIREBASE ────────────────────────────────────────────────── */
 const _noop={get:function(){return Promise.resolve({exists:false,forEach:function(){},data:function(){return{};}});},add:function(){return Promise.resolve({id:"local"});},set:function(){return Promise.resolve();},update:function(){return Promise.resolve();},delete:function(){return Promise.resolve();},where:function(){return _noop;},orderBy:function(){return _noop;},doc:function(){return _noop;},limit:function(){return _noop;},onSnapshot:function(cb){cb({forEach:function(){}});return function(){};},runTransaction:function(fn){return fn(_noop);}};
@@ -167,6 +173,7 @@ function renderProfesores(){
 }
 renderProfesores();
 renderSociosBloques();
+cargarFeedActividad();
 
 /* ─── VERDADES INCOMODAS ──────────────────────────────────────── */
 const verdades=[
@@ -771,6 +778,10 @@ async function aprobarPartido(docId,ganador,perdedor){
       tx.update(partRef,{estado:"aprobado"});
     });
     toast("Partido aprobado. Puntos sumados.");
+    // Buscar sets del partido para la tarjeta
+    var pSnap=await db.collection("partidos_atmas").doc(docId).get();
+    var pData=pSnap.exists?pSnap.data():{};
+    mostrarTarjetaPartido(ganador,perdedor,pData.sets||"",pData.contexto||"");
     renderAdmin();
   }catch(e){console.warn("aprobarPartido error:",e);toast("Error al aprobar partido.");}
 }
@@ -2191,6 +2202,135 @@ async function guardarAdminConfig(){
     PAGO.nombre=data.banco_nombre;PAGO.rut=data.banco_rut;PAGO.banco=data.banco_banco;PAGO.tipo=data.banco_tipo;PAGO.cuenta=data.banco_cuenta;PAGO.email=data.banco_email;
     toast("Configuración guardada ✓");
   }catch(e){toast("Error: "+e.message);}
+}
+
+/* ─── FEED ACTIVIDAD RECIENTE ─────────────────────────────────── */
+async function cargarFeedActividad(){
+  var cont=el("feed-actividad");if(!cont)return;
+  try{
+    var snap=await db.collection("partidos_atmas").orderBy("ts","desc").limit(8).get();
+    if(snap.empty){cont.innerHTML='<p class="hint">Sin partidos registrados aún</p>';return;}
+    var h="";
+    snap.forEach(function(doc){
+      var r=doc.data();
+      var col=avatarColor(r.ganador||"?");var ini=initials(r.ganador||"?");
+      var fecha=r.ts?new Date(r.ts.toDate()).toLocaleDateString("es-CL",{day:"numeric",month:"short"}):"";
+      var ctx=r.contexto?'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:8px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">'+r.contexto+'</span>':"";
+      h+='<div class="feed-card">'+
+        '<div class="fc-avatar" style="background:'+col+'">'+ini+'</div>'+
+        '<div class="fc-body">'+
+          '<div class="fc-name">'+r.ganador+' <span style="font-size:11px;font-weight:400;color:var(--suave)">ganó a</span> '+(r.perdedor||"?")+'</div>'+
+          '<div style="display:flex;align-items:center;gap:4px;margin-top:2px">'+
+            '<span class="fc-sets">'+(r.sets||"")+'</span>'+ctx+
+          '</div>'+
+          '<div class="fc-sub">'+fecha+'</div>'+
+        '</div>'+
+        '<div style="font-size:20px">🎾</div>'+
+      '</div>';
+    });
+    cont.innerHTML=h;
+  }catch(e){cont.innerHTML='<p class="hint">Sin actividad reciente</p>';}
+}
+
+/* ─── HEAD TO HEAD ────────────────────────────────────────────── */
+function initH2H(){
+  var j1=el("h2h-j1");var j2=el("h2h-j2");if(!j1||!j2)return;
+  if(j1.options.length>1)return;
+  var opts=rankingData.map(function(p){return'<option>'+p[0]+'</option>';}).join("");
+  j1.innerHTML=opts;j2.innerHTML=opts;
+  if(rankingData.length>1)j2.selectedIndex=1;
+}
+
+async function buscarH2H(){
+  var j1=(el("h2h-j1")||{}).value;var j2=(el("h2h-j2")||{}).value;
+  if(!j1||!j2||j1===j2){toast("Elige dos jugadores distintos");return;}
+  var cont=el("h2h-result");if(!cont)return;
+  cont.innerHTML='<p class="hint">Buscando...</p>';
+  try{
+    var [s1,s2]=await Promise.all([
+      db.collection("partidos_atmas").where("ganador","==",j1).where("perdedor","==",j2).get(),
+      db.collection("partidos_atmas").where("ganador","==",j2).where("perdedor","==",j1).get()
+    ]);
+    var gJ1=s1.size,gJ2=s2.size,total=gJ1+gJ2;
+    var ini1=initials(j1),ini2=initials(j2),col1=avatarColor(j1),col2=avatarColor(j2);
+    var pct1=total?Math.round(gJ1/total*100):50;
+    var h='<div class="match-card">'+
+      '<div class="mc-title">⚔️ Head to Head · '+total+' partido'+(total!==1?'s':'')+'</div>'+
+      '<div class="mc-players">'+
+        '<div style="text-align:center">'+
+          '<div style="width:48px;height:48px;border-radius:50%;background:'+col1+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:#fff;margin:0 auto 6px">'+ini1+'</div>'+
+          '<div style="font-size:12px;font-weight:700;max-width:80px;line-height:1.2">'+j1+'</div>'+
+        '</div>'+
+        '<div style="text-align:center">'+
+          '<div class="mc-score">'+gJ1+' – '+gJ2+'</div>'+
+          '<div class="mc-detail">victorias</div>'+
+        '</div>'+
+        '<div style="text-align:center">'+
+          '<div style="width:48px;height:48px;border-radius:50%;background:'+col2+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:#fff;margin:0 auto 6px">'+ini2+'</div>'+
+          '<div style="font-size:12px;font-weight:700;max-width:80px;line-height:1.2">'+j2+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="background:rgba(255,255,255,.15);border-radius:20px;height:8px;margin-bottom:6px;overflow:hidden">'+
+        '<div style="background:var(--lima);height:100%;width:'+pct1+'%;border-radius:20px;transition:width .5s"></div>'+
+      '</div>'+
+      '<div class="mc-detail">'+pct1+'% dominio '+j1.split(' ')[0]+'</div>'+
+    '</div>';
+    // Últimos partidos
+    var todos=[];
+    s1.forEach(function(d){todos.push(Object.assign({},d.data(),{_gan:j1}));});
+    s2.forEach(function(d){todos.push(Object.assign({},d.data(),{_gan:j2}));});
+    todos.sort(function(a,b){return(b.ts&&b.ts.seconds||0)-(a.ts&&a.ts.seconds||0);});
+    if(todos.length){
+      h+='<div class="section-title">Últimos partidos</div>';
+      todos.slice(0,6).forEach(function(r){
+        var fecha=r.ts?new Date(r.ts.toDate()).toLocaleDateString("es-CL",{day:"numeric",month:"short",year:"2-digit"}):"";
+        var gano=r._gan===j1?j1:j2;
+        h+='<div class="res-card" style="border-color:'+(gano===j1?"var(--verde)":"#f59e0b")+'">'+
+          '<div class="rc-top"><span class="rc-name">'+gano+' ganó</span><span class="rc-date">'+fecha+'</span></div>'+
+          (r.contexto?'<div style="font-size:10px;color:var(--suave)">'+r.contexto+'</div>':'')+
+          '<div class="rc-sub">'+(r.sets||"sin sets")+'</div>'+
+        '</div>';
+      });
+    }
+    if(total===0)h+='<p class="hint" style="text-align:center">Aún no se han enfrentado 🎾</p>';
+    cont.innerHTML=h;
+  }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
+}
+
+/* ─── TARJETA VISUAL DE PARTIDO ───────────────────────────────── */
+function mostrarTarjetaPartido(ganador,perdedor,sets,contexto){
+  var col=avatarColor(ganador);
+  var sc=el("sheet-content");var mo=el("modal");if(!sc||!mo)return;
+  var fecha=new Date().toLocaleDateString("es-CL",{day:"numeric",month:"long",year:"numeric"});
+  sc.innerHTML=
+    '<div class="match-card" id="match-share-card">'+
+      '<div class="mc-title">🎾 ATMAS · Resultado</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:12px">'+fecha+(contexto?' · '+contexto:'')+'</div>'+
+      '<div class="mc-players">'+
+        '<div style="text-align:center">'+
+          '<div style="width:52px;height:52px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#fff;margin:0 auto 6px;border:3px solid var(--lima)">'+initials(ganador)+'</div>'+
+          '<div style="font-size:12px;font-weight:800;color:var(--lima);max-width:80px;line-height:1.2">'+ganador+'</div>'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:2px">GANADOR</div>'+
+        '</div>'+
+        '<div style="text-align:center;padding:0 8px">'+
+          '<div style="font-size:32px;font-weight:900;color:#fff">'+sets+'</div>'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.5)">vs</div>'+
+        '</div>'+
+        '<div style="text-align:center">'+
+          '<div style="width:52px;height:52px;border-radius:50%;background:'+avatarColor(perdedor)+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#fff;margin:0 auto 6px;opacity:.7">'+initials(perdedor)+'</div>'+
+          '<div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.7);max-width:80px;line-height:1.2">'+perdedor+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:8px">@ATMAS_TENIS · Club Las Avestruces</div>'+
+    '</div>'+
+    '<button class="btn wa" onclick="compartirResultadoWA(\''+ganador+'\',\''+perdedor+'\',\''+sets+'\')">📲 Compartir por WhatsApp</button>'+
+    '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';
+  mo.classList.add("show");
+}
+
+function compartirResultadoWA(gan,per,sets){
+  var msg="🎾 *ATMAS Tenis*\n✅ *"+gan+"* ganó a *"+per+"*\n📊 Sets: "+sets+"\n🏆 Escalerilla ATMAS · Club Las Avestruces";
+  window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank");
 }
 
 // Al iniciar, cargar config desde Firestore si existe

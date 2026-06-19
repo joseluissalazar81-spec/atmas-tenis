@@ -107,16 +107,30 @@
         <div class="stat"><div class="n">4</div><div class="l">Canchas</div></div>
       </div>
       <div class="section-title">Proximo torneo</div>
-      <div class="tcard"><div class="tn">Torneo Novicios 4</div><div class="tm">11 julio 2026 &middot; turnos 16:00 y 18:00</div><div class="trow"><span class="price">$20.000</span><span class="cupos">6 cupos</span><button class="mini" onclick="go('torneos')">Ver mas</button></div></div>
+      <div class="tcard" onclick="go('torneos')" style="cursor:pointer"><div class="tn">Torneo Novicios 5</div><div class="tm">22 agosto 2026 &middot; 16:00 y 17:30</div><div class="trow"><span class="price">$20.000</span><span class="cupos">15 cupos</span><button class="mini">Ver mas</button></div></div>
+      <div class="section-title">⚡ Actividad reciente</div>
+      <div id="feed-actividad"><p class="hint">Cargando...</p></div>
     </section>
     <section class="screen" id="escalerilla">
-      <div class="seg"><button id="vRank" class="on" onclick="setVista('rank')">Ranking</button><button id="vCuadro" onclick="setVista('cuadro')">Cuadros</button></div>
+      <div class="seg"><button id="vRank" class="on" onclick="setVista('rank')">Ranking</button><button id="vH2H" onclick="setVista('h2h')">H2H</button><button id="vCuadro" onclick="setVista('cuadro')">Cuadros</button></div>
       <div id="vista-rank">
         <div class="mycard"><div class="pos">L&iacute;der &middot; Escalerilla Jun-Ago 2026</div><div class="name">#1 &middot; Manuel Illanes</div><div class="row"><div><span class="big">20</span><span class="cap">Puntos</span></div><div><span class="big">4</span><span class="cap">Jugados</span></div><div><span class="big">100%</span><span class="cap">Rendimiento</span></div></div></div>
         <button class="btn" onclick="openModal('partido')">+ Registrar partido</button>
         <button class="btn dark" onclick="openModal('jugador')">+ Agregar jugador</button>
         <div class="section-title">Ranking del club</div>
         <div id="ranking-list"></div>
+      </div>
+      <div id="vista-h2h" style="display:none">
+        <div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.07)">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px">⚔️ Head to Head</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+            <select id="h2h-j1" style="flex:1;border:1.5px solid var(--gris);border-radius:10px;padding:9px;font-size:13px"></select>
+            <span style="font-weight:900;color:var(--suave)">vs</span>
+            <select id="h2h-j2" style="flex:1;border:1.5px solid var(--gris);border-radius:10px;padding:9px;font-size:13px"></select>
+          </div>
+          <button class="btn" onclick="buscarH2H()">Ver historial</button>
+        </div>
+        <div id="h2h-result"></div>
       </div>
       <div id="vista-cuadro" style="display:none">
         <div class="seg"><button id="segOro" class="on" onclick="setCuadro('oro')">Categor&iacute;a A</button><button id="segPlata" onclick="setCuadro('plata')">Categor&iacute;a B</button></div>
