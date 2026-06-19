@@ -634,19 +634,19 @@ async function renderPerfilAdmin(p,pBody){
 }
 
 /* ─── TORNEOS ─────────────────────────────────────────────────── */
-const ZONA_NORTE_INSCRITOS=["Marcelo Escalona","Ariel Araya","Rodrigo Bernal","Osvaldo Valdivia","Marco Carrasco","Hipólito Bello","Ignacio Soto","Roro Navarro","Mauro Morales","Seba Brito","Edgardo Pacheco","Pablo Ortiz","Oscar Henríquez","Roro Turchan","Seba López","Miguel Osores"];
+const ZONA_NORTE_INSCRITOS=["Marcelo Escalona","Ariel Araya","Rodrigo Bernal","Osvaldo Valdivia","Marco Carrasco","Hipólito Bello","Ignacio Soto","Roro Navarro","Mauro Morales","Seba Brito","Edgardo Pacheco","Pablo Ortiz","Oscar Henríquez","Roro Turchan"];
 
 var ZONA_NORTE_SEED={
   nombre:"Ranking Zona Norte - Sexta Fecha",fecha:"Sabado 21 Junio 2026",
   octavos:[
     {a:"Ariel Araya",b:"Hipólito Bello",hora:"12:00",gan:null,res:null},
     {a:"Rodrigo Bernal",b:"Roro Turchan",hora:"12:00",gan:null,res:null},
-    {a:"Osvaldo Valdivia",b:"Seba López",hora:"12:00",gan:null,res:null},
-    {a:"Edgardo Pacheco",b:"Miguel Osores",hora:"12:00",gan:null,res:null},
-    {a:"Mauro Morales",b:"Roro Navarro",hora:"14:00",gan:null,res:null},
-    {a:"Marcelo Escalona",b:"Pablo Ortiz",hora:"14:00",gan:null,res:null},
-    {a:"Seba Brito",b:"Oscar Henríquez",hora:"14:00",gan:null,res:null},
-    {a:"Marco Carrasco",b:"Ignacio Soto",hora:"14:00",gan:null,res:null}
+    {a:"Marco Carrasco",b:"Osvaldo Valdivia",hora:"12:00",gan:null,res:null},
+    {a:"Mauro Morales",b:"Pablo Ortiz",hora:"12:00",gan:null,res:null},
+    {a:"Marcelo Escalona",b:"Oscar Henríquez",hora:"14:00",gan:null,res:null},
+    {a:"Ignacio Soto",b:"Seba Brito",hora:"14:00",gan:null,res:null},
+    {a:"Edgardo Pacheco",b:"Roro Navarro",hora:"14:00",gan:null,res:null},
+    {a:"M.Escalona",b:"Ignacio Soto",hora:"14:00",gan:null,res:null}
   ],
   cuartos:[
     {a:null,b:null,hora:"16:00",gan:null},{a:null,b:null,hora:"16:00",gan:null},
@@ -655,9 +655,12 @@ var ZONA_NORTE_SEED={
   semis:[{a:null,b:null,hora:"18:00",gan:null},{a:null,b:null,hora:"18:00",gan:null}],
   final:{a:null,b:null,hora:"20:00",gan:null}
 };
+// Lista jugadores Zona Norte Sexta Fecha
+var ZONA_NORTE_JUGADORES=["Marcelo Escalona","Ariel Araya","Rodrigo Bernal","Osvaldo Valdivia","Marco Carrasco","Hipólito Bello","Ignacio Soto","Roro Navarro","Mauro Morales","Seba Brito","Edgardo Pacheco","Pablo Ortiz","Oscar Henríquez","Roro Turchan","Disponible","Disponible"];
 const torneos=[
-  {n:"Ranking Zona Norte - Sexta Fecha",f:"21 junio 2026 &middot; Full Tenis",p:"$20.000",c:"0 cupos",monto:20000},
-  {n:"Torneo Novicios 4",f:"11 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"6 cupos",monto:20000},
+  {n:"Torneo Novicios 5",f:"22 agosto 2026 &middot; 16:00 y 17:30",p:"$20.000",c:"15 cupos",monto:20000},
+  {n:"Ranking Zona Norte - Sexta Fecha",f:"21 junio 2026 &middot; Full Tenis",p:"$20.000",c:"Cerrado",monto:20000},
+  {n:"Torneo Novicios 4",f:"11 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"Cerrado",monto:20000},
   {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"Cerrado",monto:15000},
   {n:"Nueva Escalerilla Jun-Ago",f:"Series A y B &middot; $15.000 por partido",p:"$35.000",c:"4 cupos",monto:35000}
 ];
@@ -693,7 +696,7 @@ const torneos=[
 async function cargarInscripciones(){
   var enl=el("novicios-list");if(!enl)return;
   try{
-    var snap=await db.collection("inscripciones_atmas").where("torneo","==","Torneo Novicios 4").get();
+    var snap=await db.collection("inscripciones_atmas").where("torneo","==","Torneo Novicios 5").get();
     var inscritos=[];snap.forEach(function(doc){inscritos.push(doc.data().nombre);});
     var nh="";
     inscritos.forEach(function(n){var col=avatarColor(n);var ini=initials(n);nh+='<div class="lcard"><div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div class="nm">'+n+'</div></div><span>OK</span></div>';});
