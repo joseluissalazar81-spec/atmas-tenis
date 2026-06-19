@@ -450,7 +450,11 @@ async function cargarHistorial(nombre){
 
 function mostrarPopupTorneos(){
   try{
-    var torneosAbiertos=torneos.filter(function(t){return t.c&&t.c.includes("cupos");});
+    var torneosAbiertos=torneos.filter(function(t){
+      if(!t.c)return false;
+      var m=t.c.match(/^(\d+)\s*cupo/i);
+      return m&&parseInt(m[1])>0;
+    });
     if(!torneosAbiertos.length)return;
     setTimeout(function(){
       var t=torneosAbiertos[0];
@@ -534,9 +538,29 @@ async function renderPerfilAdmin(p,pBody){
 }
 
 /* ─── TORNEOS ─────────────────────────────────────────────────── */
-const ZONA_NORTE_INSCRITOS=["Marcelo Escalona","Ariel Araya","Miguel Osores","Manuel Acuña","Osvaldo Valdivia","Flavio Ugarte","Nacho Flores","Marcos Carrasco","Ignacio Soto","Hipólito Bello"];
+const ZONA_NORTE_INSCRITOS=["Marcelo Escalona","Ariel Araya","Rodrigo Bernal","Osvaldo Valdivia","Marco Carrasco","Hipólito Bello","Ignacio Soto","Roro Navarro","Mauro Morales","Seba Brito","Edgardo Pacheco","Pablo Ortiz","Oscar Henríquez","Roro Turchan","Seba López","Miguel Osores"];
+
+var ZONA_NORTE_SEED={
+  nombre:"Ranking Zona Norte - Sexta Fecha",fecha:"Sabado 21 Junio 2026",
+  octavos:[
+    {a:"Ariel Araya",b:"Hipólito Bello",hora:"12:00",gan:null,res:null},
+    {a:"Rodrigo Bernal",b:"Roro Turchan",hora:"12:00",gan:null,res:null},
+    {a:"Osvaldo Valdivia",b:"Seba López",hora:"12:00",gan:null,res:null},
+    {a:"Edgardo Pacheco",b:"Miguel Osores",hora:"12:00",gan:null,res:null},
+    {a:"Mauro Morales",b:"Roro Navarro",hora:"14:00",gan:null,res:null},
+    {a:"Marcelo Escalona",b:"Pablo Ortiz",hora:"14:00",gan:null,res:null},
+    {a:"Seba Brito",b:"Oscar Henríquez",hora:"14:00",gan:null,res:null},
+    {a:"Marco Carrasco",b:"Ignacio Soto",hora:"14:00",gan:null,res:null}
+  ],
+  cuartos:[
+    {a:null,b:null,hora:"16:00",gan:null},{a:null,b:null,hora:"16:00",gan:null},
+    {a:null,b:null,hora:"16:00",gan:null},{a:null,b:null,hora:"16:00",gan:null}
+  ],
+  semis:[{a:null,b:null,hora:"18:00",gan:null},{a:null,b:null,hora:"18:00",gan:null}],
+  final:{a:null,b:null,hora:"20:00",gan:null}
+};
 const torneos=[
-  {n:"Ranking Zona Norte - Sexta Fecha",f:"20 junio 2026 &middot; Full Tenis",p:"$20.000",c:"6 cupos",monto:20000},
+  {n:"Ranking Zona Norte - Sexta Fecha",f:"21 junio 2026 &middot; Full Tenis",p:"$20.000",c:"0 cupos",monto:20000},
   {n:"Torneo Novicios 4",f:"11 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"6 cupos",monto:20000},
   {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"Cerrado",monto:15000},
   {n:"Nueva Escalerilla Jun-Ago",f:"Series A y B &middot; $15.000 por partido",p:"$35.000",c:"4 cupos",monto:35000}
@@ -850,9 +874,91 @@ var NOVICIOS3_SEED={
 var cuadroListener=null;var cuadroData=null;
 
 async function seedCuadroNovicios3(){
+  try{await db.collection("torneos_cuadro").doc("novicios3").set(NOVICIOS3_SEED);}catch(e){console.warn("seedCuadro error:",e);}
+}
+
+async function seedCuadroZonaNorte(){
   try{
-    await db.collection("torneos_cuadro").doc("novicios3").set(NOVICIOS3_SEED);
-  }catch(e){console.warn("seedCuadro error:",e);}
+    var snap=await db.collection("torneos_cuadro").doc("zonanorte6").get();
+    if(!snap.exists)await db.collection("torneos_cuadro").doc("zonanorte6").set(ZONA_NORTE_SEED);
+  }catch(e){console.warn("seedZonaNorte error:",e);}
+}
+
+var zonaNorteListener=null;var zonaNorteData=null;
+function iniciarZonaNorteLive(){
+  if(zonaNorteListener)zonaNorteListener();
+  try{
+    zonaNorteListener=db.collection("torneos_cuadro").doc("zonanorte6").onSnapshot(function(snap){
+      zonaNorteData=snap.exists?snap.data():ZONA_NORTE_SEED;
+      renderCuadroZonaNorte(zonaNorteData);
+    },function(){zonaNorteData=ZONA_NORTE_SEED;renderCuadroZonaNorte(ZONA_NORTE_SEED);});
+  }catch(e){zonaNorteData=ZONA_NORTE_SEED;renderCuadroZonaNorte(ZONA_NORTE_SEED);}
+}
+
+function renderCuadroZonaNorte(data){
+  var ecn=el("cuadro-zonanorte");if(!ecn)return;
+  try{
+    var _p=getPerfil()||{};var admin=esAdmin(_p.nombre||"",_p.email||"");
+    function mhtml(ronda,idx,m){
+      var aCls=m.gan&&m.gan===m.a?"gan":"";var bCls=m.gan&&m.gan===m.b?"gan":"";
+      var adminBtn=admin&&m.a&&m.b&&!m.gan?'<button class="mini" style="width:100%;margin-top:4px;font-size:10px" onclick="openModalGanadorZN(\''+ronda+'\','+idx+')">Registrar ganador</button>':"";
+      var resTag=m.res?'<div style="font-size:9px;color:var(--suave);text-align:center;margin-top:2px">'+m.res+'</div>':"";
+      var badge=m.gan?'<div style="font-size:9px;color:var(--verde-osc);font-weight:700;text-align:center;margin-top:3px">&#10003; '+m.gan+'</div>'+resTag:adminBtn;
+      return'<div class="cuadro-match"><div class="cuadro-hora">'+m.hora+'</div><div class="cuadro-player '+(m.a?"":"tbd")+' '+aCls+'">'+(m.a||"Por definir")+'</div><div style="font-size:9px;color:var(--suave);text-align:center;padding:2px 0">vs</div><div class="cuadro-player '+(m.b?"":"tbd")+' '+bCls+'">'+(m.b||"Por definir")+'</div>'+badge+'</div>';
+    }
+    var oct=data.octavos||[];var cua=data.cuartos||[];var sem=data.semis||[];var fin=data.final||{};
+    var h='<div class="cuadro-bracket">';
+    h+='<div class="cuadro-col"><div class="cuadro-col-title">Octavos &middot; S&aacute;b 21/6</div>';
+    oct.forEach(function(m,i){h+=mhtml("octavos",i,m);});
+    h+='</div><div class="cuadro-col cuadro-col-mid"><div class="cuadro-col-title">Cuartos &middot; 16:00</div>';
+    cua.forEach(function(m,i){h+=mhtml("cuartos",i,m);});
+    h+='</div><div class="cuadro-col cuadro-col-mid"><div class="cuadro-col-title">Semis &middot; 18:00</div>';
+    sem.forEach(function(m,i){h+=mhtml("semis",i,m);});
+    h+='</div><div class="cuadro-col cuadro-col-mid"><div class="cuadro-col-title">Final &middot; 20:00</div>';
+    h+=mhtml("final",0,fin);
+    if(fin.gan){h+='<div style="text-align:center;padding:6px 0"><div style="font-size:26px">&#127942;</div><div style="font-weight:900;font-size:12px;color:var(--verde-osc)">Campe&oacute;n!</div><div style="font-size:11px;font-weight:700">'+fin.gan+'</div></div>';}
+    h+='</div></div>';
+    ecn.innerHTML=h;
+  }catch(e){console.warn("renderCuadroZonaNorte error:",e);}
+}
+
+function openModalGanadorZN(ronda,idx){
+  if(!zonaNorteData)return;
+  var m=ronda==="final"?zonaNorteData.final:zonaNorteData[ronda][idx];
+  if(!m||!m.a||!m.b)return;
+  window._ganModalZN={ronda:ronda,idx:idx,a:m.a,b:m.b};
+  var sc=el("sheet-content");var mo=el("modal");if(!sc||!mo)return;
+  sc.innerHTML='<h3>Registrar ganador</h3><p style="font-size:13px;color:var(--suave);margin-bottom:14px">'+m.a+' vs '+m.b+'</p>'+
+    '<button class="btn" style="margin-bottom:8px" onclick="guardarGanadorZN(0)">&#127942; '+m.a+'</button>'+
+    '<button class="btn sec" style="margin-bottom:8px" onclick="guardarGanadorZN(1)">&#127942; '+m.b+'</button>'+
+    '<div class="field" style="margin-top:8px"><label>Resultado (opcional)</label><input id="zn-res" placeholder="6/4 7/5"></div>'+
+    '<button class="btn sec" onclick="closeModal()">Cancelar</button>';
+  mo.classList.add("show");
+}
+
+async function guardarGanadorZN(idx){
+  var g=window._ganModalZN;if(!g)return;
+  var gan=idx===0?g.a:g.b;
+  var res=((el("zn-res")||{}).value||"").trim();
+  var update={};
+  if(g.ronda==="final"){update["final.gan"]=gan;if(res)update["final.res"]=res;}
+  else{update[g.ronda+"."+g.idx+".gan"]=gan;if(res)update[g.ronda+"."+g.idx+".res"]=res;}
+  // Avanzar ganador al siguiente cuadro
+  var data=zonaNorteData;
+  var newData=JSON.parse(JSON.stringify(data));
+  if(g.ronda==="octavos"){
+    var qIdx=Math.floor(g.idx/2);
+    var slot=g.idx%2===0?"a":"b";
+    newData.cuartos[qIdx][slot]=gan;
+    newData.octavos[g.idx].gan=gan;if(res)newData.octavos[g.idx].res=res;
+  }else if(g.ronda==="cuartos"){
+    var sIdx=Math.floor(g.idx/2);var slot=g.idx%2===0?"a":"b";
+    newData.semis[sIdx][slot]=gan;newData.cuartos[g.idx].gan=gan;if(res)newData.cuartos[g.idx].res=res;
+  }else if(g.ronda==="semis"){
+    var slot=g.idx===0?"a":"b";newData.final[slot]=gan;newData.semis[g.idx].gan=gan;if(res)newData.semis[g.idx].res=res;
+  }else if(g.ronda==="final"){newData.final.gan=gan;if(res)newData.final.res=res;}
+  try{await db.collection("torneos_cuadro").doc("zonanorte6").set(newData);toast("Ganador registrado: "+gan);closeModal();}
+  catch(e){toast("Error: "+e.message);}
 }
 
 function iniciarCuadroLive(){
@@ -1270,7 +1376,7 @@ async function renderAdminReservas(){
   try{
     var hoy=new Date();var desde=new Date(hoy);desde.setDate(desde.getDate()-2);
     var desdeStr=desde.toISOString().split("T")[0];
-    var snap=await db.collection("reservas").where("fecha",">=",desdeStr).orderBy("fecha","asc").orderBy("horaInicio","asc").limit(150).get();
+    var snap=await db.collection("reservas").where("fecha",">=",desdeStr).orderBy("fecha","asc").limit(150).get();
     if(snap.empty){cont.innerHTML='<p class="hint">Sin reservas en este período</p>';return;}
     var html="";var fechaAct="";var hoyStr=hoy.toISOString().split("T")[0];
     snap.forEach(function(doc){
@@ -1347,8 +1453,6 @@ async function renderAdminSanciones(){
     cont.innerHTML=count?html:'<p class="hint">Sin sanciones activas</p>';
   }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
 }
-
-function adminSalir(){adminUnlocked=false;go('inicio');}
 
 function adminSalir(){adminUnlocked=false;go('inicio');}
 
