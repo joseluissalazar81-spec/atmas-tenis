@@ -1153,7 +1153,8 @@ async function confirmarReserva(){
       .where("estado","in",["confirmada","confirmada_pagada","pendiente_pago"])
       .get();
     if(!snap.empty){toast("Ese horario acaba de ser reservado. Elige otro.");renderSlots();ocultarFormRes();return;}
-    var uid=(p&&p.uid)||(auth&&auth.currentUser&&auth.currentUser.uid)||"anonimo";
+    var rutId=p&&p.rut?p.rut.replace(/\./g,"").replace(/-/g,""):null;
+    var uid=(p&&p.uid)||(auth&&auth.currentUser&&!auth.currentUser.isAnonymous?auth.currentUser.uid:null)||rutId||"anonimo";
     var reservaData={
       userId:uid,nombre:nombre,tel:tel,tipo:resState.tipo,
       canchaId:resState.canchaId,canchaNombre:cancha?cancha.nombre:"Cancha "+resState.canchaId,
@@ -1202,8 +1203,9 @@ function handlePaymentReturn(){
 async function renderMisReservas(){
   var cont=el("mis-reservas-list");if(!cont)return;
   var p=getPerfil();
-  var uid=(p&&p.uid)||(auth&&auth.currentUser&&auth.currentUser.uid);
-  if(!uid||!uid||uid==="anonimo"){cont.innerHTML='<p class="hint">Inicia sesión para ver tus reservas</p>';return;}
+  var rutId2=p&&p.rut?p.rut.replace(/\./g,"").replace(/-/g,""):null;
+  var uid=(p&&p.uid)||(auth&&auth.currentUser&&!auth.currentUser.isAnonymous?auth.currentUser.uid:null)||rutId2;
+  if(!uid||uid==="anonimo"){cont.innerHTML='<p class="hint">Inicia sesión para ver tus reservas</p>';return;}
   cont.innerHTML='<p class="hint">Cargando...</p>';
   try{
     var hoy=new Date().toISOString().split("T")[0];
@@ -1382,33 +1384,49 @@ async function renderAdminTipos(){
   var cont=el("admin-tipos-cont");if(!cont)return;
   cont.innerHTML='<p class="hint">Cargando jugadores...</p>';
   try{
-    var snap=await db.collection("jugadores").limit(100).get();
-    if(snap.empty){cont.innerHTML='<p class="hint">No hay jugadores registrados</p>';return;}
+    // Merge jugadores (perfiles con login) + ranking_atmas (todos los jugadores)
+    var snapJ=await db.collection("jugadores").limit(200).get();
+    var snapR=await db.collection("ranking_atmas").limit(200).get();
     var tipos={socio_mensual:"Socio mensualidad",socio_partido:"Socio paga partido",invitado:"Invitado",arriendo:"Arriendo",academia:"Academia"};
-    var html='';
-    snap.forEach(function(doc){
-      var p=doc.data();if(!p.nombre)return;
-      var tipoActual=p.tipo||"arriendo";
+    // Build map by nombre (normalized)
+    var jugMap={};
+    snapJ.forEach(function(doc){var p=doc.data();if(p.nombre)jugMap[doc.id]={...p,_col:"jugadores",_id:doc.id};});
+    // Add ranking players not already in jugadores (match by nombre)
+    var jugNombres={};snapJ.forEach(function(doc){var p=doc.data();if(p.nombre)jugNombres[p.nombre.toLowerCase()]=true;});
+    snapR.forEach(function(doc){var p=doc.data();if(p.nombre&&!jugNombres[p.nombre.toLowerCase()])jugMap["rank_"+doc.id]={nombre:p.nombre,rut:"",tipo:p.tipo||null,_col:"ranking_atmas",_id:doc.id};});
+    var entries=Object.values(jugMap).sort(function(a,b){return a.nombre.localeCompare(b.nombre);});
+    if(!entries.length){cont.innerHTML='<p class="hint">No hay jugadores</p>';return;}
+    var html='<div style="font-size:11px;color:var(--suave);margin-bottom:8px">'+entries.length+' jugadores</div>';
+    entries.forEach(function(p){
+      var docId=p._id;var tipoActual=p.tipo||"";
+      var selId="tipo-sel-"+docId.replace(/[^a-zA-Z0-9]/g,"_");
       html+='<div class="reserva-card" style="margin-bottom:8px">'+
         '<div style="font-weight:700;font-size:13px">'+p.nombre+'</div>'+
-        '<div style="font-size:11px;color:var(--suave);margin-bottom:8px">'+(p.rut||p.email||doc.id)+'</div>'+
-        '<select id="tipo-sel-'+doc.id+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;margin-bottom:6px">';
+        '<div style="font-size:11px;color:var(--suave);margin-bottom:8px">'+(p.rut||p.email||"")+(p._col==="ranking_atmas"?' &middot; <span style="color:#6366f1">ranking</span>':'')+'</div>'+
+        '<select id="'+selId+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;margin-bottom:6px">'+
+        '<option value="">-- Sin asignar --</option>';
       Object.keys(tipos).forEach(function(k){
         html+='<option value="'+k+'"'+(tipoActual===k?' selected':'')+'>'+tipos[k]+'</option>';
       });
       html+='</select>'+
-        '<button class="mini" style="background:var(--verde-claro);color:var(--verde-osc)" onclick="guardarTipoUsuario(\''+doc.id+'\')">Guardar</button>'+
+        '<button class="mini" style="background:var(--verde-claro);color:var(--verde-osc)" onclick="guardarTipoUsuario(\''+p._col+'\',\''+docId+'\',\''+selId+'\')">Guardar</button>'+
         '</div>';
     });
-    cont.innerHTML=html||'<p class="hint">Sin jugadores</p>';
+    cont.innerHTML=html;
   }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
 }
 
-async function guardarTipoUsuario(uid){
-  var sel=el("tipo-sel-"+uid);if(!sel)return;
-  var tipo=sel.value;
+async function guardarTipoUsuario(col,docId,selId){
+  var sel=el(selId);if(!sel)return;
+  var tipo=sel.value;if(!tipo){toast("Elige un tipo");return;}
   try{
-    await db.collection("jugadores").doc(uid).update({tipo:tipo});
-    toast("Tipo actualizado: "+tipo);
-  }catch(e){toast("Error: "+e.message);}
+    await db.collection(col).doc(docId).update({tipo:tipo});
+    toast("Tipo guardado: "+(CONFIG_RES.labelTipo[tipo]||tipo));
+  }catch(e){
+    // Si no existe el doc en jugadores, crearlo
+    if(e.code==="not-found"||e.message.includes("No document")){
+      await db.collection(col).doc(docId).set({tipo:tipo},{merge:true});
+      toast("Tipo asignado: "+(CONFIG_RES.labelTipo[tipo]||tipo));
+    }else{toast("Error: "+e.message);}
+  }
 }
