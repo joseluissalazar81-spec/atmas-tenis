@@ -885,6 +885,11 @@ function openModal(tipo,idx){
 }
 
 function actualizarPagoClase(){var sel=el("cls-plan");if(!sel)return;var monto=parseInt(sel.value);var ecp=el("cls-pago");if(ecp)ecp.innerHTML=pagoHTML(monto,"inscripcion academia",MP.inscripcion);}
+function notificarMarcelo(msg){
+  var wp=(_configCache&&_configCache.wp)||"56956343558";
+  var url="https://wa.me/"+wp+"?text="+encodeURIComponent("🔔 ATMAS APP\n"+msg);
+  window.open(url,"_blank");
+}
 function pedirDunlopWA(){var nombre=((el("dun-nombre")||{}).value||"").trim();var cant=((el("dun-cant")||{}).value)||"1";var msg=encodeURIComponent("Hola ATMAS! Quiero pedir "+cant+" tarro(s) Dunlop FORT. Nombre: "+(nombre||"sin indicar"));closeModal();window.open("https://wa.me/56956343558?text="+msg,"_blank");}
 function enviarEncordadoWA(){var nombre=((el("enc-nombre")||{}).value||"").trim();var tipo=(el("enc-tipo")||{}).value||"Control";var msg=encodeURIComponent("Hola ATMAS! Quiero solicitar encordado. Nombre: "+(nombre||"sin indicar")+" Tipo: "+tipo);closeModal();window.open("https://wa.me/56956343558?text="+msg,"_blank");}
 
@@ -911,6 +916,7 @@ async function inscribirTorneo(idx){
     if(!existe.empty){toast("Ya estas inscrito en este torneo");return;}
     await db.collection("inscripciones_atmas").add({nombre:nombre,tel:tel,torneo:t.n,turno:turno,monto:t.monto,estado:"pendiente_pago",ts:firebase.firestore.FieldValue.serverTimestamp()});
     toast("Inscripcion registrada - Ahora completa el pago");
+    notificarMarcelo("🏆 Nueva inscripción torneo\nJugador: "+nombre+"\nTorneo: "+t.n+"\nMonto: $"+Number(t.monto).toLocaleString("es-CL")+"\nTel: "+tel);
   }catch(e){toast("Error al inscribir. Intenta de nuevo.");}
 }
 
@@ -954,14 +960,14 @@ async function renderAdmin(){
   var h="";
   h+='<div class="admin-header"><div><h2>Panel Admin</h2><p>Club Las Avestruces &middot; ATMAS</p></div>';
   h+='<button onclick="adminSalir()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer">Salir</button></div>';
-  h+='<div class="seg" style="margin-bottom:14px">';
-  h+='<button id="atab-reservas" class="on" onclick="adminTab(this,\'reservas\')">Reservas</button>';
-  h+='<button id="atab-sanciones" onclick="adminTab(this,\'sanciones\')">Sanciones</button>';
-  h+='<button id="atab-torneos" onclick="adminTab(this,\'torneos\')">Torneos</button>';
-  h+='<button id="atab-ranking" onclick="adminTab(this,\'ranking\')">Ranking</button>';
-  h+='<button id="atab-agenda" onclick="adminTab(this,\'agenda\')">Agenda</button>';
-  h+='<button id="atab-config" onclick="adminTab(this,\'config\')">Config</button>';
-  h+='</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">'+
+    '<button id="atab-reservas" class="on" onclick="adminTab(this,\'reservas\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:var(--verde);color:#fff">📋 Reservas</button>'+
+    '<button id="atab-sanciones" onclick="adminTab(this,\'sanciones\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">🚫 Sanciones</button>'+
+    '<button id="atab-torneos" onclick="adminTab(this,\'torneos\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">🏆 Torneos</button>'+
+    '<button id="atab-ranking" onclick="adminTab(this,\'ranking\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">📊 Ranking</button>'+
+    '<button id="atab-agenda" onclick="adminTab(this,\'agenda\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">📅 Agenda</button>'+
+    '<button id="atab-config" onclick="adminTab(this,\'config\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">⚙️ Config</button>'+
+    '</div>';
   h+='<div id="admin-tab-reservas"><div class="section-title">Reservas de canchas</div><div id="admin-reservas-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-sanciones" style="display:none"><div class="section-title">Sanciones activas</div><div id="admin-sanciones-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-torneos" style="display:none">';
@@ -995,7 +1001,7 @@ async function renderAdmin(){
 function adminTab(el_,tab){if(tab===undefined){tab=el_;}
   ["reservas","sanciones","torneos","ranking","agenda","config"].forEach(function(t){
     var div=el("admin-tab-"+t);if(div)div.style.display=t===tab?"":"none";
-    var btn=el("atab-"+t);if(btn)btn.className=t===tab?"on":"";
+    var btn=el("atab-"+t);if(btn){btn.style.background=t===tab?"var(--verde)":"#fff";btn.style.color=t===tab?"#fff":"var(--verde-mid)";}
   });
   if(tab==="sanciones")renderAdminSanciones();
   if(tab==="ranking")renderAdminTipos();
@@ -1960,6 +1966,7 @@ async function confirmarReservaSlot(id,fecha,hora){
         '<div style="font-size:12px;color:var(--suave);margin-top:12px">Marcelo se pondrá en contacto contigo.</div>'+
       '</div>';
     toast("Clase reservada ✓");
+    notificarMarcelo("📅 Nueva reserva clase individual\nAlumno: "+nombre+"\nFecha: "+fecha+" "+hora+"\nObjetivo: "+objetivo+(detalle?"\nDetalle: "+detalle:"")+"\nTel: "+tel);
   }catch(e){toast("Error: "+e.message);}
 }
 
