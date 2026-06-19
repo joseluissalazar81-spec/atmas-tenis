@@ -115,7 +115,7 @@ function renderBracket(k){
 function setCuadro(k){renderBracket(k);var so=el("segOro");var sp=el("segPlata");if(so)so.classList.toggle("on",k==="oro");if(sp)sp.classList.toggle("on",k==="plata");}
 
 /* ─── PROFESORES ──────────────────────────────────────────────── */
-const profesores=[{nombre:"Marcelo Escalona G.",rol:"Director ATMAS &middot; Profesor de Tenis",bio:"Entrenador certificado con mas de 15 anos de experiencia en formacion y competencia. Director de ATMAS Academia de Tenis AT+ en el Club Las Avestruces, Quilicura. Especialista en desarrollo de jugadores desde iniciacion hasta alto rendimiento.",certs:{"PTR":["Nivel 1","Nivel 2","Nivel 3","High Performance"],"ITF":["Nivel 1","Nivel 2","Play and Stay"],"PST":["Nivel 1 Entrenador Nacional","Nivel 2"],"Play Tenis":["Profesor de Tenis","Pelota Roja","Pelota Naranja"]}}];
+const profesores=[{nombre:"Marcelo Escalona G.",rol:"Director ATMAS &middot; Profesor de Tenis",bio:"Entrenador certificado con m&aacute;s de 15 a&ntilde;os de experiencia en formaci&oacute;n y competencia. Director de ATMAS Academia de Tenis AT+ en el Club Las Avestruces, Quilicura. Especialista en desarrollo de jugadores desde iniciaci&oacute;n hasta alto rendimiento.",certs:{"PTR":["Nivel 1","Nivel 2","Nivel 3","High Performance"],"ITF":["Nivel 1","Nivel 2","Play and Stay"],"PST":["Nivel 1 Entrenador Nacional","Nivel 2"],"Play Tenis":["Profesor de Tenis","Pelota Roja","Pelota Naranja"]}}];
 
 function renderProfesores(){
   var epl=el("profes-list");if(!epl)return;
@@ -127,7 +127,29 @@ function renderProfesores(){
       Object.entries(prof.certs).forEach(function(ent){
         certsH+='<div style="margin-top:12px"><div style="font-size:10px;font-weight:800;color:var(--verde-osc);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">'+ent[0]+'</div><div style="display:flex;flex-wrap:wrap;gap:5px">'+ent[1].map(function(i){return'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">'+i+'</span>';}).join('')+'</div></div>';
       });
-      h+='<div style="background:#fff;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)"><div style="display:flex;align-items:center;gap:14px;margin-bottom:14px"><div class="avatar" style="background:'+col+';width:60px;height:60px;font-size:20px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800">'+ini+'</div><div><div style="font-weight:900;font-size:17px;color:var(--texto)">'+prof.nombre+'</div><div style="font-size:12px;color:var(--verde-osc);font-weight:600;margin-top:2px">'+prof.rol+'</div></div></div><p style="font-size:13px;color:var(--suave);line-height:1.6;border-top:1px solid var(--linea);padding-top:12px;margin-bottom:4px">'+prof.bio+'</p><div style="border-top:1px solid var(--linea);margin-top:12px;padding-top:4px">'+certsH+'</div></div>';
+      h+=
+        '<div style="background:#fff;border-radius:20px;margin-bottom:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1)">'+
+          // Header verde degradado
+          '<div style="background:linear-gradient(135deg,var(--verde-osc),var(--verde-mid));padding:20px 18px 22px">'+
+            '<div style="display:flex;align-items:center;gap:14px">'+
+              '<div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;flex-shrink:0;border:3px solid rgba(255,255,255,.4)">'+ini+'</div>'+
+              '<div>'+
+                '<div style="font-weight:900;font-size:19px;color:#fff;line-height:1.1">'+prof.nombre+'</div>'+
+                '<div style="font-size:12px;color:var(--lima);font-weight:700;margin-top:4px;letter-spacing:.3px">'+prof.rol+'</div>'+
+              '</div>'+
+            '</div>'+
+          '</div>'+
+          // Bio bloque negro como series
+          '<div style="background:var(--negro);padding:16px 18px">'+
+            '<div style="font-size:10px;font-weight:800;color:var(--lima);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">Sobre el entrenador</div>'+
+            '<p style="font-size:14px;color:rgba(255,255,255,.88);line-height:1.65;margin:0">'+prof.bio+'</p>'+
+          '</div>'+
+          // Certificaciones
+          '<div style="padding:16px 18px">'+
+            '<div style="font-size:10px;font-weight:800;color:var(--verde-osc);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Certificaciones</div>'+
+            certsH+
+          '</div>'+
+        '</div>';
     });
     epl.innerHTML=h;
   }catch(e){console.warn("renderProfesores error:",e);}
