@@ -649,6 +649,9 @@ async function guardarPartido(){
   var s3=(el("pt-s3")||{}).value||"";
   var cancha=(el("pt-cancha")||{}).value||"Cancha 1";
   var fecha=(el("pt-fecha")||{}).value||"";
+  var ctx=(el("pt-contexto")||{}).value||"Escalerilla ATMAS";
+  var ctxOtro=((el("pt-contexto-otro")||{}).value||"").trim();
+  var contexto=(ctx==="otro"&&ctxOtro)?ctxOtro:ctx;
   if(!yo){toast("Escribe tu nombre");return;}
   var ganador=resultado==="gane"?yo:rival;
   var perdedor=resultado==="gane"?rival:yo;
@@ -656,7 +659,7 @@ async function guardarPartido(){
   try{
     await db.collection("partidos_atmas").add({
       jugador1:yo,jugador2:rival,ganador:ganador,perdedor:perdedor,
-      sets:sets,cancha:cancha,fecha:fecha,estado:"pendiente_rival",
+      sets:sets,cancha:cancha,fecha:fecha,contexto:contexto,estado:"pendiente_rival",
       ts:firebase.firestore.FieldValue.serverTimestamp()
     });
     closeModal();
@@ -747,7 +750,24 @@ function openModal(tipo,idx){
     }else if(tipo==="partido"){
       var perfil=getPerfil();var miNombre=perfil?perfil.nombre:"";
       var oh="";rankingData.forEach(function(p){if(p[0]!==miNombre)oh+='<option>'+p[0]+'</option>';});
-      html='<h3>Registrar partido</h3><div class="field"><label>Tu nombre</label><input id="pt-yo" value="'+miNombre+'" placeholder="Tu nombre"'+(miNombre?' readonly style="background:#f4f5f7"':'')+' ></div><div class="field"><label>Oponente</label><select id="pt-rival">'+oh+'</select></div><div class="field"><label>Resultado</label><select id="pt-resultado"><option value="gane">Gane</option><option value="perdi">Perdi</option></select></div><div class="field"><label>Sets</label><div class="sets"><input id="pt-s1" placeholder="6-3"><input id="pt-s2" placeholder="4-6"><input id="pt-s3" placeholder="--"></div></div><div class="field"><label>Cancha</label><select id="pt-cancha"><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div><div class="field"><label>Fecha</label><input id="pt-fecha" type="date" value="'+new Date().toISOString().split("T")[0]+'"></div><button class="btn" onclick="guardarPartido()">Guardar partido</button><button class="btn sec" onclick="closeModal()">Cancelar</button>';
+      html='<h3>Registrar partido</h3>'+
+        '<div class="field"><label>Tu nombre</label><input id="pt-yo" value="'+miNombre+'" placeholder="Tu nombre"'+(miNombre?' readonly style="background:#f4f5f7"':'')+' ></div>'+
+        '<div class="field"><label>Oponente</label><select id="pt-rival">'+oh+'</select></div>'+
+        '<div class="field"><label>Resultado</label><select id="pt-resultado"><option value="gane">Gané</option><option value="perdi">Perdí</option></select></div>'+
+        '<div class="field"><label>Sets</label><div class="sets"><input id="pt-s1" placeholder="6-3"><input id="pt-s2" placeholder="4-6"><input id="pt-s3" placeholder="--"></div></div>'+
+        '<div class="field"><label>Contexto / Torneo</label><select id="pt-contexto">'+
+          '<option value="Escalerilla ATMAS">Escalerilla ATMAS</option>'+
+          '<option value="Ranking Zona Norte">Ranking Zona Norte</option>'+
+          '<option value="Torneo Novicios">Torneo Novicios</option>'+
+          '<option value="Partido amistoso">Partido amistoso</option>'+
+          '<option value="Partido a puntos">Partido a puntos</option>'+
+          '<option value="otro">Otro (especificar abajo)</option>'+
+        '</select></div>'+
+        '<div class="field"><label>Especificar (si aplica)</label><input id="pt-contexto-otro" placeholder="Ej: Final Torneo Verano"></div>'+
+        '<div class="field"><label>Cancha</label><select id="pt-cancha"><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div>'+
+        '<div class="field"><label>Fecha</label><input id="pt-fecha" type="date" value="'+new Date().toISOString().split("T")[0]+'"></div>'+
+        '<button class="btn" onclick="guardarPartido()">Guardar partido</button>'+
+        '<button class="btn sec" onclick="closeModal()">Cancelar</button>';
     }else if(tipo==="socio"){openSocioModal();return;
     }else if(tipo==="caracteristicas"){
       var p2=getPerfil()||{};
@@ -952,7 +972,7 @@ async function loadAdminTorneos(){
     if(!ap){}else if(snapPend.empty){ap.innerHTML='<p class="hint">Sin partidos pendientes</p>';}
     else{
       window._pendQ=[];var hp="";
-      snapPend.forEach(function(doc){var r=doc.data();var qi=window._pendQ.length;window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' ganó</span><span class="rc-date">'+(r.fecha||"")+'</span></div><div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">Aprobar +5/+1</button><button class="btn sec" style="flex:1;padding:8px;font-size:12px" onclick="pendRechazar('+qi+')">Rechazar</button></div></div>';});
+      snapPend.forEach(function(doc){var r=doc.data();var qi=window._pendQ.length;window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' ganó</span><span class="rc-date">'+(r.fecha||"")+'</span></div>'+(r.contexto?'<div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:2px">'+r.contexto+'</div>':'')+'<div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">Aprobar +5/+1</button><button class="btn sec" style="flex:1;padding:8px;font-size:12px" onclick="pendRechazar('+qi+')">Rechazar</button></div></div>';});
       ap.innerHTML=hp;
     }
   }catch(e){var ap2=el("a-pendientes");if(ap2)ap2.innerHTML='<p class="hint">Error</p>';}
