@@ -1016,8 +1016,13 @@ async function renderAdmin(){
   h+='<div class="admin-section"><div class="section-title" style="color:#b45309">Partidos en disputa</div><div id="a-pendientes"><p class="hint">Cargando...</p></div></div>';
   h+='<div class="admin-section"><div class="section-title">Inscripciones torneo</div><div id="a-inscripciones"><p class="hint">Cargando...</p></div></div>';
   h+='</div>';
-  h+='<div id="admin-tab-ranking" style="display:none"><div class="admin-section"><div class="section-title">Tipos de usuario</div><div id="admin-tipos-cont"><p class="hint">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div>';
-  h+='<button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div></div>';
+  h+='<div id="admin-tab-ranking" style="display:none">'+
+    '<div class="admin-section"><div class="section-title">Tipos de usuario</div><div id="admin-tipos-cont"><p class="hint">Cargando...</p></div></div>'+
+    '<div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div>'+
+    '<button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button>'+
+    '<button class="btn sec" style="margin-top:8px;border-color:#dc2626;color:#dc2626" onclick="resetearRanking()">🔄 Resetear ranking a cero</button></div>'+
+    '<div class="admin-section"><div class="section-title">📋 Planilla de resultados</div><div id="admin-planilla-cont"><p class="hint">Cargando...</p></div></div>'+
+    '</div>';
   h+='<div id="admin-tab-agenda" style="display:none"><div class="admin-section"><div class="section-title">📅 Agenda Clases Individuales</div><div id="admin-slots-cont"><p class="hint">Cargando...</p></div></div></div>';
   h+='<div id="admin-tab-config" style="display:none"><div id="admin-config-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-evaluar" style="display:none"><div class="admin-section"><div class="section-title">&#128104;&#8205;&#127979; Evaluar Alumnos</div><div id="admin-evaluar-cont"><p class="hint">Cargando...</p></div></div></div>';
@@ -1044,7 +1049,7 @@ function adminTab(el_,tab){if(tab===undefined){tab=el_;}
     var btn=el("atab-"+t);if(btn){btn.style.background=t===tab?"var(--verde)":"#fff";btn.style.color=t===tab?"#fff":"var(--verde-mid)";}
   });
   if(tab==="sanciones")renderAdminSanciones();
-  if(tab==="ranking")renderAdminTipos();
+  if(tab==="ranking"){renderAdminTipos();cargarPlanillaResultados();}
   if(tab==="agenda")renderAdminSlots();
   if(tab==="config"){renderAdminConfig();setTimeout(cargarCodigosLista,300);}
   if(tab==="torneos"){loadAdminTorneos();cargarListaTorneos();}
@@ -2587,6 +2592,49 @@ async function guardarTipoUsuario(col,docId,selId){
       toast("Tipo asignado: "+(CONFIG_RES.labelTipo[tipo]||tipo));
     }else{toast("Error: "+e.message);}
   }
+}
+
+async function resetearRanking(){
+  if(!confirm("⚠️ ¿Resetear TODOS los puntos a cero? Esto no se puede deshacer."))return;
+  if(!confirm("Confirma nuevamente: se borrarán todos los puntos, partidos ganados y perdidos."))return;
+  try{
+    toast("Reseteando...");
+    var snap=await db.collection("ranking_atmas").get();
+    var batch=db.batch();
+    snap.forEach(function(doc){
+      batch.update(doc.ref,{pts:0,jugados:0,ganados:0,perdidos:0,pct:0});
+    });
+    await batch.commit();
+    // Marcar todos los partidos como archivados
+    var snapP=await db.collection("partidos_atmas").get();
+    var batch2=db.batch();
+    snapP.forEach(function(doc){batch2.update(doc.ref,{estado:"archivado"});});
+    await batch2.commit();
+    toast("✓ Ranking reseteado a cero");
+    iniciarRankingLive();
+  }catch(e){toast("Error: "+e.message);}
+}
+
+async function cargarPlanillaResultados(){
+  var cont=el("admin-planilla-cont");if(!cont)return;
+  cont.innerHTML='<p class="hint">Cargando...</p>';
+  try{
+    var snap=await db.collection("partidos_atmas").where("estado","==","aprobado").orderBy("ts","desc").limit(100).get();
+    if(snap.empty){cont.innerHTML='<p class="hint">Sin partidos registrados aún</p>';return;}
+    var filas="";var n=0;
+    snap.forEach(function(doc){
+      n++;var r=doc.data();
+      var fechaFmt=r.fecha?r.fecha.split("-").reverse().join("/"):"-";
+      var bgRow=n%2===0?"#f9fafb":"#fff";
+      filas+='<div style="display:grid;grid-template-columns:24px 1fr 1fr auto;gap:6px;align-items:center;padding:8px 10px;background:'+bgRow+';border-radius:8px;margin-bottom:3px">'+
+        '<div style="font-size:11px;color:var(--suave);font-weight:600">'+n+'</div>'+
+        '<div><div style="font-size:12px;font-weight:700">'+r.ganador+'</div><div style="font-size:10px;color:var(--suave)">vs '+r.perdedor+'</div></div>'+
+        '<div style="font-size:11px;color:#444">'+(r.sets||"—")+'<br><span style="color:var(--suave)">'+fechaFmt+'</span></div>'+
+        '<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#15803d;border-radius:6px;padding:2px 6px">W</span>'+
+        '</div>';
+    });
+    cont.innerHTML='<div style="font-size:11px;color:var(--suave);margin-bottom:8px">'+n+' partidos aprobados</div>'+filas;
+  }catch(e){if(cont)cont.innerHTML='<p class="hint">Error al cargar</p>';}
 }
 
 /* ─── CATÁLOGO DE PROGRAMAS FORMATIVOS ───────────────────────── */
