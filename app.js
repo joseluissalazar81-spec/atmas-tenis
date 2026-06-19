@@ -839,6 +839,18 @@ async function renderAdmin(){
   h+='<div id="admin-tab-reservas"><div class="section-title">Reservas de canchas</div><div id="admin-reservas-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-sanciones" style="display:none"><div class="section-title">Sanciones activas</div><div id="admin-sanciones-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-torneos" style="display:none">';
+  h+='<div class="admin-section"><button class="btn" onclick="abrirFormCrearTorneo()">+ Crear torneo</button><div id="admin-form-torneo" style="display:none;margin-top:14px;background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.07)">'+
+    '<div class="section-title" style="margin-top:0">Nuevo torneo</div>'+
+    '<div class="field"><label>Nombre</label><input id="nt-nombre" placeholder="Ej: Torneo Novicios 5"></div>'+
+    '<div class="field"><label>Fecha</label><input id="nt-fecha" type="date"></div>'+
+    '<div class="field"><label>Hora</label><input id="nt-hora" placeholder="Ej: 16:00 y 18:00"></div>'+
+    '<div class="field"><label>Precio inscripci&oacute;n</label><input id="nt-precio" type="number" placeholder="20000"></div>'+
+    '<div class="field"><label>Cupos disponibles</label><input id="nt-cupos" type="number" placeholder="16"></div>'+
+    '<div class="field"><label>Descripci&oacute;n (opcional)</label><input id="nt-desc" placeholder="Detalles del torneo"></div>'+
+    '<button class="btn" onclick="guardarNuevoTorneo()">Crear torneo</button>'+
+    '<button class="btn sec" style="margin-top:8px" onclick="el(\'admin-form-torneo\').style.display=\'none\'">Cancelar</button>'+
+    '</div></div>';
+  h+='<div class="admin-section"><div class="section-title">Torneos activos</div><div id="admin-torneos-lista"><p class="hint">Cargando...</p></div></div>';
   h+='<div class="admin-section"><div class="section-title" style="color:#b45309">Partidos en disputa</div><div id="a-pendientes"><p class="hint">Cargando...</p></div></div>';
   h+='<div class="admin-section"><div class="section-title">Inscripciones torneo</div><div id="a-inscripciones"><p class="hint">Cargando...</p></div></div>';
   h+='</div>';
@@ -861,6 +873,76 @@ function adminTab(el_,tab){if(tab===undefined){tab=el_;}
   if(tab==="sanciones")renderAdminSanciones();
   if(tab==="ranking")renderAdminTipos();
   if(tab==="config")renderAdminConfig();
+  if(tab==="torneos"){loadAdminTorneos();cargarListaTorneos();}
+}
+
+function abrirFormCrearTorneo(){
+  var f=el("admin-form-torneo");if(!f)return;
+  f.style.display=f.style.display==="none"?"":"none";
+  // Fecha por defecto: hoy
+  var fi=el("nt-fecha");if(fi&&!fi.value)fi.value=new Date().toISOString().split("T")[0];
+}
+
+async function guardarNuevoTorneo(){
+  var nombre=((el("nt-nombre")||{}).value||"").trim();
+  var fecha=((el("nt-fecha")||{}).value||"").trim();
+  var hora=((el("nt-hora")||{}).value||"").trim();
+  var precio=parseInt((el("nt-precio")||{}).value||"0")||0;
+  var cupos=parseInt((el("nt-cupos")||{}).value||"0")||0;
+  var desc=((el("nt-desc")||{}).value||"").trim();
+  if(!nombre||!fecha){toast("Completa nombre y fecha");return;}
+  try{
+    await db.collection("torneos_app").add({
+      nombre:nombre,fecha:fecha,hora:hora,precio:precio,cupos:cupos,cuposDisp:cupos,
+      descripcion:desc,activo:true,ts:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast("Torneo creado ✓");
+    el("admin-form-torneo").style.display="none";
+    ["nt-nombre","nt-hora","nt-desc"].forEach(function(id){var e=el(id);if(e)e.value="";});
+    cargarListaTorneos();
+  }catch(e){toast("Error: "+e.message);}
+}
+
+async function cargarListaTorneos(){
+  var cont=el("admin-torneos-lista");if(!cont)return;
+  cont.innerHTML='<p class="hint">Cargando...</p>';
+  try{
+    var snap=await db.collection("torneos_app").orderBy("ts","desc").limit(20).get();
+    if(snap.empty){cont.innerHTML='<p class="hint">Sin torneos creados aún</p>';return;}
+    var h="";
+    snap.forEach(function(doc){
+      var t=doc.data();
+      var fechaFmt=t.fecha?new Date(t.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"short",day:"numeric",month:"short",year:"numeric"}):"";
+      var cuposLabel=t.cuposDisp!==undefined?t.cuposDisp+" cupos":"";
+      h+='<div class="reserva-card" style="margin-bottom:8px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+        '<div>'+
+          '<div style="font-weight:700;font-size:14px">'+t.nombre+'</div>'+
+          '<div style="font-size:12px;color:#4b5563">'+fechaFmt+(t.hora?' &middot; '+t.hora:'')+'</div>'+
+          '<div style="font-size:12px;color:#4b5563">'+(t.precio>0?"$"+Number(t.precio).toLocaleString("es-CL"):"")+' &middot; '+cuposLabel+'</div>'+
+          (t.descripcion?'<div style="font-size:11px;color:var(--suave);margin-top:2px">'+t.descripcion+'</div>':'')+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'+
+          '<span style="font-size:11px;font-weight:700;color:'+(t.activo?"#16a34a":"#9ca3af")+'">'+(t.activo?"ACTIVO":"INACTIVO")+'</span>'+
+          '<button class="mini" style="color:#dc2626" onclick="toggleTorneo(\''+doc.id+'\','+(t.activo?'false':'true')+')">'+( t.activo?"Desactivar":"Activar")+'</button>'+
+          '<button class="mini" onclick="editarCuposTorneo(\''+doc.id+'\','+t.cuposDisp+')">Cupos</button>'+
+        '</div></div></div>';
+    });
+    cont.innerHTML=h;
+  }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
+}
+
+async function toggleTorneo(id,activo){
+  try{await db.collection("torneos_app").doc(id).update({activo:activo});toast(activo?"Torneo activado":"Torneo desactivado");cargarListaTorneos();}
+  catch(e){toast("Error: "+e.message);}
+}
+
+async function editarCuposTorneo(id,actual){
+  var n=prompt("Cupos disponibles (actual: "+actual+"):");
+  if(n===null||n==="")return;
+  var v=parseInt(n);if(isNaN(v)||v<0){toast("Número inválido");return;}
+  try{await db.collection("torneos_app").doc(id).update({cuposDisp:v});toast("Cupos actualizados: "+v);cargarListaTorneos();}
+  catch(e){toast("Error: "+e.message);}
 }
 
 async function loadAdminTorneos(){
