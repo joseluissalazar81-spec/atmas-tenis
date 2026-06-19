@@ -1360,8 +1360,11 @@ function actualizarResumenForm(){
     if(tarifa>0){
       var t=PAGO;
       var linkMP=resState.duracion===2?MP.cancha2hrs:MP.cancha1hr;
-      md.innerHTML='<div class="pago-box" style="margin-bottom:0">'+
-        '<div class="pago-title"><span style="font-size:16px">💳</span> Datos de transferencia</div>'+
+      md.innerHTML=
+        '<a href="'+linkMP+'" target="_blank" style="display:block;background:#009ee3;color:#fff;text-align:center;padding:14px;border-radius:14px;font-size:15px;font-weight:800;text-decoration:none;margin-bottom:12px">&#128179; Pagar con MercadoPago &rarr; $'+tarifa.toLocaleString("es-CL")+'</a>'+
+        '<div style="text-align:center;font-size:12px;color:#9ca3af;margin-bottom:12px">— o transferencia bancaria —</div>'+
+        '<div class="pago-box" style="margin-bottom:0">'+
+        '<div class="pago-title">&#128179; Datos de transferencia</div>'+
         '<div class="pago-row"><span>Nombre</span><b>'+t.nombre+'</b></div>'+
         '<div class="pago-row"><span>RUT</span><b>'+t.rut+'</b></div>'+
         '<div class="pago-row"><span>Banco</span><b>'+t.banco+'</b></div>'+
@@ -1370,9 +1373,9 @@ function actualizarResumenForm(){
         '<div class="pago-row"><span>Email</span><b>'+t.email+'</b></div>'+
         '<div class="pago-row"><span>Monto</span><b style="font-size:16px;color:var(--verde-osc)">$'+tarifa.toLocaleString("es-CL")+'</b></div>'+
         '</div>'+
-        '<p style="font-size:12px;color:#6b7280;text-align:center;margin:10px 0 12px">Transfiere y envía el comprobante por WhatsApp para confirmar tu reserva.</p>';
+        '<p style="font-size:12px;color:#6b7280;text-align:center;margin:10px 0 4px">Transferencia: env&iacute;a comprobante por WhatsApp para confirmar.</p>';
     }else{
-      md.innerHTML='<p style="color:var(--verde-osc);font-weight:700;font-size:14px;margin-bottom:12px">✓ Sin costo adicional &mdash; incluido en tu membresía</p>';
+      md.innerHTML='<p style="color:var(--verde-osc);font-weight:700;font-size:14px;margin-bottom:12px">&#10003; Sin costo adicional &mdash; incluido en tu membres&iacute;a</p>';
     }
   }
   var btn=el("res-btn");if(btn)btn.textContent=tarifa>0?"Enviar comprobante por WhatsApp":"Confirmar reserva";
