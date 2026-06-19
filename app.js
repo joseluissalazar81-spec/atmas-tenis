@@ -13,7 +13,7 @@ try{
 }catch(e){console.warn("Firebase no disponible:",e);}
 
 /* ─── CONSTANTES ──────────────────────────────────────────────── */
-const PAGO={nombre:"Marcelo Andres Escalona Galvez",rut:"12.637.853-K",banco:"Mercado Pago",tipo:"Cuenta Vista",cuenta:"1057752328",email:"locampinotenisclub@hotmail.com"};
+const PAGO={nombre:"Marcelo Andrés Escalona Gálvez",rut:"12.637.853-K",banco:"Mercado Pago",tipo:"Cuenta Vista",cuenta:"1057752328",email:"locampinotenisclub@hotmail.com"};
 const avatarColors=["#e74c3c","#e67e22","#f39c12","#2ecc71","#1abc9c","#3498db","#9b59b6","#e91e63","#00bcd4","#4caf50","#ff5722","#607d8b"];
 function initials(n){if(!n)return"?";return n.split(" ").slice(0,2).map(function(x){return x[0];}).join("").toUpperCase();}
 function avatarColor(n){if(!n)return avatarColors[0];var h=0;for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%avatarColors.length;return avatarColors[h];}
