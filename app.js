@@ -165,13 +165,14 @@ renderVerdades();
 const MP={cancha1hr:"https://mpago.li/2Up5tJ7",cancha2hrs:"https://mpago.la/1JgQ4Y5",torneo20:"https://mpago.la/REEMPLAZAR_T20",torneo15:"https://mpago.la/REEMPLAZAR_T15",escalerilla:"https://mpago.la/REEMPLAZAR_ESC",socio:"https://mpago.la/REEMPLAZAR_SOCIO",inscripcion:"https://mpago.la/REEMPLAZAR_INSC"};
 function pagoHTML(monto,label,link){
   var t=PAGO;
+  function _fila(k,v,cv){return '<div class="pagobox row"><span class="k">'+k+':</span><span class="v">'+v+'</span>'+(cv?'<button class="copy-btn" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+cv+'\').then(function(){toast(\'Copiado ✓\');})">Copiar</button>':'<span></span>')+'</div>';}
   return '<div class="pagobox"><h4>&#128180; Datos de transferencia</h4>'+
-    '<div class="row"><span class="k">Nombre:</span><span class="v">'+t.nombre+'</span></div>'+
-    '<div class="row"><span class="k">RUT:</span><span class="v">'+t.rut+'</span></div>'+
-    '<div class="row"><span class="k">Banco:</span><span class="v">'+t.banco+' &middot; '+t.tipo+'</span></div>'+
-    '<div class="row"><span class="k">N&ordm; Cuenta:</span><span class="v">'+t.cuenta+'</span></div>'+
-    '<div class="row"><span class="k">Email:</span><span class="v">'+t.email+'</span></div>'+
-    '<div class="row"><span class="k">Monto:</span><span class="v" style="font-weight:800;font-size:16px;color:var(--verde-osc)">$'+monto.toLocaleString("es-CL")+'</span></div>'+
+    _fila("Nombre",t.nombre,t.nombre)+
+    _fila("RUT",t.rut,t.rut)+
+    _fila("Banco",t.banco+' &middot; '+t.tipo,t.banco)+
+    _fila("N&ordm; Cuenta",t.cuenta,t.cuenta)+
+    _fila("Email",t.email,t.email)+
+    _fila("Monto",'<b style="font-size:17px;color:var(--verde-osc)">$'+monto.toLocaleString("es-CL")+'</b>',String(monto))+
     '<a class="btn wa" href="'+link+'" target="_blank" onclick="registrarIntentoPago(\''+label+'\','+monto+')" style="margin-top:12px">Pagar con Mercado Pago &rarr;</a></div>';
 }
 function registrarIntentoPago(label,monto){try{db.collection("pagos_mp").add({label:label,monto:monto,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}}
@@ -1469,19 +1470,23 @@ function actualizarResumenForm(){
     if(tarifa>0){
       var t=PAGO;
       var linkMP=resState.duracion===2?MP.cancha2hrs:MP.cancha1hr;
-      function fila(k,v,big){return '<div class="pagobox row"><span class="k">'+k+':</span><span class="v'+(big?' big':'')+'">'+v+'</span></div>';}
+      function copiarTexto(txt){navigator.clipboard&&navigator.clipboard.writeText(txt).then(function(){toast("Copiado ✓");}).catch(function(){});}
+      function fila(k,v,copyVal,big){
+        var copyBtn=copyVal?'<button class="copy-btn" onclick="(function(){navigator.clipboard&&navigator.clipboard.writeText(\''+copyVal.replace(/'/g,"\\'")+'\')?navigator.clipboard.writeText(\''+copyVal.replace(/'/g,"\\'")+'\').then(function(){toast(\'Copiado ✓\');}):toast(\'Copiado ✓\');})()">Copiar</button>':'<span></span>';
+        return '<div class="pagobox row"><span class="k">'+k+':</span><span class="v'+(big?' big':'')+'">'+v+'</span>'+copyBtn+'</div>';
+      }
       md.innerHTML=
         '<a href="'+linkMP+'" target="_blank" style="display:block;background:#009ee3;color:#fff;text-align:center;padding:14px;border-radius:14px;font-size:15px;font-weight:800;text-decoration:none;margin-bottom:12px">&#128179;&nbsp; Pagar con MercadoPago &rarr; $'+tarifa.toLocaleString("es-CL")+'</a>'+
         '<div style="text-align:center;font-size:12px;color:#9ca3af;margin:-4px 0 12px">&mdash; o transferencia bancaria &mdash;</div>'+
         '<div class="pagobox">'+
         '<h4>&#128180; Datos de transferencia</h4>'+
-        fila("Nombre",t.nombre)+
-        fila("RUT",t.rut)+
-        fila("Banco",t.banco)+
-        fila("Tipo",t.tipo)+
-        fila("N&ordm; Cuenta",t.cuenta)+
-        fila("Email",t.email)+
-        fila("Monto",'<b style="font-size:16px;color:var(--verde-osc)">$'+tarifa.toLocaleString("es-CL")+'</b>',true)+
+        fila("Nombre",t.nombre,t.nombre)+
+        fila("RUT",t.rut,t.rut)+
+        fila("Banco",t.banco,t.banco)+
+        fila("Tipo",t.tipo,t.tipo)+
+        fila("N&ordm; Cuenta",t.cuenta,t.cuenta)+
+        fila("Email",t.email,t.email)+
+        fila("Monto",'<b style="font-size:17px;color:var(--verde-osc)">$'+tarifa.toLocaleString("es-CL")+'</b>',String(tarifa),true)+
         '</div>'+
         '<p style="font-size:12px;color:#6b7280;text-align:center;margin:6px 0 4px">Env&iacute;a comprobante por WhatsApp para confirmar.</p>';
     }else{
