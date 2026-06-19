@@ -985,6 +985,7 @@ async function renderAdmin(){
     '<button id="atab-ranking" onclick="adminTab(this,\'ranking\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">📊 Ranking</button>'+
     '<button id="atab-agenda" onclick="adminTab(this,\'agenda\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">📅 Agenda</button>'+
     '<button id="atab-config" onclick="adminTab(this,\'config\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">⚙️ Config</button>'+
+    '<button id="atab-ingresos" onclick="adminTab(this,\'ingresos\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid);grid-column:1/-1">💰 Ingresos</button>'+
     '</div>';
   h+='<div id="admin-tab-reservas"><div class="section-title">Reservas de canchas</div><div id="admin-reservas-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-sanciones" style="display:none"><div class="section-title">Sanciones activas</div><div id="admin-sanciones-cont"><p class="hint">Cargando...</p></div></div>';
@@ -1008,6 +1009,15 @@ async function renderAdmin(){
   h+='<button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div></div>';
   h+='<div id="admin-tab-agenda" style="display:none"><div class="admin-section"><div class="section-title">📅 Agenda Clases Individuales</div><div id="admin-slots-cont"><p class="hint">Cargando...</p></div></div></div>';
   h+='<div id="admin-tab-config" style="display:none"><div id="admin-config-cont"><p class="hint">Cargando...</p></div></div>';
+  h+='<div id="admin-tab-ingresos" style="display:none"><div class="admin-section">'+
+    '<div class="section-title">💰 Informe de Ingresos</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
+      '<div class="field" style="margin:0"><label style="font-size:11px">Desde</label><input type="date" id="ing-desde" style="font-size:13px;padding:8px;border:1.5px solid var(--gris);border-radius:10px;width:100%"></div>'+
+      '<div class="field" style="margin:0"><label style="font-size:11px">Hasta</label><input type="date" id="ing-hasta" style="font-size:13px;padding:8px;border:1.5px solid var(--gris);border-radius:10px;width:100%"></div>'+
+    '</div>'+
+    '<button class="btn" onclick="generarInformeIngresos()">Ver informe</button>'+
+    '<div id="admin-ingresos-cont" style="margin-top:14px"></div>'+
+  '</div></div>';
   h+='<div style="height:20px"></div>';
   eab.innerHTML=h;
   renderAdminReservas();
@@ -1017,7 +1027,7 @@ async function renderAdmin(){
 }
 
 function adminTab(el_,tab){if(tab===undefined){tab=el_;}
-  ["reservas","sanciones","torneos","ranking","agenda","config"].forEach(function(t){
+  ["reservas","sanciones","torneos","ranking","agenda","config","ingresos"].forEach(function(t){
     var div=el("admin-tab-"+t);if(div)div.style.display=t===tab?"":"none";
     var btn=el("atab-"+t);if(btn){btn.style.background=t===tab?"var(--verde)":"#fff";btn.style.color=t===tab?"#fff":"var(--verde-mid)";}
   });
@@ -1026,6 +1036,66 @@ function adminTab(el_,tab){if(tab===undefined){tab=el_;}
   if(tab==="agenda")renderAdminSlots();
   if(tab==="config"){renderAdminConfig();setTimeout(cargarCodigosLista,300);}
   if(tab==="torneos"){loadAdminTorneos();cargarListaTorneos();}
+  if(tab==="ingresos")iniciarInformeIngresos();
+}
+function iniciarInformeIngresos(){
+  var hoy=new Date().toISOString().split("T")[0];
+  var primerDiaMes=hoy.substring(0,8)+"01";
+  var d=el("ing-desde");var h=el("ing-hasta");
+  if(d&&!d.value)d.value=primerDiaMes;
+  if(h&&!h.value)h.value=hoy;
+}
+async function generarInformeIngresos(){
+  var desde=(el("ing-desde")||{}).value||"";
+  var hasta=(el("ing-hasta")||{}).value||"";
+  if(!desde||!hasta){toast("Selecciona rango de fechas");return;}
+  var cont=el("admin-ingresos-cont");
+  if(cont)cont.innerHTML='<p class="hint">Cargando...</p>';
+  try{
+    var snap=await db.collection("reservas").where("fecha",">=",desde).where("fecha","<=",hasta).get();
+    var todas=[];snap.forEach(function(doc){todas.push(doc.data());});
+    var pagadas=todas.filter(function(r){return r.estado==="confirmada_pagada";});
+    var canceladas=todas.filter(function(r){return r.estado==="cancelada";});
+    // Agrupar por tipo de usuario
+    var porTipo={};
+    pagadas.forEach(function(r){
+      var t=r.tipo||"otro";
+      if(!porTipo[t])porTipo[t]={count:0,total:0};
+      porTipo[t].count++;porTipo[t].total+=(r.monto||0);
+    });
+    var totalGeneral=pagadas.reduce(function(s,r){return s+(r.monto||0);},0);
+    // Agrupar por día
+    var porDia={};
+    pagadas.forEach(function(r){
+      if(!r.fecha)return;
+      if(!porDia[r.fecha])porDia[r.fecha]=0;
+      porDia[r.fecha]+=(r.monto||0);
+    });
+    var diasOrden=Object.keys(porDia).sort();
+    var labelTipo={"socio_mensual":"Socio Mensual","socio_partido":"Pago por partido","invitado":"Invitado","academia":"Academia","arriendo":"Arriendo"};
+    var h2='<div style="background:linear-gradient(135deg,#0f3d08,#2f6b1a);border-radius:16px;padding:16px;color:#fff;margin-bottom:12px">'+
+      '<div style="font-size:11px;opacity:.75;margin-bottom:4px">TOTAL CONFIRMADO '+desde.split("-").reverse().join("/")+" → "+hasta.split("-").reverse().join("/")+'</div>'+
+      '<div style="font-size:28px;font-weight:900">$'+totalGeneral.toLocaleString("es-CL")+'</div>'+
+      '<div style="font-size:12px;opacity:.8;margin-top:4px">'+pagadas.length+' reservas pagadas &middot; '+canceladas.length+' canceladas</div>'+
+    '</div>';
+    // Desglose por tipo
+    h2+='<div class="section-title" style="margin-top:0">Desglose por tipo</div>';
+    Object.keys(porTipo).forEach(function(t){
+      var p=porTipo[t];
+      h2+='<div class="lcard" style="justify-content:space-between"><div><div class="nm">'+(labelTipo[t]||t)+'</div><div class="ds">'+p.count+' reservas</div></div><div style="font-weight:800;color:var(--verde-mid)">$'+p.total.toLocaleString("es-CL")+'</div></div>';
+    });
+    if(Object.keys(porTipo).length===0)h2+='<p class="hint">Sin ingresos en este período</p>';
+    // Desglose por día
+    if(diasOrden.length>0){
+      h2+='<div class="section-title">Por día</div>';
+      diasOrden.forEach(function(fecha){
+        var parts=fecha.split("-");
+        var fechaFmt=parts[2]+"/"+parts[1]+"/"+parts[0];
+        h2+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gris)"><div style="font-size:13px;color:var(--texto)">'+fechaFmt+'</div><div style="font-weight:700;color:var(--verde-mid)">$'+porDia[fecha].toLocaleString("es-CL")+'</div></div>';
+      });
+    }
+    if(cont)cont.innerHTML=h2;
+  }catch(e){console.warn("informe error:",e);if(cont)cont.innerHTML='<p class="hint">Error al cargar. Revisa la conexión.</p>';}
 }
 
 function abrirFormCrearTorneo(){
