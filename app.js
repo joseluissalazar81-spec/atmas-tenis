@@ -184,7 +184,13 @@ function savePerfil(p){
   }catch(e){console.warn("savePerfil error:",e);}
 }
 
-function esAdmin(nombre){if(!nombre)return false;var n=nombre.toLowerCase().trim();return n.includes("marcelo")&&n.includes("escalona");}
+var ADMIN_EMAILS=["joseluissalazar81@gmail.com","locampinotenisclub@hotmail.com"];
+function esAdmin(nombre,email){
+  if(email&&ADMIN_EMAILS.indexOf((email||"").toLowerCase().trim())!==-1)return true;
+  if(!nombre)return false;
+  var n=nombre.toLowerCase().trim();
+  return(n.includes("marcelo")&&n.includes("escalona"))||(n.includes("jorge")&&n.includes("borges"));
+}
 function formatRut(inp){if(!inp)return;var v=inp.value.replace(/[^0-9kK]/g,"");if(v.length>1){var d=v.slice(0,-1);var dv=v.slice(-1);var fmt="";for(var i=d.length-1,j=0;i>=0;i--,j++){if(j>0&&j%3===0)fmt="."+fmt;fmt=d[i]+fmt;}inp.value=fmt+"-"+dv;}else{inp.value=v;}}
 
 /* ─── AUTH UI: UN SOLO PUNTO DE CONTROL ──────────────────────── */
@@ -403,7 +409,7 @@ function renderPerfil(){
       pBody.innerHTML='<div class="hero" style="margin-bottom:14px"><div class="ball"></div><h2>Bienvenido a ATMAS</h2><p>Tu academia de tenis en un solo lugar.</p></div><div class="infobox" style="margin-bottom:12px"><div style="font-weight:800;font-size:14px;margin-bottom:10px">Ya soy miembro &middot; Ingresar con RUT</div><div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)"></div><button class="btn" onclick="recuperarPerfil()">Ingresar</button></div><div style="text-align:center;color:var(--suave);font-size:12px;margin:8px 0">o</div><div class="infobox"><div style="font-weight:800;font-size:14px;margin-bottom:10px">Soy nuevo &middot; Crear perfil</div><div class="field"><label>Nombre completo</label><input id="reg-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>RUT</label><input id="reg-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)"></div><div class="field"><label>Fecha de nacimiento</label><input id="reg-fnac" type="date"></div><div class="field"><label>Telefono</label><input id="reg-tel" type="tel" placeholder="+569 XXXX XXXX"></div><button class="btn sec" onclick="registrarPerfil()">Crear mi perfil</button></div>';
       return;
     }
-    if(esAdmin(p.nombre)){adminUnlocked=true;renderPerfilAdmin(p,pBody);return;}
+    if(esAdmin(p.nombre,p.email||"")){adminUnlocked=true;renderPerfilAdmin(p,pBody);return;}
     var jugador=rankingData.find(function(j){return j[0].toLowerCase()===p.nombre.toLowerCase();});
     var pos=jugador?rankingData.indexOf(jugador)+1:null;
     var ini=initials(p.nombre);var col=avatarColor(p.nombre);
@@ -861,7 +867,7 @@ function iniciarCuadroLive(){
 function renderCuadroNovicios3(data){
   var ecn=el("cuadro-novicios3");if(!ecn)return;
   try{
-    var admin=esAdmin((getPerfil()||{}).nombre||"");
+    var _p=getPerfil()||{};var admin=esAdmin(_p.nombre||"",_p.email||"");
     function mhtml(ronda,idx,m){
       var aCls=m.gan&&m.gan===m.a?"gan":"";
       var bCls=m.gan&&m.gan===m.b?"gan":"";
