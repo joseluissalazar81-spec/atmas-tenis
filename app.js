@@ -1884,6 +1884,8 @@ async function renderAdminSanciones(){
 
 var _configCache=null;
 /* ─── AGENDA CLASES INDIVIDUALES ──────────────────────────────── */
+var HORARIOS_PERMITIDOS={0:{min:"14:00",max:"20:00"},1:{min:"08:00",max:"16:00"},2:{min:"08:00",max:"16:00"},3:{min:"08:00",max:"16:00"},4:{min:"08:00",max:"16:00"},5:{min:"08:00",max:"14:00"},6:{min:"14:00",max:"20:00"}};
+var DIAS_ES=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 async function cargarSlotsIndividuales(){
   var cont=el("slots-list");if(!cont)return;
   try{
@@ -1956,7 +1958,14 @@ async function renderAdminSlots(){
   cont.innerHTML='<p class="hint">Cargando...</p>';
   try{
     var snap=await db.collection("slots_individuales").orderBy("fecha").orderBy("hora").limit(50).get();
-    var h='<div class="field"><label>Fecha</label><input id="ns-fecha" type="date"></div>'+
+    var h='<div style="background:#f0fdf4;border-radius:12px;padding:12px;margin-bottom:14px;font-size:12px">'+
+      '<div style="font-weight:800;color:var(--verde-osc);margin-bottom:6px">⏰ Horarios permitidos clases individuales</div>'+
+      '<div style="color:#444;line-height:1.8">'+
+        'Lun – Jue: 08:00 a 16:00<br>'+
+        'Viernes: 08:00 a 14:00<br>'+
+        'Sáb – Dom: 14:00 a 20:00'+
+      '</div></div>'+
+      '<div class="field"><label>Fecha</label><input id="ns-fecha" type="date"></div>'+
       '<div class="field"><label>Hora</label><input id="ns-hora" placeholder="Ej: 10:00"></div>'+
       '<div class="field"><label>Nota (opcional)</label><input id="ns-nota" placeholder="Ej: Cancha 1"></div>'+
       '<button class="btn" onclick="crearSlot()" style="margin-bottom:16px">+ Agregar horario</button>'+
@@ -1980,6 +1989,12 @@ async function crearSlot(){
   var hora=((el("ns-hora")||{}).value||"").trim();
   var nota=((el("ns-nota")||{}).value||"").trim();
   if(!fecha||!hora){toast("Ingresa fecha y hora");return;}
+  // Validar rango según día
+  var d=new Date(fecha+"T12:00");var dow=d.getDay();
+  var rango=HORARIOS_PERMITIDOS[dow];
+  if(hora<rango.min||hora>=rango.max){
+    toast("⚠️ "+DIAS_ES[dow]+": solo "+rango.min+" a "+rango.max);return;
+  }
   try{
     await db.collection("slots_individuales").add({fecha,hora,nota,estado:"disponible",ts:firebase.firestore.FieldValue.serverTimestamp()});
     toast("Horario agregado ✓");["ns-hora","ns-nota"].forEach(function(id){var e=el(id);if(e)e.value="";});
