@@ -249,46 +249,48 @@
       <div class="lcard"><div class="ic">&#128316;</div><div style="flex:1"><div class="nm">Cambio de grip</div><div class="ds">Mayor comodidad y agarre</div></div><button class="mini" onclick="openModal('encordado')">Solicitar</button></div>
 
       <div class="section-title">&#127873; Ofertas ATMAS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
 
-      <!-- Tarro Dunlop FORT -->
-      <div style="background:#fff;border-radius:16px;padding:15px;margin-bottom:11px;box-shadow:0 1px 3px rgba(0,0,0,.07);display:flex;align-items:center;gap:14px">
-        <div style="width:56px;height:56px;border-radius:12px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">&#127934;</div>
-        <div style="flex:1">
-          <div style="font-weight:800;font-size:15px;color:#1a2e1a">Tarro Dunlop FORT</div>
-          <div style="font-size:12px;color:var(--suave);margin:2px 0 6px">All Court &middot; 3 pelotas</div>
-          <div style="font-weight:800;font-size:17px;color:var(--verde-osc)">$10.500</div>
-        </div>
-        <button class="mini" onclick="openModal('oferta-dunlop')">Pedir</button>
-      </div>
-
-      <!-- Encordados ATMAS -->
-      <div style="background:linear-gradient(135deg,#0f3d08,#2f6b1a);border-radius:16px;padding:16px;margin-bottom:11px;box-shadow:0 2px 8px rgba(15,61,8,.25)">
-        <div style="font-size:11px;font-weight:800;color:var(--lima);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">&#128299; Encordados ATMAS</div>
-        <div style="font-size:16px;font-weight:900;color:#fff;margin-bottom:4px">¿Buscas mejorar tus sensaciones?</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:14px">Ajustamos tu raqueta según tu estilo de juego.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-          <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px;text-align:center">
-            <div style="font-size:18px;margin-bottom:3px">&#127795;</div>
-            <div style="font-size:11px;font-weight:800;color:var(--lima)">H&iacute;bridos</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.65);margin-top:2px">Comodidad + Control</div>
-          </div>
-          <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px;text-align:center">
-            <div style="font-size:18px;margin-bottom:3px">&#127919;</div>
-            <div style="font-size:11px;font-weight:800;color:var(--lima)">Control</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.65);margin-top:2px">Precisi&oacute;n y direcci&oacute;n</div>
-          </div>
-          <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px;text-align:center">
-            <div style="font-size:18px;margin-bottom:3px">&#127942;</div>
-            <div style="font-size:11px;font-weight:800;color:var(--lima)">Competencia</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.65);margin-top:2px">Rendimiento total</div>
-          </div>
-          <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px;text-align:center">
-            <div style="font-size:18px;margin-bottom:3px">&#9889;</div>
-            <div style="font-size:11px;font-weight:800;color:var(--lima)">Potencia</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.65);margin-top:2px">M&aacute;xima salida de bola</div>
+        <!-- Tarro Dunlop FORT -->
+        <div onclick="openModal('oferta-dunlop')" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.1);cursor:pointer;active:opacity:.85">
+          <div style="background:#f5f5f5;height:130px;display:flex;align-items:center;justify-content:center;font-size:56px">&#127934;</div>
+          <div style="padding:10px">
+            <div style="font-size:12px;color:#333;line-height:1.3;margin-bottom:6px">Tarro Dunlop FORT · 3 pelotas</div>
+            <div style="font-size:18px;font-weight:900;color:#333;margin-bottom:8px">$10.500</div>
+            <button class="btn" style="width:100%;padding:8px;font-size:13px;border-radius:8px">Comprar</button>
           </div>
         </div>
-        <button class="btn" style="background:var(--lima);color:#1a2e1a;font-weight:900" onclick="openModal('encordado')">Solicitar encordado</button>
+
+        <!-- Encordado ATMAS -->
+        <div onclick="openModal('encordado')" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.1);cursor:pointer">
+          <div style="background:#e8f5e9;height:130px;display:flex;align-items:center;justify-content:center;font-size:56px">&#128299;</div>
+          <div style="padding:10px">
+            <div style="font-size:12px;color:#333;line-height:1.3;margin-bottom:6px">Encordado profesional ATMAS</div>
+            <div style="font-size:14px;font-weight:700;color:var(--verde-osc);margin-bottom:8px">Desde $15.000</div>
+            <button class="btn" style="width:100%;padding:8px;font-size:13px;border-radius:8px">Solicitar</button>
+          </div>
+        </div>
+
+        <!-- Cambio de grip -->
+        <div onclick="openModal('encordado')" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.1);cursor:pointer">
+          <div style="background:#fff8e1;height:130px;display:flex;align-items:center;justify-content:center;font-size:56px">&#128316;</div>
+          <div style="padding:10px">
+            <div style="font-size:12px;color:#333;line-height:1.3;margin-bottom:6px">Cambio de grip</div>
+            <div style="font-size:14px;font-weight:700;color:var(--verde-osc);margin-bottom:8px">Consultar</div>
+            <button class="btn" style="width:100%;padding:8px;font-size:13px;border-radius:8px">Pedir</button>
+          </div>
+        </div>
+
+        <!-- Cubre cabeza -->
+        <div onclick="openModal('encordado')" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.1);cursor:pointer">
+          <div style="background:#fce4ec;height:130px;display:flex;align-items:center;justify-content:center;font-size:56px">&#127931;</div>
+          <div style="padding:10px">
+            <div style="font-size:12px;color:#333;line-height:1.3;margin-bottom:6px">Cubre cabeza raqueta</div>
+            <div style="font-size:14px;font-weight:700;color:var(--verde-osc);margin-bottom:8px">Consultar</div>
+            <button class="btn" style="width:100%;padding:8px;font-size:13px;border-radius:8px">Pedir</button>
+          </div>
+        </div>
+
       </div>
 
       <p class="foot">@ATMAS_TENIS &middot; Club de Tenis Las Avestruces</p>
