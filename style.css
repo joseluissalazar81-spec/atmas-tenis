@@ -51,7 +51,7 @@ header p{font-size:11px;color:var(--suave);white-space:nowrap}
 .infobox{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
 .pagobox{background:var(--verde-claro);border-radius:16px;padding:16px;margin:12px 0;border:1.5px solid var(--verde)}
 .pagobox h4{font-weight:800;font-size:15px;color:var(--verde-osc);margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.pagobox .row{display:grid;grid-template-columns:80px 1fr auto;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.6);margin-bottom:5px}
+.pagobox .row{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.6);margin-bottom:5px}
 .pagobox .row:last-child{margin-bottom:0}
 .pagobox .row .k{font-size:12px;font-weight:700;color:var(--verde-osc);white-space:nowrap}
 .pagobox .row .v{font-size:13px;font-weight:600;color:var(--texto);word-break:break-word}
