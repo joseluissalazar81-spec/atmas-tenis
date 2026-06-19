@@ -29,37 +29,70 @@ function el(id){return document.getElementById(id);}
 /* ─── DATOS INICIALES (solo para semilla) ─────────────────────── */
 // Escalerilla Jun-Ago 2026 — actualizado 19/06/2026
 var SEED_PLAYERS=[
-  ["Manuel Illanes",20,4,4,0,100],
-  ["Mauricio Morales",15,3,3,0,100],
-  ["Sebastián Brito",11,3,2,1,66.67],
-  ["Andy Cespedes",10,2,2,0,100],
-  ["Osvaldo Valdivia",10,2,2,0,100],
-  ["Rubén González",6,2,1,1,50],
-  ["Emilio Alzérreca",6,2,1,1,50],
-  ["Ignacio Peyresblanque",5,1,1,0,100],
-  ["Oscar Henríquez",5,1,1,0,100],
-  ["Nicolás Martínez",5,1,1,0,100],
-  ["Felipe Martínez",5,1,1,0,100],
-  ["Patricio Chamorro",5,1,1,0,100],
-  ["Marcelo Escalona",5,1,1,0,100],
-  ["Rodrigo Bernal",5,1,1,0,100],
-  ["Aurelio Saavedra",3,3,0,3,0],
-  ["Hipólito Bello",2,2,0,2,0],
-  ["Edgardo Pacheco",2,2,0,2,0],
-  ["Felipe Miño",2,2,0,2,0],
-  ["Vicente Rodríguez",1,1,0,1,0],
-  ["Pablo Ortiz",1,1,0,1,0],
-  ["Rodrigo Navarro",1,1,0,1,0],
-  ["César Moreno",1,1,0,1,0],
-  ["Alfredo Muñoz",1,1,0,1,0],
-  ["Carlos Tapia",1,1,0,1,0],
-  ["Néstor Zárate",1,1,0,1,0],
-  ["Pablo Concha",1,1,0,1,0]
+  ["Manuel Illanes",0,0,0,0,0],
+  ["Mauricio Morales",0,0,0,0,0],
+  ["Sebastián Brito",0,0,0,0,0],
+  ["Andy Cespedes",0,0,0,0,0],
+  ["Osvaldo Valdivia",0,0,0,0,0],
+  ["Rubén González",0,0,0,0,0],
+  ["Emilio Alzérreca",0,0,0,0,0],
+  ["Ignacio Peyresblanque",0,0,0,0,0],
+  ["Oscar Henríquez",0,0,0,0,0],
+  ["Nicolás Martínez",0,0,0,0,0],
+  ["Felipe Martínez",0,0,0,0,0],
+  ["Patricio Chamorro",0,0,0,0,0],
+  ["Marcelo Escalona",0,0,0,0,0],
+  ["Rodrigo Bernal",0,0,0,0,0],
+  ["Aurelio Saavedra",0,0,0,0,0],
+  ["Hipólito Bello",0,0,0,0,0],
+  ["Edgardo Pacheco",0,0,0,0,0],
+  ["Felipe Miño",0,0,0,0,0],
+  ["Vicente Rodríguez",0,0,0,0,0],
+  ["Pablo Ortiz",0,0,0,0,0],
+  ["Rodrigo Navarro",0,0,0,0,0],
+  ["César Moreno",0,0,0,0,0],
+  ["Alfredo Muñoz",0,0,0,0,0],
+  ["Carlos Tapia",0,0,0,0,0],
+  ["Néstor Zárate",0,0,0,0,0],
+  ["Pablo Concha",0,0,0,0,0]
 ];
 
 /* ─── RANKING LIVE DESDE FIRESTORE ───────────────────────────── */
 var rankingData=[];
 var rankingListener=null;
+
+async function resetearRankingFirestore(){
+  try{
+    // Verificar si ya se hizo el reset de temporada Jun-Ago 2026
+    var flagSnap=await db.collection("config_app").doc("reset_jun2026").get();
+    if(flagSnap.exists)return; // Ya se hizo, no repetir
+    // Resetear todos los jugadores a cero
+    var snap=await db.collection("ranking_atmas").get();
+    if(!snap.empty){
+      var batch=db.batch();
+      snap.forEach(function(doc){
+        batch.update(doc.ref,{pts:0,jugados:0,ganados:0,perdidos:0,pct:0});
+      });
+      await batch.commit();
+    } else {
+      var batch2=db.batch();
+      SEED_PLAYERS.forEach(function(p){
+        var ref=db.collection("ranking_atmas").doc(slugify(p[0]));
+        batch2.set(ref,{nombre:p[0],pts:0,jugados:0,ganados:0,perdidos:0,pct:0},{merge:true});
+      });
+      await batch2.commit();
+    }
+    // Archivar partidos anteriores
+    var snapP=await db.collection("partidos_atmas").get();
+    if(!snapP.empty){
+      var batch3=db.batch();
+      snapP.forEach(function(doc){batch3.update(doc.ref,{estado:"archivado"});});
+      await batch3.commit();
+    }
+    // Marcar como hecho para no repetir
+    await db.collection("config_app").doc("reset_jun2026").set({done:true,fecha:new Date().toISOString()});
+  }catch(e){console.warn("resetearRankingFirestore error:",e);}
+}
 
 async function seedRankingIfEmpty(){
   try{
@@ -2455,7 +2488,7 @@ function compartirResultadoWA(gan,per,sets){
 function adminSalir(){adminUnlocked=false;go('inicio');}
 
 (function(){
-  try{seedRankingIfEmpty().then(function(){iniciarRankingLive();generarYRenderCuadros();});}catch(e){}
+  try{resetearRankingFirestore().then(function(){iniciarRankingLive();generarYRenderCuadros();});}catch(e){}
   try{seedCuadroNovicios3().then(function(){iniciarCuadroLive();});}catch(e){}
   if(auth){
     // Manejar resultado del redirect de Google antes de signInAnonymously
