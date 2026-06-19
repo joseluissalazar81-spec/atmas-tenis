@@ -2071,12 +2071,9 @@ var DIAS_ES=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado
 async function cargarSlotsIndividuales(){
   var cont=el("slots-list");if(!cont)return;
   try{
-    var snap=await db.collection("slots_individuales")
-      .where("estado","==","disponible")
-      .orderBy("fecha")
-      .get();
-    // Ordenar por hora en memoria
-    var docs=[];snap.forEach(function(doc){docs.push({id:doc.id,data:doc.data()});});
+    var snap=await db.collection("slots_individuales").get();
+    var docs=[];
+    snap.forEach(function(doc){var d=doc.data();if(d.estado==="disponible")docs.push({id:doc.id,data:d});});
     docs.sort(function(a,b){return a.data.fecha===b.data.fecha?a.data.hora.localeCompare(b.data.hora):a.data.fecha.localeCompare(b.data.fecha);});
     if(!docs.length){cont.innerHTML='<div style="text-align:center;padding:24px"><div style="font-size:36px;margin-bottom:8px">📅</div><div style="font-size:14px;color:var(--suave)">No hay horarios disponibles.<br>Consulta a Marcelo.</div></div>';return;}
     var h='<div style="font-size:12px;color:var(--suave);margin-bottom:12px">Elige un horario disponible:</div>';
