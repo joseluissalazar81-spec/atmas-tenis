@@ -1,5 +1,5 @@
 function toast(m){var t=document.getElementById("toast");if(!t)return;t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("show");},10000);}
-function go(s){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});var sc=document.getElementById(s);if(sc)sc.classList.add("active");document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.s===s);});var ct=document.querySelector(".content");if(ct)ct.scrollTop=0;if(s==="perfil")renderPerfil();if(s==="admin")renderAdmin();if(s==="cancha")renderCalendario();}
+function go(s){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});var sc=document.getElementById(s);if(sc)sc.classList.add("active");document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.s===s);});var ct=document.querySelector(".content");if(ct)ct.scrollTop=0;if(s==="perfil")renderPerfil();if(s==="admin")renderAdmin();if(s==="cancha")renderCalendario();if(s==="mis-reservas")renderMisReservas();}
 function closeModal(){var m=document.getElementById("modal");if(m)m.classList.remove("show");}
 function setVista(v){var r=document.getElementById("vista-rank");var c=document.getElementById("vista-cuadro");if(r)r.style.display=v==="rank"?"block":"none";if(c)c.style.display=v==="cuadro"?"block":"none";var vr=document.getElementById("vRank");var vc=document.getElementById("vCuadro");if(vr)vr.classList.toggle("on",v==="rank");if(vc)vc.classList.toggle("on",v==="cuadro");}
 
@@ -639,80 +639,6 @@ var calFechaSel=null;
 var calConteo={};
 var slotSeleccionado=null;var slotDurHrs=1;var slotMonto=15000;
 
-async function renderCalendario(){
-  var ecal=el("cal-container");if(!ecal)return;
-  try{
-    var mes2=String(calMes+1).padStart(2,"0");
-    var ult=new Date(calAnio,calMes+1,0).getDate();
-    var inicio=calAnio+"-"+mes2+"-01";
-    var fin=calAnio+"-"+mes2+"-"+String(ult).padStart(2,"0");
-    calConteo={};
-    try{var snap=await db.collection("reservas").where("fecha",">=",inicio).where("fecha","<=",fin).get();snap.forEach(function(d){var f=d.data().fecha;calConteo[f]=(calConteo[f]||0)+1;});}catch(e){}
-    var meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-    var dh=["D","L","M","M","J","V","S"];
-    var hoy=new Date().toISOString().split("T")[0];
-    var primerDia=new Date(calAnio,calMes,1).getDay();
-    var h='<div class="cal-nav"><button onclick="calMover(-1)" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--verde-osc);line-height:1">&#8249;</button><div style="font-weight:800;font-size:15px">'+meses[calMes]+" "+calAnio+'</div><button onclick="calMover(1)" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--verde-osc);line-height:1">&#8250;</button></div><div class="cal-grid">';
-    dh.forEach(function(d){h+='<div class="cal-hdr">'+d+'</div>';});
-    for(var i=0;i<primerDia;i++)h+='<div class="cal-cell vacio"></div>';
-    for(var d=1;d<=ult;d++){
-      var fs=calAnio+"-"+mes2+"-"+String(d).padStart(2,"0");
-      var esHoy=fs===hoy;var esPas=fs<hoy;var cnt=calConteo[fs]||0;var esSel=fs===calFechaSel;
-      var cls="cal-cell"+(esHoy?" hoy":esPas?" pasado":cnt>0?" tiene":"");
-      if(esSel&&!esHoy)cls+=" sel";
-      var click=esPas?"":"onclick=\"calDia('"+fs+"')\"";
-      h+='<div class="'+cls+'" '+click+'>'+d+(cnt>0&&!esHoy?'<span style="font-size:7px;display:block">'+cnt+'</span>':'')+'</div>';
-    }
-    h+='</div>';
-    ecal.innerHTML=h;
-  }catch(e){console.warn("renderCalendario error:",e);}
-}
-
-function calMover(dir){
-  calMes+=dir;
-  if(calMes>11){calMes=0;calAnio++;}if(calMes<0){calMes=11;calAnio--;}
-  calFechaSel=null;renderCalendario();
-  var sc=el("slots-container");if(sc)sc.innerHTML='<p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Toca un dia del calendario</p>';
-  var cf=el("can-form");if(cf)cf.style.display="none";
-}
-
-function calDia(fecha){
-  calFechaSel=fecha;
-  var cp=getPerfil()||{};
-  var cn=el("can-nombre");var ct=el("can-tel");
-  if(cn)cn.value=cp.nombre||"";if(ct)ct.value=cp.tel||"";
-  renderCalendario();slotSeleccionado=null;
-  var cf=el("can-form");if(cf)cf.style.display="none";
-  cargarSlots(fecha);
-}
-
-function slotsDelDia(fecha){var d=new Date(fecha+"T12:00:00");var dia=d.getDay();var esFS=(dia===0||dia===6);var slots=[];if(!esFS){for(var h=8;h<=17;h++)slots.push({hora:String(h).padStart(2,"0")+":00",durHrs:1,monto:15000});}else{[[8,10],[10,12],[12,14]].forEach(function(rng){slots.push({hora:String(rng[0]).padStart(2,"0")+":00",durHrs:2,monto:25000});});for(var h=14;h<=20;h++)slots.push({hora:String(h).padStart(2,"0")+":00",durHrs:1,monto:15000});}return slots;}
-
-async function cargarSlots(fecha){
-  if(!fecha)fecha=calFechaSel;
-  if(!fecha)return;
-  var cont=el("slots-container");if(!cont)return;
-  cont.innerHTML='<p style="color:var(--suave);font-size:13px;text-align:center;padding:16px 0">Cargando disponibilidad...</p>';
-  try{
-    var snap=await db.collection("reservas").where("fecha","==",fecha).get();
-    var ocupadas={};snap.forEach(function(doc){var h=doc.data().hora;ocupadas[h]=(ocupadas[h]||0)+1;});
-    var slots=slotsDelDia(fecha);
-    var html='<p style="font-size:12px;color:var(--suave);margin-bottom:6px">Toca un horario disponible:</p><div class="slot-grid">';
-    slots.forEach(function(slot){
-      var count=ocupadas[slot.hora]||0;var libre=count<4;var sel=slotSeleccionado===slot.hora;
-      var cls="slot"+(sel?" sel":!libre?" lleno":"");
-      var libres=libre?(4-count)+" libre"+(4-count!==1?"s":""):"Sin cupo";
-      html+='<button class="'+cls+'" '+(libre?'onclick="seleccionarSlot(\''+slot.hora+'\','+slot.durHrs+','+slot.monto+')"':' disabled')+'>'+slot.hora+'<span class="sub">'+(slot.durHrs===2?'2 hrs':'1 hr')+' &middot; '+libres+'</span></button>';
-    });
-    html+='</div>';
-    cont.innerHTML=html;
-    var cf=el("can-form");if(cf)cf.style.display=slotSeleccionado?"block":"none";
-  }catch(e){if(cont)cont.innerHTML='<p style="color:#e74c3c;font-size:13px;padding:12px 0">Error al cargar disponibilidad. Verifica tu conexion.</p>';}
-}
-
-function seleccionarSlot(hora,durHrs,monto){slotSeleccionado=hora;slotDurHrs=durHrs;slotMonto=monto;var cf=el("can-form");if(cf)cf.style.display="block";cargarSlots(calFechaSel);actualizarPagoCancha();}
-function actualizarPagoCancha(){var monto=slotMonto||15000;var mpLink=monto===15000?MP.cancha1hr:MP.cancha2hrs;var ecp=el("can-pago");if(ecp)ecp.innerHTML=pagoHTML(monto,"arriendo de cancha",mpLink);}
-
 async function reservarCancha(){
   var nombre=((el("can-nombre")||{}).value||"").trim();
   var tel=((el("can-tel")||{}).value||"").trim();
@@ -835,43 +761,58 @@ function pinPress(k){
 /* ─── ADMIN PANEL ─────────────────────────────────────────────── */
 async function renderAdmin(){
   var eab=el("admin-body");if(!eab)return;
-  var hoy=new Date().toISOString().split("T")[0];
-  eab.innerHTML='<div class="admin-header"><div><h2>Panel Admin</h2><p>Club Las Avestruces &middot; ATMAS</p></div><button onclick="adminUnlocked=false;go(\'inicio\')" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer">Salir</button></div><div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"><div class="admin-stat"><div class="n" id="a-res-count">...</div><div class="l">Reservas hoy</div></div><div class="admin-stat"><div class="n" id="a-insc-count">...</div><div class="l">Inscripciones</div></div><div class="admin-stat"><div class="n" id="a-total">...</div><div class="l">Total semana</div></div></div><div class="admin-section"><div class="section-title">Proximas reservas</div><div id="a-reservas"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title" style="color:#b45309">Partidos en disputa</div><div id="a-pendientes"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Inscripciones torneo</div><div id="a-inscripciones"><p style="color:var(--suave);font-size:13px">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div><button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div><div style="height:20px"></div>';
-  try{
-    var snap=await db.collection("reservas").where("fecha",">=",hoy).get();
-    var docs=[];snap.forEach(function(d){docs.push(d.data());});
-    docs.sort(function(a,b){return(a.fecha+a.hora)<(b.fecha+b.hora)?-1:1;});
-    var arc=el("a-res-count");if(arc)arc.textContent=docs.filter(function(r){return r.fecha===hoy;}).length;
-    var fin=new Date();fin.setDate(fin.getDate()+7);var finStr=fin.toISOString().split("T")[0];
-    var atot=el("a-total");if(atot)atot.textContent="$"+docs.filter(function(r){return r.fecha<=finStr;}).reduce(function(s,r){return s+(r.monto||0);},0).toLocaleString("es-CL");
-    var ar=el("a-reservas");
-    if(!ar){}else if(docs.length===0){ar.innerHTML='<p style="color:var(--suave);font-size:13px">Sin reservas proximas</p>';}
-    else{var h="";docs.slice(0,20).forEach(function(r){var fd=r.fecha?r.fecha.split("-").reverse().join("/"):"-";var esHoy=r.fecha===hoy;h+='<div class="res-card" style="border-color:'+(esHoy?"var(--verde-osc)":"var(--verde)")+'"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+' </span><span class="rc-date">'+fd+' '+(r.hora||"")+' </span></div><div class="rc-sub">'+(r.cancha||"")+' &middot; '+(r.duracion||"1 hora")+' &middot; $'+(r.monto||0).toLocaleString("es-CL")+(esHoy?" &middot; <b>HOY</b>":"")+' </div></div>';});ar.innerHTML=h;}
-  }catch(e){var ar2=el("a-reservas");if(ar2)ar2.innerHTML='<p style="color:var(--suave);font-size:13px">Error al cargar reservas</p>';}
-  try{
-    var snap2=await db.collection("inscripciones_atmas").orderBy("ts","desc").limit(40).get();
-    var aic=el("a-insc-count");if(aic)aic.textContent=snap2.size;
-    var ai=el("a-inscripciones");
-    if(!ai){}else if(snap2.size===0){ai.innerHTML='<p style="color:var(--suave);font-size:13px">Sin inscripciones</p>';}
-    else{var h2="";snap2.forEach(function(doc){var r=doc.data();h2+='<div class="res-card" style="border-color:#6366f1"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+' </span><span style="font-size:11px;color:var(--suave)">'+(r.torneo||r.categoria||"")+' </span></div><div class="rc-sub">'+(r.tel||"")+' &middot; '+(r.estado||"pendiente")+' </div></div>';});ai.innerHTML=h2;}
-  }catch(e){}
+  var h="";
+  h+='<div class="admin-header"><div><h2>Panel Admin</h2><p>Club Las Avestruces &middot; ATMAS</p></div>';
+  h+='<button onclick="adminSalir()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer">Salir</button></div>';
+  h+='<div class="seg" style="margin-bottom:14px">';
+  h+='<button id="atab-reservas" class="on" onclick="adminTab(this,\'reservas\')">Reservas</button>';
+  h+='<button id="atab-sanciones" onclick="adminTab(this,\'sanciones\')">Sanciones</button>';
+  h+='<button id="atab-torneos" onclick="adminTab(this,\'torneos\')">Torneos</button>';
+  h+='<button id="atab-ranking" onclick="adminTab(this,\'ranking\')">Ranking</button>';
+  h+='</div>';
+  h+='<div id="admin-tab-reservas"><div class="section-title">Reservas de canchas</div><div id="admin-reservas-cont"><p class="hint">Cargando...</p></div></div>';
+  h+='<div id="admin-tab-sanciones" style="display:none"><div class="section-title">Sanciones activas</div><div id="admin-sanciones-cont"><p class="hint">Cargando...</p></div></div>';
+  h+='<div id="admin-tab-torneos" style="display:none">';
+  h+='<div class="admin-section"><div class="section-title" style="color:#b45309">Partidos en disputa</div><div id="a-pendientes"><p class="hint">Cargando...</p></div></div>';
+  h+='<div class="admin-section"><div class="section-title">Inscripciones torneo</div><div id="a-inscripciones"><p class="hint">Cargando...</p></div></div>';
+  h+='</div>';
+  h+='<div id="admin-tab-ranking" style="display:none"><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div>';
+  h+='<button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div></div>';
+  h+='<div style="height:20px"></div>';
+  eab.innerHTML=h;
+  renderAdminReservas();
+  loadAdminTorneos();
+  var rh="";rankingData.slice(0,10).forEach(function(p,i){rh+='<div class="lcard"><div class="rank-pos" style="width:24px;font-size:12px">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+p[0]+'</div><div class="ds">'+p[1]+' pts &middot; '+p[3]+'G '+p[4]+'P</div></div></div>';});
+  var ara=el("a-ranking-admin");if(ara)ara.innerHTML=rh||'<p class="hint">Cargando ranking...</p>';
+}
+
+function adminTab(tab){
+  ["reservas","sanciones","torneos","ranking"].forEach(function(t){
+    var div=el("admin-tab-"+t);if(div)div.style.display=t===tab?"":"none";
+    var btn=el("atab-"+t);if(btn)btn.className=t===tab?"on":"";
+  });
+  if(tab==="sanciones")renderAdminSanciones();
+}
+
+async function loadAdminTorneos(){
   try{
     var snapPend=await db.collection("partidos_atmas").where("estado","==","pendiente_admin").orderBy("ts","desc").limit(20).get();
     var ap=el("a-pendientes");
-    if(!ap){}else if(snapPend.empty){ap.innerHTML='<p style="color:var(--suave);font-size:13px">Sin partidos pendientes</p>';}
+    if(!ap){}else if(snapPend.empty){ap.innerHTML='<p class="hint">Sin partidos pendientes</p>';}
     else{
       window._pendQ=[];var hp="";
-      snapPend.forEach(function(doc){
-        var r=doc.data();var qi=window._pendQ.length;
-        window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});
-        hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' gano</span><span class="rc-date">'+(r.fecha||"")+'</span></div><div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">Aprobar +5/+1</button><button class="btn sec" style="flex:1;padding:8px;font-size:12px" onclick="pendRechazar('+qi+')">Rechazar</button></div></div>';
-      });
+      snapPend.forEach(function(doc){var r=doc.data();var qi=window._pendQ.length;window._pendQ.push({id:doc.id,gan:r.ganador,per:r.perdedor});hp+='<div class="res-card" style="border-color:#f59e0b"><div class="rc-top"><span class="rc-name">'+r.ganador+' ganó</span><span class="rc-date">'+(r.fecha||"")+'</span></div><div class="rc-sub">vs '+r.perdedor+' &middot; '+(r.sets||"sin sets")+'</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" style="flex:1;padding:8px;font-size:12px" onclick="pendAprobar('+qi+')">Aprobar +5/+1</button><button class="btn sec" style="flex:1;padding:8px;font-size:12px" onclick="pendRechazar('+qi+')">Rechazar</button></div></div>';});
       ap.innerHTML=hp;
     }
-  }catch(e){var ap2=el("a-pendientes");if(ap2)ap2.innerHTML='<p style="color:var(--suave);font-size:13px">Error al cargar pendientes</p>';}
-  var rh="";rankingData.slice(0,10).forEach(function(p,i){rh+='<div class="lcard"><div class="rank-pos" style="width:24px;font-size:12px">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+p[0]+'</div><div class="ds">'+p[1]+' pts &middot; '+p[3]+'G '+p[4]+'P</div></div></div>';});
-  var ara=el("a-ranking-admin");if(ara)ara.innerHTML=rh||'<p style="color:var(--suave);font-size:13px">Cargando ranking...</p>';
+  }catch(e){var ap2=el("a-pendientes");if(ap2)ap2.innerHTML='<p class="hint">Error</p>';}
+  try{
+    var snap2=await db.collection("inscripciones_atmas").orderBy("ts","desc").limit(40).get();
+    var ai=el("a-inscripciones");
+    if(!ai){}else if(snap2.empty){ai.innerHTML='<p class="hint">Sin inscripciones</p>';}
+    else{var h2="";snap2.forEach(function(doc){var r=doc.data();h2+='<div class="res-card" style="border-color:#6366f1"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+'</span><span style="font-size:11px;color:var(--suave)">'+(r.torneo||r.categoria||"")+'</span></div><div class="rc-sub">'+(r.tel||"")+' &middot; '+(r.estado||"pendiente")+'</div></div>';});ai.innerHTML=h2;}
+  }catch(e){}
 }
+
 
 /* ─── CUADROS ─────────────────────────────────────────────────── */
 function generarYRenderCuadros(){cuadros=generarCuadros();renderBracket("oro");}
@@ -994,6 +935,413 @@ async function guardarGanadorPartido(slot){
 }
 
 /* ─── INICIO ──────────────────────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════════════════
+   SISTEMA DE RESERVAS ATMAS
+   ═══════════════════════════════════════════════════════════════ */
+
+var CONFIG_RES={
+  tarifas:{socio_mensual:0,socio_partido:3000,invitado:5000,arriendo:5000,academia_individual:15000,academia_grupal:8000},
+  canchas:[
+    {id:1,nombre:"Cancha 1",tipos:["socio_mensual","socio_partido"]},
+    {id:2,nombre:"Cancha 2",tipos:["socio_mensual","socio_partido"]},
+    {id:3,nombre:"Cancha 3",tipos:["invitado","arriendo","academia"]},
+    {id:4,nombre:"Cancha 4",tipos:["invitado","arriendo","academia"]}
+  ],
+  horaInicio:8,horaFin:22,bloqueMin:90,
+  labelTipo:{socio_mensual:"Socio mensualidad",socio_partido:"Socio paga partido",invitado:"Invitado",arriendo:"Arriendo",academia:"Academia"}
+};
+
+var resState={tipo:null,fecha:null,canchaId:null,horaInicio:null,horaFin:null};
+
+function canchasPermitidas(tipo){
+  if(tipo==="admin")return CONFIG_RES.canchas;
+  return CONFIG_RES.canchas.filter(function(c){return c.tipos.indexOf(tipo)!==-1;});
+}
+function tarifaTipo(tipo){return CONFIG_RES.tarifas[tipo]||0;}
+
+function renderCalendario(){
+  handlePaymentReturn();
+  var p=getPerfil();
+  var tipo=(p&&p.tipo)||null;
+  var ts=el("res-tipo-selector"),rm=el("res-main");
+  if(!tipo||tipo==="admin"){
+    if(ts)ts.style.display="";if(rm)rm.style.display="none";
+    // Admin: show cambiar tipo button
+    var cbt=el("res-cambiar-tipo");if(cbt)cbt.style.display=tipo==="admin"?"":"none";
+  }else{
+    resState.tipo=tipo;
+    if(ts)ts.style.display="none";if(rm)rm.style.display="";
+    var cbt2=el("res-cambiar-tipo");if(cbt2)cbt2.style.display="none";
+    actualizarLabelTipo();renderDayStrip();renderCourtTabs();verificarSancionBanner();
+  }
+}
+
+function showTipoSelector(){
+  var ts=el("res-tipo-selector"),rm=el("res-main");
+  if(ts)ts.style.display="";if(rm)rm.style.display="none";
+}
+
+function setTipoReserva(tipo){
+  resState.tipo=tipo;resState.fecha=null;resState.canchaId=null;resState.horaInicio=null;
+  var ts=el("res-tipo-selector"),rm=el("res-main");
+  if(ts)ts.style.display="none";if(rm)rm.style.display="";
+  actualizarLabelTipo();renderDayStrip();renderCourtTabs();verificarSancionBanner();
+  var cbt=el("res-cambiar-tipo");if(cbt)cbt.style.display="";
+}
+
+function actualizarLabelTipo(){
+  var lbl=el("res-tipo-label");if(!lbl)return;
+  var tarifa=tarifaTipo(resState.tipo);
+  lbl.textContent=(CONFIG_RES.labelTipo[resState.tipo]||resState.tipo)+(tarifa>0?" — $"+tarifa.toLocaleString("es-CL"):" — incluido");
+}
+
+function renderDayStrip(){
+  var strip=el("day-strip");if(!strip)return;
+  strip.innerHTML="";
+  var hoy=new Date();
+  var dias=["Do","Lu","Ma","Mi","Ju","Vi","Sá"];
+  var meses=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  for(var i=0;i<14;i++){
+    var d=new Date(hoy);d.setDate(hoy.getDate()+i);
+    var fs=d.toISOString().split("T")[0];
+    var chip=document.createElement("div");
+    chip.className="day-chip"+(resState.fecha===fs?" active":"");
+    chip.innerHTML='<div class="dc-dia">'+dias[d.getDay()]+'</div><div class="dc-num">'+d.getDate()+'</div><div class="dc-mes">'+meses[d.getMonth()]+'</div>';
+    chip.onclick=(function(f){return function(){selectFechaRes(f);};})(fs);
+    strip.appendChild(chip);
+  }
+}
+
+function renderCourtTabs(){
+  var tabs=el("court-tabs");if(!tabs)return;
+  tabs.innerHTML="";
+  var canchas=canchasPermitidas(resState.tipo);
+  if(canchas.length===1&&!resState.canchaId){resState.canchaId=canchas[0].id;}
+  canchas.forEach(function(c){
+    var btn=document.createElement("button");
+    btn.textContent=c.nombre;
+    btn.className=resState.canchaId===c.id?"on":"";
+    btn.onclick=(function(cid){return function(){selectCanchaRes(cid);};})(c.id);
+    tabs.appendChild(btn);
+  });
+}
+
+function selectFechaRes(fecha){
+  resState.fecha=fecha;resState.horaInicio=null;
+  renderDayStrip();ocultarFormRes();
+  if(resState.canchaId)renderSlots();
+  else{var sc=el("slots-res");if(sc)sc.innerHTML='<p class="hint">Selecciona una cancha</p>';}
+}
+
+function selectCanchaRes(cid){
+  resState.canchaId=cid;resState.horaInicio=null;
+  renderCourtTabs();ocultarFormRes();
+  if(resState.fecha)renderSlots();
+  else{var sc=el("slots-res");if(sc)sc.innerHTML='<p class="hint">Selecciona un día</p>';}
+}
+
+async function renderSlots(){
+  var cont=el("slots-res");if(!cont)return;
+  if(!resState.fecha||!resState.canchaId){
+    cont.innerHTML='<p class="hint">Selecciona día y cancha</p>';return;
+  }
+  cont.innerHTML='<p class="hint">Cargando horarios...</p>';
+  try{
+    var snap=await db.collection("reservas")
+      .where("canchaId","==",resState.canchaId)
+      .where("fecha","==",resState.fecha)
+      .where("estado","in",["confirmada","confirmada_pagada","pendiente_pago"])
+      .get();
+    var ocupadas={};
+    snap.forEach(function(doc){ocupadas[doc.data().horaInicio]=true;});
+    var ahora=new Date();var slots=[];
+    var h=CONFIG_RES.horaInicio;
+    while(h<CONFIG_RES.horaFin){
+      var hFin=h+CONFIG_RES.bloqueMin/60;if(hFin>CONFIG_RES.horaFin)break;
+      var hi=padH(h)+":00";var hf=padH(Math.floor(hFin))+(hFin%1===0.5?":30":":00");
+      var slotDt=new Date(resState.fecha+"T"+hi);
+      slots.push({hi:hi,hf:hf,ocupada:!!ocupadas[hi],pasado:slotDt<ahora});
+      h+=CONFIG_RES.bloqueMin/60;
+    }
+    if(!slots.length){cont.innerHTML='<p class="hint">Sin horarios configurados</p>';return;}
+    var htmlS='<div class="slot-grid">';
+    slots.forEach(function(s){
+      var cls="slot-block"+(s.pasado||s.ocupada?" ocupado":resState.horaInicio===s.hi?" seleccionado":" libre");
+      var click=(!s.pasado&&!s.ocupada)?'onclick="selectSlotRes(\''+s.hi+'\',\''+s.hf+'\')"':'';
+      htmlS+='<div class="'+cls+'" '+click+'><div class="sl-h">'+s.hi+'</div><div class="sl-f">'+s.hf+'</div><div class="sl-e">'+(s.pasado?"Pasado":s.ocupada?"Ocupado":"Libre")+'</div></div>';
+    });
+    htmlS+='</div>';
+    cont.innerHTML=htmlS;
+  }catch(e){cont.innerHTML='<p class="hint">Error al cargar</p>';console.warn(e);}
+}
+
+function padH(h){return h<10?"0"+Math.floor(h):String(Math.floor(h));}
+
+function selectSlotRes(hi,hf){
+  resState.horaInicio=hi;resState.horaFin=hf;
+  renderSlots();mostrarFormRes();
+}
+
+function mostrarFormRes(){
+  var form=el("res-form");if(!form)return;
+  form.style.display="";
+  var p=getPerfil();
+  if(p){var nb=el("res-nombre");if(nb&&!nb.value)nb.value=p.nombre||"";var tb=el("res-tel");if(tb&&!tb.value)tb.value=p.tel||"";}
+  var cancha=CONFIG_RES.canchas.find(function(c){return c.id===resState.canchaId;});
+  var fechaFmt=new Date(resState.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});
+  var rs=el("res-resumen");if(rs)rs.innerHTML='<b>'+(cancha?cancha.nombre:"Cancha "+resState.canchaId)+'</b> &middot; '+fechaFmt+'<br>'+resState.horaInicio+' &ndash; '+resState.horaFin;
+  var tarifa=tarifaTipo(resState.tipo);
+  var md=el("res-monto");if(md)md.textContent=tarifa>0?"Total: $"+tarifa.toLocaleString("es-CL"):"Sin costo adicional";
+  var btn=el("res-btn");if(btn)btn.textContent=tarifa>0?"Pagar con MercadoPago — $"+tarifa.toLocaleString("es-CL"):"Confirmar reserva";
+  setTimeout(function(){form.scrollIntoView({behavior:"smooth",block:"nearest"});},100);
+}
+
+function ocultarFormRes(){var f=el("res-form");if(f)f.style.display="none";}
+function cancelarSeleccionRes(){resState.horaInicio=null;resState.horaFin=null;renderSlots();ocultarFormRes();}
+
+async function verificarSancionBanner(){
+  var banner=el("res-sancion-banner"),txt=el("res-sancion-txt");
+  if(!banner||!txt)return;
+  var p=getPerfil();var uid=(p&&p.uid)||(auth&&auth.currentUser&&auth.currentUser.uid);
+  if(!uid){banner.style.display="none";return;}
+  try{
+    var snap=await db.collection("sanciones").doc(uid).get();
+    if(!snap.exists){banner.style.display="none";return;}
+    var san=snap.data();
+    if(san.bloqIndef){
+      banner.style.display="";banner.style.background="#fee2e2";banner.style.borderColor="#fca5a5";
+      txt.style.color="#dc2626";txt.textContent="⛔ Reservas bloqueadas indefinidamente. Contacta al administrador.";
+      var btn=el("res-btn");if(btn)btn.disabled=true;
+    }else if(san.bloqHasta){
+      var hasta=san.bloqHasta.toDate?san.bloqHasta.toDate():new Date(san.bloqHasta);
+      if(hasta>new Date()){
+        banner.style.display="";banner.style.background="#fee2e2";banner.style.borderColor="#fca5a5";
+        txt.style.color="#dc2626";txt.textContent="⛔ Bloqueado hasta "+hasta.toLocaleDateString("es-CL")+" "+hasta.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"});
+        var btn2=el("res-btn");if(btn2)btn2.disabled=true;return;
+      }
+    }
+    if(san.estado==="advertencia"){
+      banner.style.display="";banner.style.background="#fef3c7";banner.style.borderColor="#fcd34d";
+      txt.style.color="#d97706";txt.textContent="⚠️ Advertencia: tienes "+san.faltas+" inasistencia(s) registrada(s).";
+    }else{banner.style.display="none";}
+  }catch(e){banner.style.display="none";}
+}
+
+async function confirmarReserva(){
+  var p=getPerfil();
+  var nombre=((el("res-nombre")||{}).value||"").trim()||(p&&p.nombre)||"";
+  var tel=((el("res-tel")||{}).value||"").trim()||(p&&p.tel)||"";
+  if(!nombre){toast("Ingresa tu nombre");return;}
+  if(!resState.fecha||!resState.canchaId||!resState.horaInicio){toast("Selecciona un horario");return;}
+  var tarifa=tarifaTipo(resState.tipo);
+  var cancha=CONFIG_RES.canchas.find(function(c){return c.id===resState.canchaId;});
+  var btn=el("res-btn");if(btn){btn.disabled=true;btn.textContent="Procesando...";}
+  try{
+    // Re-verificar disponibilidad
+    var snap=await db.collection("reservas")
+      .where("canchaId","==",resState.canchaId)
+      .where("fecha","==",resState.fecha)
+      .where("horaInicio","==",resState.horaInicio)
+      .where("estado","in",["confirmada","confirmada_pagada","pendiente_pago"])
+      .get();
+    if(!snap.empty){toast("Ese horario acaba de ser reservado. Elige otro.");renderSlots();ocultarFormRes();return;}
+    var uid=(p&&p.uid)||(auth&&auth.currentUser&&auth.currentUser.uid)||"anonimo";
+    var reservaData={
+      userId:uid,nombre:nombre,tel:tel,tipo:resState.tipo,
+      canchaId:resState.canchaId,canchaNombre:cancha?cancha.nombre:"Cancha "+resState.canchaId,
+      fecha:resState.fecha,horaInicio:resState.horaInicio,horaFin:resState.horaFin,
+      estado:tarifa>0?"pendiente_pago":"confirmada",monto:tarifa,asistio:null,
+      ts:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    var docRef=await db.collection("reservas").add(reservaData);
+    if(tarifa>0){
+      await iniciarPagoMP(docRef.id,tarifa,"Reserva "+(cancha?cancha.nombre:"Cancha ")+resState.canchaId+" ATMAS");
+    }else{
+      toast("¡Reserva confirmada! "+resState.horaInicio+" "+cancha.nombre);
+      ocultarFormRes();resState.horaInicio=null;resState.horaFin=null;renderSlots();
+    }
+  }catch(e){toast("Error: "+e.message);}
+  finally{if(btn){btn.disabled=false;btn.textContent=tarifa>0?"Pagar con MercadoPago":"Confirmar reserva";}}
+}
+
+async function iniciarPagoMP(reservaId,monto,titulo){
+  try{
+    var res=await fetch("/api/crear-pago",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({titulo:titulo,monto:monto,reservaId:reservaId})});
+    var data=await res.json();
+    if(data.error){toast("Error MP: "+data.error);return;}
+    window.location.href=data.init_point||data.sandbox_init_point;
+  }catch(e){toast("Error al conectar con MercadoPago: "+e.message);}
+}
+
+function handlePaymentReturn(){
+  var params=new URLSearchParams(window.location.search);
+  var pago=params.get("pago");var rid=params.get("rid");
+  if(!pago||!rid)return;
+  window.history.replaceState({},"","/");
+  if(pago==="ok"){
+    var payId=params.get("payment_id")||"";
+    db.collection("reservas").doc(rid).update({estado:"confirmada_pagada",mpPaymentId:payId}).catch(function(){});
+    setTimeout(function(){toast("¡Pago confirmado! Tu reserva está lista ✓");},500);
+  }else if(pago==="error"){
+    db.collection("reservas").doc(rid).update({estado:"cancelada"}).catch(function(){});
+    setTimeout(function(){toast("El pago no fue procesado. Intenta de nuevo.");},500);
+  }else if(pago==="pendiente"){
+    setTimeout(function(){toast("Pago pendiente de confirmación.");},500);
+  }
+}
+
+/* ─── MIS RESERVAS ──────────────────────────────────────────── */
+async function renderMisReservas(){
+  var cont=el("mis-reservas-list");if(!cont)return;
+  var p=getPerfil();
+  var uid=(p&&p.uid)||(auth&&auth.currentUser&&auth.currentUser.uid);
+  if(!uid||!uid||uid==="anonimo"){cont.innerHTML='<p class="hint">Inicia sesión para ver tus reservas</p>';return;}
+  cont.innerHTML='<p class="hint">Cargando...</p>';
+  try{
+    var hoy=new Date().toISOString().split("T")[0];
+    var snap=await db.collection("reservas").where("userId","==",uid).orderBy("fecha","desc").limit(30).get();
+    if(snap.empty){cont.innerHTML='<p class="hint">No tienes reservas aún</p>';return;}
+    var html="";
+    snap.forEach(function(doc){
+      var r=doc.data();
+      var ec={confirmada:"#2563eb",confirmada_pagada:"#16a34a",pendiente_pago:"#d97706",cancelada:"#9ca3af"};
+      var et={confirmada:"Confirmada",confirmada_pagada:"Pagada ✓",pendiente_pago:"Pago pendiente",cancelada:"Cancelada"};
+      var color=ec[r.estado]||"#6b7280";var label=et[r.estado]||r.estado;
+      var pasada=r.fecha<hoy;
+      html+='<div class="reserva-card'+(pasada?" pasada":"")+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'+
+        '<div style="font-weight:700;font-size:14px">'+(r.canchaNombre||"Cancha "+r.canchaId)+'</div>'+
+        '<span style="font-size:11px;font-weight:700;color:'+color+'">'+label+'</span></div>'+
+        '<div style="font-size:13px;color:#4b5563">'+fechaLarga(r.fecha)+' &middot; '+(r.horaInicio||"")+' &ndash; '+(r.horaFin||"")+'</div>'+
+        (r.monto>0?'<div style="font-size:12px;color:var(--suave)">$'+Number(r.monto).toLocaleString("es-CL")+'</div>':'')+
+        (!pasada&&r.estado!=="cancelada"?'<button class="mini" style="margin-top:8px;background:#fee2e2;color:#dc2626" onclick="cancelarMiReserva(\''+doc.id+'\')">Cancelar</button>':'')+
+        '</div>';
+    });
+    cont.innerHTML=html;
+  }catch(e){cont.innerHTML='<p class="hint">Error al cargar</p>';console.warn(e);}
+}
+
+function fechaLarga(f){if(!f)return"";var d=new Date(f+"T12:00");return d.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});}
+
+async function cancelarMiReserva(id){
+  if(!confirm("¿Cancelar esta reserva?"))return;
+  try{await db.collection("reservas").doc(id).update({estado:"cancelada"});toast("Reserva cancelada");renderMisReservas();}
+  catch(e){toast("Error: "+e.message);}
+}
+
+/* ─── SANCIONES ─────────────────────────────────────────────── */
+async function registrarFalta(userId,nombreUsuario,reservaId,fecha){
+  var ref=db.collection("sanciones").doc(userId);
+  var snap=await ref.get();
+  var data=snap.exists?snap.data():{userId:userId,nombre:nombreUsuario,faltas:0,historial:[],estado:"ok",bloqHasta:null,bloqIndef:false};
+  data.faltas=(data.faltas||0)+1;
+  data.historial=data.historial||[];
+  data.historial.push({fecha:fecha,reservaId:reservaId,ts:new Date().toISOString()});
+  data.nombre=nombreUsuario||data.nombre;
+  var now=new Date();
+  if(data.faltas===1){data.estado="advertencia";data.bloqHasta=null;data.bloqIndef=false;}
+  else if(data.faltas===2){data.estado="bloqueado";data.bloqHasta=new Date(now.getTime()+72*3600*1000);data.bloqIndef=false;}
+  else if(data.faltas===3){data.estado="bloqueado";data.bloqHasta=new Date(now.getTime()+7*24*3600*1000);data.bloqIndef=false;}
+  else{data.estado="bloqueado";data.bloqHasta=null;data.bloqIndef=true;}
+  await ref.set(data);
+  return data;
+}
+
+async function levantarSancion(userId){
+  try{await db.collection("sanciones").doc(userId).update({estado:"ok",bloqHasta:null,bloqIndef:false,faltas:0});toast("Sanción levantada");}
+  catch(e){toast("Error: "+e.message);}
+}
+
+/* ─── ADMIN: RESERVAS Y SANCIONES ───────────────────────────── */
+async function renderAdminReservas(){
+  var cont=el("admin-reservas-cont");if(!cont)return;
+  cont.innerHTML='<p class="hint">Cargando...</p>';
+  try{
+    var hoy=new Date();var desde=new Date(hoy);desde.setDate(desde.getDate()-2);
+    var desdeStr=desde.toISOString().split("T")[0];
+    var snap=await db.collection("reservas").where("fecha",">=",desdeStr).orderBy("fecha","asc").orderBy("horaInicio","asc").limit(150).get();
+    if(snap.empty){cont.innerHTML='<p class="hint">Sin reservas en este período</p>';return;}
+    var html="";var fechaAct="";var hoyStr=hoy.toISOString().split("T")[0];
+    snap.forEach(function(doc){
+      var r=doc.data();
+      if(r.fecha!==fechaAct){if(fechaAct)html+='</div>';fechaAct=r.fecha;html+='<div class="section-title" style="margin-top:12px">'+fechaLarga(r.fecha)+(r.fecha===hoyStr?' — <span style="color:var(--verde-osc)">HOY</span>':'')+'</div><div>';}
+      var ec={confirmada:"#2563eb",confirmada_pagada:"#16a34a",pendiente_pago:"#d97706",cancelada:"#9ca3af"};
+      var el_={confirmada:"CONF",confirmada_pagada:"PAGADA",pendiente_pago:"PEND",cancelada:"CANC"};
+      var pasada=r.fecha<hoyStr||(r.fecha===hoyStr&&(r.horaFin||"")<=hoy.toTimeString().slice(0,5));
+      html+='<div class="reserva-card" style="margin-bottom:8px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+        '<div><div style="font-weight:700;font-size:13px">'+(r.canchaNombre||"C"+r.canchaId)+' &middot; '+(r.horaInicio||"")+'&ndash;'+(r.horaFin||"")+'</div>'+
+        '<div style="font-size:12px;color:#4b5563">'+(r.nombre||"")+(r.tel?' &middot; '+r.tel:'')+'</div>'+
+        '<div style="font-size:11px;color:var(--suave)">'+(CONFIG_RES.labelTipo[r.tipo]||r.tipo||"")+(r.monto>0?' &middot; $'+Number(r.monto).toLocaleString("es-CL"):' &middot; Gratis')+'</div></div>'+
+        '<span style="font-size:10px;font-weight:700;color:'+(ec[r.estado]||"#6b7280")+'">'+(el_[r.estado]||r.estado)+'</span></div>';
+      if(r.estado!=="cancelada"){
+        html+='<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">';
+        if(pasada&&r.asistio===null){
+          html+='<button class="mini" style="background:#dcfce7;color:#16a34a" onclick="marcarAsistencia(\''+doc.id+'\',\''+r.userId+'\',\''+r.nombre+'\',\''+r.fecha+'\',true)">✓ Asistió</button>';
+          html+='<button class="mini" style="background:#fee2e2;color:#dc2626" onclick="marcarAsistencia(\''+doc.id+'\',\''+r.userId+'\',\''+r.nombre+'\',\''+r.fecha+'\',false)">✗ No asistió</button>';
+        }else if(r.asistio===true){html+='<span style="font-size:11px;color:#16a34a">✓ Asistió</span>';}
+        else if(r.asistio===false){html+='<span style="font-size:11px;color:#dc2626">✗ No asistió</span>';}
+        html+='<button class="mini" style="color:#dc2626" onclick="adminCancelarReserva(\''+doc.id+'\')">Cancelar</button>';
+        html+='</div>';
+      }
+      html+='</div>';
+    });
+    if(fechaAct)html+='</div>';
+    cont.innerHTML=html||'<p class="hint">Sin reservas</p>';
+  }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';console.warn(e);}
+}
+
+async function marcarAsistencia(reservaId,userId,nombre,fecha,asistio){
+  try{
+    await db.collection("reservas").doc(reservaId).update({asistio:asistio});
+    if(!asistio&&userId&&userId!=="anonimo"){
+      var san=await registrarFalta(userId,nombre,reservaId,fecha);
+      var msg="Falta registrada ("+san.faltas+" total)";
+      if(san.estado==="advertencia")msg+=" — advertencia enviada";
+      else if(san.bloqIndef)msg+=" — bloqueado indefinidamente";
+      else if(san.bloqHasta)msg+=" — bloqueado hasta "+new Date(san.bloqHasta).toLocaleDateString("es-CL");
+      toast(msg);
+    }else{toast(asistio?"Asistencia confirmada":"Inasistencia registrada");}
+    renderAdminReservas();
+  }catch(e){toast("Error: "+e.message);}
+}
+
+async function adminCancelarReserva(id){
+  if(!confirm("¿Cancelar esta reserva?"))return;
+  try{await db.collection("reservas").doc(id).update({estado:"cancelada"});toast("Reserva cancelada");renderAdminReservas();}
+  catch(e){toast("Error: "+e.message);}
+}
+
+async function renderAdminSanciones(){
+  var cont=el("admin-sanciones-cont");if(!cont)return;
+  cont.innerHTML='<p class="hint">Cargando...</p>';
+  try{
+    var snap=await db.collection("sanciones").get();
+    if(snap.empty){cont.innerHTML='<p class="hint">Sin sanciones registradas</p>';return;}
+    var html="";var count=0;
+    snap.forEach(function(doc){
+      var s=doc.data();
+      if(!s.faltas||s.estado==="ok")return;
+      count++;
+      var color=s.bloqIndef||s.estado==="bloqueado"?"#dc2626":"#d97706";
+      var estado=s.bloqIndef?"Bloqueado indefinidamente":s.bloqHasta?"Bloqueado hasta "+new Date(s.bloqHasta.toDate?s.bloqHasta.toDate():s.bloqHasta).toLocaleDateString("es-CL"):"Advertencia";
+      html+='<div class="reserva-card" style="border-left:3px solid '+color+'">'+
+        '<div style="display:flex;justify-content:space-between"><div style="font-weight:700">'+(s.nombre||doc.id)+'</div>'+
+        '<span style="font-size:11px;color:'+color+';font-weight:700">'+s.faltas+' falta(s)</span></div>'+
+        '<div style="font-size:12px;color:'+color+'">'+estado+'</div>'+
+        '<div style="font-size:11px;color:var(--suave);margin-top:2px">'+(s.historial||[]).slice(-2).map(function(h){return h.fecha;}).join(", ")+'</div>'+
+        '<button class="mini" style="margin-top:8px;background:#dcfce7;color:#16a34a" onclick="levantarSancion(\''+doc.id+'\').then(function(){renderAdminSanciones();})">Levantar sanción</button>'+
+        '</div>';
+    });
+    cont.innerHTML=count?html:'<p class="hint">Sin sanciones activas</p>';
+  }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
+}
+
+function adminSalir(){adminUnlocked=false;go('inicio');}
+
+function adminSalir(){adminUnlocked=false;go('inicio');}
+
 (function(){
   try{seedRankingIfEmpty().then(function(){iniciarRankingLive();generarYRenderCuadros();});}catch(e){}
   try{seedCuadroNovicios3().then(function(){iniciarCuadroLive();});}catch(e){}
