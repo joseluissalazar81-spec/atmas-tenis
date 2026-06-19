@@ -139,7 +139,7 @@ function renderProfesores(){
       var ini=initials(prof.nombre);var col=avatarColor(prof.nombre);
       var certsH="";
       Object.entries(prof.certs).forEach(function(ent){
-        certsH+='<div style="margin-top:12px"><div style="font-size:10px;font-weight:800;color:var(--verde-osc);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">'+ent[0]+'</div><div style="display:flex;flex-wrap:wrap;gap:5px">'+ent[1].map(function(i){return'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">'+i+'</span>';}).join('')+'</div></div>';
+        certsH+='<div style="margin-top:12px"><div style="font-size:10px;font-weight:800;color:var(--verde-osc);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">'+ent[0]+'</div><div style="display:flex;flex-wrap:wrap;gap:5px">'+ent[1].map(function(i){return'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:20px;padding:3px 10px;font-size:13px;font-weight:400">'+i+'</span>';}).join('')+'</div></div>';
       });
       h+=
         '<div style="background:#fff;border-radius:20px;margin-bottom:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1)">'+
