@@ -81,7 +81,7 @@ function iniciarRankingLive(){
       rankingData=[];
       snap.forEach(function(doc){
         var d=doc.data();
-        rankingData.push([d.nombre,d.pts||0,d.jugados||0,d.ganados||0,d.perdidos||0,d.pct||0,doc.id]);
+        rankingData.push([d.nombre,d.pts||0,d.jugados||0,d.ganados||0,d.perdidos||0,d.pct||0,doc.id,d.socio||false]);
       });
       if(rankingData.length===0)rankingData=SEED_PLAYERS.map(function(p){return p.slice();});
       renderRanking();
@@ -105,7 +105,9 @@ function renderRanking(){
     var c=i===0?"top1":i===1?"top2":i===2?"top3":"";
     var col=avatarColor(p[0]);var ini=initials(p[0]);
     var cat=CAT_A.indexOf(p[0])!==-1?'<span style="font-size:9px;font-weight:700;background:var(--verde-claro);color:var(--verde-osc);border-radius:10px;padding:1px 6px;margin-left:5px">A</span>':CAT_B.indexOf(p[0])!==-1?'<span style="font-size:9px;font-weight:700;background:#e8f4fd;color:#1565c0;border-radius:10px;padding:1px 6px;margin-left:5px">B</span>':"";
-    rh+='<div class="rank-item '+c+'"><div class="rank-pos">'+(i+1)+'</div><div class="avatar" style="background:'+col+'">'+ini+'</div><div class="rank-info"><div class="nm">'+p[0]+cat+'</div><div class="sub">'+p[3]+'G &middot; '+p[4]+'P &middot; '+p[2]+' jugados</div><div class="bar"><i style="width:'+(p[1]/maxPts*100)+'%"></i></div></div><div class="rank-pts"><div class="p">'+p[1]+'</div><div class="pct">'+p[5]+'%</div></div></div>';
+    var socioBadge=p[7]===true?'<span style="font-size:9px;font-weight:800;background:#15803d;color:#fff;border-radius:10px;padding:1px 7px;margin-left:5px">SOCIO ✓</span>':"";
+    var itemStyle=p[7]===true?'border-left:3px solid #15803d;':'';
+    rh+='<div class="rank-item '+c+'" style="'+itemStyle+'"><div class="rank-pos">'+(i+1)+'</div><div class="avatar" style="background:'+col+'">'+ini+'</div><div class="rank-info"><div class="nm">'+p[0]+cat+socioBadge+'</div><div class="sub">'+p[3]+'G &middot; '+p[4]+'P &middot; '+p[2]+' jugados</div><div class="bar"><i style="width:'+(p[1]/maxPts*100)+'%"></i></div></div><div class="rank-pts"><div class="p">'+p[1]+'</div><div class="pct">'+p[5]+'%</div></div></div>';
   });
   var rl=el("ranking-list");if(rl)rl.innerHTML=rh||'<p class="hint">Sin datos</p>';
 }
@@ -463,7 +465,8 @@ function renderPerfil(){
     var jugador=rankingData.find(function(j){return j[0].toLowerCase()===p.nombre.toLowerCase();});
     var pos=jugador?rankingData.indexOf(jugador)+1:null;
     var ini=initials(p.nombre);var col=avatarColor(p.nombre);
-    var socioTag=p.socio?'<span class="cupos" style="background:#ffd700;color:#7a5c00">SOCIO</span>':'<span class="cupos">Sin membresia</span>';
+    var esSocio=p.socio||!!getSocioTier();
+    var socioTag=esSocio?'<span class="cupos" style="background:#15803d;color:#fff;font-weight:800">SOCIO ✓</span>':'<span class="cupos">Sin members&iacute;a</span>';
     var pct=jugador?jugador[5]:0;
     var statsHtml=jugador?'<div class="mycard" style="margin-bottom:14px"><div class="pos">Posicion #'+pos+' &middot; Escalerilla ATMAS</div><div class="name">'+p.nombre+'</div><div class="row"><div><span class="big">'+jugador[1]+'</span><span class="cap">Puntos</span></div><div><span class="big">'+jugador[3]+'</span><span class="cap">Ganados</span></div><div><span class="big">'+jugador[4]+'</span><span class="cap">Perdidos</span></div><div><span class="big">'+pct+'%</span><span class="cap">Rendimiento</span></div></div></div>':'<div class="aviso">Aun no tienes partidos en la escalerilla. Juega y sube tu ranking!</div>';
     var estiloTag=(p.estilo||p.golpe)?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+[p.estilo,p.golpe,p.superficie].filter(Boolean).map(function(x){return'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600">'+x+'</span>';}).join('')+'</div>':"";
@@ -2058,19 +2061,31 @@ async function validarCodigoSocio(){
     localStorage.setItem("atmas_socio_precio",precio);
     localStorage.setItem("atmas_socio_label",codPersonalizado.label||"Socio Mensualidad");
     toast("✓ Código válido · Mensualidad $"+Number(precio).toLocaleString("es-CL"));
+    guardarSocioEnFirestore("custom");
     renderSociosBloques();
   }else
   if(cod===codAntiguo){
     localStorage.setItem("atmas_socio_tier","antiguo");
     toast("✓ Código válido — Socio Antiguo desbloqueado");
+    guardarSocioEnFirestore("antiguo");
     renderSociosBloques();
   }else if(cod===codNuevo){
     localStorage.setItem("atmas_socio_tier","nuevo");
     toast("✓ Código válido — Socio Nuevo desbloqueado");
+    guardarSocioEnFirestore("nuevo");
     renderSociosBloques();
   }else{
     toast("Código incorrecto");
   }
+}
+async function guardarSocioEnFirestore(tier){
+  try{
+    var p=getPerfil();if(!p||!p.nombre)return;
+    var docId=slugify(p.nombre);
+    await db.collection("ranking_atmas").doc(docId).update({socio:true,socioTier:tier});
+    p.socio=true;savePerfil(p);
+    renderRanking();
+  }catch(e){console.warn("guardarSocioEnFirestore error:",e);}
 }
 function renderSociosBloques(){
   var cont=el("socios-bloques");if(!cont)return;
