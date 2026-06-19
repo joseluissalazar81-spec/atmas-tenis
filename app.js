@@ -91,8 +91,12 @@ function iniciarRankingLive(){
   }
 }
 
+var _rankCat="A";
+function setRankCat(c){_rankCat=c;var ba=el("rCatA");var bb=el("rCatB");if(ba)ba.classList.toggle("on",c==="A");if(bb)bb.classList.toggle("on",c==="B");renderRanking();}
 function renderRanking(){
-  var lista=rankingData.slice();
+  var catList=_rankCat==="A"?CAT_A:CAT_B;
+  var lista=rankingData.slice().filter(function(p){return catList.indexOf(p[0])!==-1;});
+  lista.sort(function(a,b){return b[1]-a[1];});
   var maxPts=Math.max(1,...lista.map(function(p){return p[1];}));
   var rh="";
   lista.forEach(function(p,i){
@@ -100,7 +104,7 @@ function renderRanking(){
     var col=avatarColor(p[0]);var ini=initials(p[0]);
     rh+='<div class="rank-item '+c+'"><div class="rank-pos">'+(i+1)+'</div><div class="avatar" style="background:'+col+'">'+ini+'</div><div class="rank-info"><div class="nm">'+p[0]+'</div><div class="sub">'+p[3]+'G &middot; '+p[4]+'P &middot; '+p[2]+' jugados</div><div class="bar"><i style="width:'+(p[1]/maxPts*100)+'%"></i></div></div><div class="rank-pts"><div class="p">'+p[1]+'</div><div class="pct">'+p[5]+'%</div></div></div>';
   });
-  var rl=el("ranking-list");if(rl)rl.innerHTML=rh;
+  var rl=el("ranking-list");if(rl)rl.innerHTML=rh||'<p class="hint">Sin datos</p>';
 }
 
 async function actualizarStats(){
