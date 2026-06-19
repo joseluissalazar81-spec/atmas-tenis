@@ -2,11 +2,39 @@ function toast(m){var t=document.getElementById("toast");if(!t)return;t.textCont
 function go(s){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});var sc=document.getElementById(s);if(sc)sc.classList.add("active");document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.s===s);});var ct=document.querySelector(".content");if(ct)ct.scrollTop=0;if(s==="perfil")renderPerfil();if(s==="admin")renderAdmin();if(s==="cancha")renderCalendario();if(s==="mis-reservas")renderMisReservas();if(s==="academia"){renderProgramasAcademia();var _p=getPerfil();if(_p&&_p.nombre)cargarPortafolioAlumno(_p.nombre);}}
 function closeModal(){var m=document.getElementById("modal");if(m)m.classList.remove("show");}
 function setVista(v){
-  ["rank","h2h","cuadro"].forEach(function(k){
+  ["rank","h2h","cuadro","partidos"].forEach(function(k){
     var d=document.getElementById("vista-"+k);if(d)d.style.display=v===k?"block":"none";
     var b=document.getElementById("v"+k.charAt(0).toUpperCase()+k.slice(1));if(b)b.classList.toggle("on",v===k);
   });
   if(v==="h2h")initH2H();
+  if(v==="partidos")cargarPartidosPublicos();
+}
+async function cargarPartidosPublicos(){
+  var cont=el("lista-partidos-publica");if(!cont)return;
+  cont.innerHTML='<p class="hint">Cargando...</p>';
+  try{
+    var snap=await db.collection("partidos_atmas").where("estado","==","aprobado").orderBy("ts","desc").limit(100).get();
+    if(snap.empty){cont.innerHTML='<p class="hint">Aún no hay partidos registrados</p>';return;}
+    var h="";var n=0;
+    snap.forEach(function(doc){
+      n++;var r=doc.data();
+      var fechaFmt=r.fecha?r.fecha.split("-").reverse().join("/"):"-";
+      h+='<div style="background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+          '<div style="flex:1">'+
+            '<div style="font-size:13px;font-weight:800;color:var(--verde-osc)">'+r.ganador+'</div>'+
+            '<div style="font-size:11px;color:var(--suave);margin:2px 0">ganó a <span style="color:var(--texto)">'+r.perdedor+'</span></div>'+
+            '<div style="font-size:12px;font-weight:600;margin-top:4px">'+( r.sets||"—")+'</div>'+
+          '</div>'+
+          '<div style="text-align:right;flex-shrink:0">'+
+            '<div style="font-size:11px;color:var(--suave)">'+fechaFmt+'</div>'+
+            (r.contexto?'<div style="font-size:10px;color:#6366f1;font-weight:600;margin-top:2px">'+r.contexto+'</div>':'')+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    });
+    cont.innerHTML='<div style="font-size:11px;color:var(--suave);margin-bottom:10px">'+n+' partidos · temporada Jun-Ago 2026</div>'+h;
+  }catch(e){if(cont)cont.innerHTML='<p class="hint">Error al cargar</p>';}
 }
 
 /* ─── FIREBASE ────────────────────────────────────────────────── */

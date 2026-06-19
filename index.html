@@ -112,7 +112,7 @@
       <div id="feed-actividad"><p class="hint">Cargando...</p></div>
     </section>
     <section class="screen" id="escalerilla">
-      <div class="seg"><button id="vRank" class="on" onclick="setVista('rank')">Ranking</button><button id="vH2H" onclick="setVista('h2h')">H2H</button><button id="vCuadro" onclick="setVista('cuadro')">Cuadros</button></div>
+      <div class="seg"><button id="vRank" class="on" onclick="setVista('rank')">Ranking</button><button id="vH2H" onclick="setVista('h2h')">H2H</button><button id="vCuadro" onclick="setVista('cuadro')">Cuadros</button><button id="vPartidos" onclick="setVista('partidos')">Partidos</button></div>
       <div id="vista-rank">
         <div class="mycard"><div class="pos">L&iacute;der &middot; Escalerilla Jun-Ago 2026</div><div class="name">#1 &middot; Manuel Illanes</div><div class="row"><div><span class="big">20</span><span class="cap">Puntos</span></div><div><span class="big">4</span><span class="cap">Jugados</span></div><div><span class="big">100%</span><span class="cap">Rendimiento</span></div></div></div>
         <button class="btn" onclick="openModal('partido')">+ Registrar partido</button>
@@ -144,6 +144,11 @@
           <div class="hrow" style="background:var(--verde-claro);border-radius:8px;padding:8px 4px"><span class="dia" style="color:var(--verde-osc)">FINALES</span><span class="hrs" style="color:var(--verde-osc);font-weight:800">13 Junio &middot; 10:30 AM</span></div>
         </div>
         <p class="foot">Escalerilla Jun-Ago 2026 &middot; Series A y B</p>
+      </div>
+      <div id="vista-partidos" style="display:none">
+        <div class="section-title">📋 Todos los partidos</div>
+        <p style="font-size:12px;color:var(--suave);margin-bottom:10px">Resultados validados por Marcelo Escalona</p>
+        <div id="lista-partidos-publica"><p class="hint">Cargando...</p></div>
       </div>
     </section>
     <section class="screen" id="torneos">
