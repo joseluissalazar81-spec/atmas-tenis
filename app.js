@@ -1115,7 +1115,9 @@ function renderCalendario(){
     resState.tipo=tipo;
     if(ts)ts.style.display="none";if(rm)rm.style.display="";
     var cbt2=el("res-cambiar-tipo");if(cbt2)cbt2.style.display="none";
-    actualizarLabelTipo();renderDayStrip();renderCourtTabs();verificarSancionBanner();
+    // Pre-seleccionar hoy
+    if(!resState.fecha){resState.fecha=new Date().toISOString().split("T")[0];}
+    actualizarLabelTipo();renderDayStrip();renderCourtTabs();renderSlots();verificarSancionBanner();
   }
 }
 
@@ -1125,10 +1127,10 @@ function showTipoSelector(){
 }
 
 function setTipoReserva(tipo){
-  resState.tipo=tipo;resState.fecha=null;resState.canchaId=null;resState.horaInicio=null;
+  resState.tipo=tipo;resState.fecha=new Date().toISOString().split("T")[0];resState.canchaId=null;resState.horaInicio=null;resState.duracion=1;
   var ts=el("res-tipo-selector"),rm=el("res-main");
   if(ts)ts.style.display="none";if(rm)rm.style.display="";
-  actualizarLabelTipo();renderDayStrip();renderCourtTabs();verificarSancionBanner();
+  actualizarLabelTipo();renderDayStrip();renderCourtTabs();renderSlots();verificarSancionBanner();
   var cbt=el("res-cambiar-tipo");if(cbt)cbt.style.display="";
 }
 
@@ -1160,7 +1162,8 @@ function renderCourtTabs(){
   var tabs=el("court-tabs");if(!tabs)return;
   tabs.innerHTML="";
   var canchas=canchasPermitidas(resState.tipo);
-  if(canchas.length===1&&!resState.canchaId){resState.canchaId=canchas[0].id;}
+  // Auto-seleccionar primera cancha si no hay ninguna elegida
+  if(!resState.canchaId&&canchas.length>0){resState.canchaId=canchas[0].id;}
   canchas.forEach(function(c){
     var btn=document.createElement("button");
     btn.textContent=c.nombre;
@@ -1171,17 +1174,14 @@ function renderCourtTabs(){
 }
 
 function selectFechaRes(fecha){
-  resState.fecha=fecha;resState.horaInicio=null;
-  renderDayStrip();ocultarFormRes();
-  if(resState.canchaId)renderSlots();
-  else{var sc=el("slots-res");if(sc)sc.innerHTML='<p class="hint">Selecciona una cancha</p>';}
+  resState.fecha=fecha;resState.horaInicio=null;resState.duracion=1;
+  renderDayStrip();ocultarFormRes();renderSlots();
 }
 
 function selectCanchaRes(cid){
-  resState.canchaId=cid;resState.horaInicio=null;
+  resState.canchaId=cid;resState.horaInicio=null;resState.duracion=1;
   renderCourtTabs();ocultarFormRes();
   if(resState.fecha)renderSlots();
-  else{var sc=el("slots-res");if(sc)sc.innerHTML='<p class="hint">Selecciona un día</p>';}
 }
 
 async function renderSlots(){
