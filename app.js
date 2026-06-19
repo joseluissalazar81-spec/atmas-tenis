@@ -1171,21 +1171,68 @@ function actualizarLabelTipo(){
   lbl.textContent=(CONFIG_RES.labelTipo[resState.tipo]||resState.tipo)+" — "+precio;
 }
 
+var _calMes=null;var _calAnio=null;
 function renderDayStrip(){
   var strip=el("day-strip");if(!strip)return;
-  strip.innerHTML="";
   var hoy=new Date();
-  var dias=["Do","Lu","Ma","Mi","Ju","Vi","Sá"];
-  var meses=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-  for(var i=0;i<14;i++){
-    var d=new Date(hoy);d.setDate(hoy.getDate()+i);
-    var fs=d.toISOString().split("T")[0];
-    var chip=document.createElement("div");
-    chip.className="day-chip"+(resState.fecha===fs?" active":"");
-    chip.innerHTML='<div class="dc-dia">'+dias[d.getDay()]+'</div><div class="dc-num">'+d.getDate()+'</div><div class="dc-mes">'+meses[d.getMonth()]+'</div>';
-    chip.onclick=(function(f){return function(){selectFechaRes(f);};})(fs);
-    strip.appendChild(chip);
+  if(_calMes===null){_calMes=hoy.getMonth();_calAnio=hoy.getFullYear();}
+  var meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  var dias=["D","L","M","M","J","V","S"];
+  var hoyStr=hoy.toISOString().split("T")[0];
+  // Primer día del mes y cuántos días tiene
+  var primerDia=new Date(_calAnio,_calMes,1).getDay();
+  var diasMes=new Date(_calAnio,_calMes+1,0).getDate();
+  // Mes anterior navegación
+  var puedeAtras=(_calAnio>hoy.getFullYear())||(_calAnio===hoy.getFullYear()&&_calMes>hoy.getMonth());
+  var h='<div style="background:#fff;border-radius:16px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);margin-bottom:12px">';
+  // Cabecera mes
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+    '<button onclick="navMes(-1)" style="background:none;border:none;font-size:20px;cursor:pointer;color:'+(puedeAtras?"var(--verde-osc)":"#d1d5db")+';padding:4px 8px" '+(puedeAtras?'':'disabled')+'>&#8249;</button>'+
+    '<div style="font-weight:800;font-size:15px">'+meses[_calMes]+' '+_calAnio+'</div>'+
+    '<button onclick="navMes(1)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--verde-osc);padding:4px 8px">&#8250;</button>'+
+    '</div>';
+  // Cabecera días
+  h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">';
+  dias.forEach(function(d){h+='<div style="text-align:center;font-size:11px;font-weight:700;color:#9ca3af;padding:2px 0">'+d+'</div>';});
+  h+='</div>';
+  // Grid días
+  h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
+  for(var i=0;i<primerDia;i++)h+='<div></div>';
+  for(var dia=1;dia<=diasMes;dia++){
+    var fs=_calAnio+'-'+(String(_calMes+1).padStart(2,'0'))+'-'+(String(dia).padStart(2,'0'));
+    var pasado=fs<hoyStr;
+    var esHoy=fs===hoyStr;
+    var selec=fs===resState.fecha;
+    var fds=(new Date(fs+"T12:00").getDay()===0||new Date(fs+"T12:00").getDay()===6);
+    var bg=selec?"var(--verde-osc)":esHoy?"var(--verde-claro)":"transparent";
+    var color=selec?"#fff":pasado?"#d1d5db":fds?"var(--verde-mid)":"#1f2937";
+    var weight=selec||esHoy?"800":"400";
+    var cursor=pasado?"default":"pointer";
+    var click=pasado?"":'onclick="selectFechaRes(\''+fs+'\')"';
+    h+='<div '+click+' style="text-align:center;padding:5px 2px;border-radius:8px;background:'+bg+';color:'+color+';font-weight:'+weight+';font-size:14px;cursor:'+cursor+(esHoy&&!selec?';border:2px solid var(--verde-mid)':'')+'">'+dia+'</div>';
   }
+  h+='</div>';
+  // Leyenda precios
+  var t1=tarifaTipo(resState.tipo,1),t2=tarifaTipo(resState.tipo,2);
+  if(t1>0){
+    h+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f3f4f6">';
+    h+='<div style="display:flex;justify-content:space-between;font-size:12px;color:#4b5563;padding:3px 0"><span>Lun-Vie 08:00&ndash;17:00</span><b style="color:var(--verde-osc)">1 hr &middot; $'+t1.toLocaleString("es-CL")+'</b></div>';
+    h+='<div style="display:flex;justify-content:space-between;font-size:12px;color:#4b5563;padding:3px 0"><span>S&aacute;b-Dom 08:00&ndash;14:00</span><b style="color:var(--verde-osc)">2 hrs &middot; $'+t2.toLocaleString("es-CL")+'</b></div>';
+    h+='<div style="display:flex;justify-content:space-between;font-size:12px;color:#4b5563;padding:3px 0"><span>S&aacute;b-Dom desde 14:00</span><b style="color:var(--verde-osc)">1 hr &middot; $'+t1.toLocaleString("es-CL")+'</b></div>';
+    h+='</div>';
+  }
+  h+='</div>';
+  strip.innerHTML=h;
+}
+
+function navMes(dir){
+  var hoy=new Date();
+  _calMes+=dir;
+  if(_calMes<0){_calMes=11;_calAnio--;}
+  if(_calMes>11){_calMes=0;_calAnio++;}
+  // No permitir ir antes del mes actual
+  if(_calAnio<hoy.getFullYear()||(_calAnio===hoy.getFullYear()&&_calMes<hoy.getMonth())){_calMes=hoy.getMonth();_calAnio=hoy.getFullYear();}
+  renderDayStrip();
 }
 
 function renderCourtTabs(){
