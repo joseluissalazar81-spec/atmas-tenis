@@ -668,7 +668,7 @@ var ZONA_NORTE_SEED={
 // Lista jugadores Zona Norte Sexta Fecha
 var ZONA_NORTE_JUGADORES=["Marcelo Escalona","Ariel Araya","Rodrigo Bernal","Osvaldo Valdivia","Marco Carrasco","Hipólito Bello","Ignacio Soto","Roro Navarro","Mauro Morales","Seba Brito","Edgardo Pacheco","Pablo Ortiz","Oscar Henríquez","Roro Turchan","Disponible","Disponible"];
 const torneos=[
-  {n:"Torneo Novicios 5",f:"22 agosto 2026 &middot; 16:00 y 17:30",p:"$20.000",c:"15 cupos",monto:20000},
+  {n:"Torneo Novicios 5",f:"22 agosto 2026 &middot; 16:00 y 17:30",p:"$20.000",c:"14 cupos",monto:20000},
   {n:"Ranking Zona Norte - Sexta Fecha",f:"21 junio 2026 &middot; Full Tenis",p:"$20.000",c:"Cerrado",monto:20000},
   {n:"Torneo Novicios 4",f:"11 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"Cerrado",monto:20000},
   {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"Cerrado",monto:15000},
@@ -710,8 +710,9 @@ async function cargarInscripciones(){
     var inscritos=[];snap.forEach(function(doc){inscritos.push(doc.data().nombre);});
     var nh="";
     inscritos.forEach(function(n){var col=avatarColor(n);var ini=initials(n);nh+='<div class="lcard"><div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div class="nm">'+n+'</div></div><span>OK</span></div>';});
-    var lleno=inscritos.length>=16;
-    for(var i=inscritos.length;i<16;i++)nh+='<div class="lcard"><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--suave)">'+(i+1)+'</div><div style="flex:1"><div class="ds">Cupo disponible</div></div>'+(lleno?'<span style="color:#b91c1c;font-size:11px">Completo</span>':'<button class="mini" onclick="openModal(\'torneo\',1)">Unirme</button>')+'</div>';
+    if(inscritos.indexOf("Marcelo Escalona")===-1)inscritos.unshift("Marcelo Escalona");
+    var lleno=inscritos.length>=15;
+    for(var i=inscritos.length;i<15;i++)nh+='<div class="lcard"><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--suave)">'+(i+1)+'</div><div style="flex:1"><div class="ds">Cupo disponible</div></div>'+(lleno?'<span style="color:#b91c1c;font-size:11px">Completo</span>':'<button class="mini" onclick="openModal(\'torneo\',1)">Unirme</button>')+'</div>';
     enl.innerHTML=nh;
   }catch(e){console.warn("cargarInscripciones error:",e);}
 }
