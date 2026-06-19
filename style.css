@@ -23,13 +23,13 @@ header p{font-size:11px;color:var(--suave);white-space:nowrap}
 .mycard{background:linear-gradient(135deg,var(--verde),var(--verde-mid));border-radius:18px;padding:18px;color:#fff;margin-bottom:10px;box-shadow:0 6px 18px rgba(122,193,67,.35)}
 .mycard .pos{font-size:12px;opacity:.9}.mycard .name{font-size:21px;font-weight:800;margin:2px 0 10px}
 .mycard .row{display:flex;gap:18px}.mycard .row .big{font-size:19px;font-weight:800;display:block}.mycard .row .cap{font-size:11px;opacity:.85}
-.rank-item{background:#1e2022;border-radius:14px;padding:14px 15px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.22)}
-.rank-pos{width:30px;height:30px;border-radius:8px;background:#2e3235;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#888;flex-shrink:0}
+.rank-item{background:#fff;border-radius:14px;padding:14px 15px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.rank-pos{width:30px;height:30px;border-radius:8px;background:var(--gris);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--suave);flex-shrink:0}
 .rank-item.top1 .rank-pos{background:#ffd700;color:#7a5c00}.rank-item.top2 .rank-pos{background:#c8cdd5;color:#444}.rank-item.top3 .rank-pos{background:#cd7f32;color:#fff}
 .avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;flex-shrink:0}
-.rank-info{flex:1;min-width:0}.rank-info .nm{font-weight:700;font-size:15px;color:#fff}.rank-info .sub{font-size:11px;color:#888;margin-top:2px}
-.rank-pts{text-align:right;flex-shrink:0}.rank-pts .p{font-weight:800;font-size:24px;color:#e8703a;line-height:1}.rank-pts .pct{font-size:11px;color:#888;margin-top:2px}
-.bar{height:4px;background:#2e3235;border-radius:3px;margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:#e8703a;border-radius:3px}
+.rank-info{flex:1;min-width:0}.rank-info .nm{font-weight:700;font-size:15px;color:#1a2e1a}.rank-info .sub{font-size:11px;color:var(--suave);margin-top:2px}
+.rank-pts{text-align:right;flex-shrink:0}.rank-pts .p{font-weight:800;font-size:24px;color:var(--verde-osc);line-height:1}.rank-pts .pct{font-size:11px;color:var(--suave);margin-top:2px}
+.bar{height:4px;background:var(--gris);border-radius:3px;margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--verde);border-radius:3px}
 .seg{display:flex;background:#fff;border-radius:12px;padding:4px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
 .seg button{flex:1;border:none;background:none;padding:9px;border-radius:9px;font-weight:700;font-size:13px;color:var(--verde-mid);cursor:pointer}
 .seg button.on{background:var(--verde);color:#fff}
