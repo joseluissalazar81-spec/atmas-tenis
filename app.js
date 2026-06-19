@@ -1891,12 +1891,15 @@ async function cargarSlotsIndividuales(){
   try{
     var snap=await db.collection("slots_individuales")
       .where("estado","==","disponible")
-      .orderBy("fecha").orderBy("hora")
+      .orderBy("fecha")
       .get();
-    if(snap.empty){cont.innerHTML='<div style="text-align:center;padding:24px"><div style="font-size:36px;margin-bottom:8px">📅</div><div style="font-size:14px;color:var(--suave)">No hay horarios disponibles.<br>Consulta a Marcelo.</div></div>';return;}
+    // Ordenar por hora en memoria
+    var docs=[];snap.forEach(function(doc){docs.push({id:doc.id,data:doc.data()});});
+    docs.sort(function(a,b){return a.data.fecha===b.data.fecha?a.data.hora.localeCompare(b.data.hora):a.data.fecha.localeCompare(b.data.fecha);});
+    if(!docs.length){cont.innerHTML='<div style="text-align:center;padding:24px"><div style="font-size:36px;margin-bottom:8px">📅</div><div style="font-size:14px;color:var(--suave)">No hay horarios disponibles.<br>Consulta a Marcelo.</div></div>';return;}
     var h='<div style="font-size:12px;color:var(--suave);margin-bottom:12px">Elige un horario disponible:</div>';
-    snap.forEach(function(doc){
-      var s=doc.data();
+    docs.forEach(function(doc){
+      var s=doc.data;
       var fechaFmt=s.fecha?new Date(s.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"}):"";
       h+='<div style="background:#f0fdf4;border-radius:12px;padding:14px;margin-bottom:8px;border-left:4px solid var(--verde)">'+
         '<div style="display:flex;align-items:center;justify-content:space-between">'+
