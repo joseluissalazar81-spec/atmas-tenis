@@ -776,7 +776,7 @@ async function renderAdmin(){
   h+='<div class="admin-section"><div class="section-title" style="color:#b45309">Partidos en disputa</div><div id="a-pendientes"><p class="hint">Cargando...</p></div></div>';
   h+='<div class="admin-section"><div class="section-title">Inscripciones torneo</div><div id="a-inscripciones"><p class="hint">Cargando...</p></div></div>';
   h+='</div>';
-  h+='<div id="admin-tab-ranking" style="display:none"><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div>';
+  h+='<div id="admin-tab-ranking" style="display:none"><div class="admin-section"><div class="section-title">Tipos de usuario</div><div id="admin-tipos-cont"><p class="hint">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div>';
   h+='<button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div></div>';
   h+='<div style="height:20px"></div>';
   eab.innerHTML=h;
@@ -792,6 +792,7 @@ function adminTab(tab){
     var btn=el("atab-"+t);if(btn)btn.className=t===tab?"on":"";
   });
   if(tab==="sanciones")renderAdminSanciones();
+  if(tab==="ranking")renderAdminTipos();
 }
 
 async function loadAdminTorneos(){
@@ -1369,3 +1370,39 @@ function adminSalir(){adminUnlocked=false;go('inicio');}
     else{mostrarLogin();showAuthStep1();}
   }
 })();
+
+/* ─── ADMIN: TIPOS DE USUARIO ───────────────────────────────── */
+async function renderAdminTipos(){
+  var cont=el("admin-tipos-cont");if(!cont)return;
+  cont.innerHTML='<p class="hint">Cargando jugadores...</p>';
+  try{
+    var snap=await db.collection("jugadores").limit(100).get();
+    if(snap.empty){cont.innerHTML='<p class="hint">No hay jugadores registrados</p>';return;}
+    var tipos={socio_mensual:"Socio mensualidad",socio_partido:"Socio paga partido",invitado:"Invitado",arriendo:"Arriendo",academia:"Academia"};
+    var html='';
+    snap.forEach(function(doc){
+      var p=doc.data();if(!p.nombre)return;
+      var tipoActual=p.tipo||"arriendo";
+      html+='<div class="reserva-card" style="margin-bottom:8px">'+
+        '<div style="font-weight:700;font-size:13px">'+p.nombre+'</div>'+
+        '<div style="font-size:11px;color:var(--suave);margin-bottom:8px">'+(p.rut||p.email||doc.id)+'</div>'+
+        '<select id="tipo-sel-'+doc.id+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;margin-bottom:6px">';
+      Object.keys(tipos).forEach(function(k){
+        html+='<option value="'+k+'"'+(tipoActual===k?' selected':'')+'>'+tipos[k]+'</option>';
+      });
+      html+='</select>'+
+        '<button class="mini" style="background:var(--verde-claro);color:var(--verde-osc)" onclick="guardarTipoUsuario(\''+doc.id+'\')">Guardar</button>'+
+        '</div>';
+    });
+    cont.innerHTML=html||'<p class="hint">Sin jugadores</p>';
+  }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
+}
+
+async function guardarTipoUsuario(uid){
+  var sel=el("tipo-sel-"+uid);if(!sel)return;
+  var tipo=sel.value;
+  try{
+    await db.collection("jugadores").doc(uid).update({tipo:tipo});
+    toast("Tipo actualizado: "+tipo);
+  }catch(e){toast("Error: "+e.message);}
+}
