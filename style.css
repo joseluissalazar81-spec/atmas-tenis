@@ -124,3 +124,29 @@ header p{font-size:11px;color:var(--suave);white-space:nowrap}
 .cuadro-player{font-size:11px;font-weight:600;padding:4px 6px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cuadro-player.gan{background:var(--verde-claro);color:var(--verde-osc);font-weight:800}
 .cuadro-player.tbd{color:#ccc;font-style:italic;font-size:10px}
+
+/* ═══ SISTEMA DE RESERVAS ═══════════════════════════════════════ */
+.hint{color:var(--suave);font-size:13px;text-align:center;padding:16px 0;}
+.day-chip{display:flex;flex-direction:column;align-items:center;padding:8px 10px;border-radius:14px;cursor:pointer;min-width:44px;transition:background .15s,color .15s;background:#f3f4f6;}
+.day-chip.active{background:var(--verde-osc);color:#fff;}
+.day-chip:not(.active):hover{background:var(--verde-claro);}
+.dc-dia{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;opacity:.7;}
+.dc-num{font-size:18px;font-weight:800;line-height:1.1;}
+.dc-mes{font-size:9px;opacity:.65;}
+.day-chip.active .dc-dia,.day-chip.active .dc-mes{opacity:.8;}
+
+.slot-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.slot-block{border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;background:#f3f4f6;border:2px solid transparent;}
+.slot-block.libre{background:#dcfce7;border-color:transparent;}
+.slot-block.libre:hover{background:var(--verde-claro);border-color:var(--verde-osc);}
+.slot-block.ocupado{background:#f3f4f6;opacity:.5;cursor:not-allowed;}
+.slot-block.seleccionado{background:var(--verde-osc);color:#fff;border-color:var(--verde-osc);}
+.sl-h{font-size:15px;font-weight:800;}
+.sl-f{font-size:11px;opacity:.7;}
+.sl-e{font-size:10px;font-weight:600;margin-top:2px;}
+.slot-block.libre .sl-e{color:var(--verde-osc);}
+.slot-block.seleccionado .sl-e{color:rgba(255,255,255,.8);}
+.slot-block.ocupado .sl-e{color:#9ca3af;}
+
+.reserva-card{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.reserva-card.pasada{opacity:.6;}
