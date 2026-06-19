@@ -20,7 +20,7 @@ header p{font-size:11px;color:var(--suave);white-space:nowrap}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .stat{background:#fff;border-radius:14px;padding:13px 6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .stat .n{font-size:21px;font-weight:800;color:var(--verde-osc)}.stat .l{font-size:10px;color:var(--suave);margin-top:2px}
-.mycard{background:linear-gradient(135deg,var(--verde),var(--verde-mid));border-radius:18px;padding:18px;color:#fff;margin-bottom:10px;box-shadow:0 6px 18px rgba(122,193,67,.35)}
+.mycard{background:linear-gradient(135deg,#7a3010,#b04a18);border-radius:18px;padding:18px;color:#fff;margin-bottom:10px;box-shadow:0 6px 18px rgba(120,45,16,.35)}
 .mycard .pos{font-size:12px;opacity:.9}.mycard .name{font-size:21px;font-weight:800;margin:2px 0 10px}
 .mycard .row{display:flex;gap:18px}.mycard .row .big{font-size:19px;font-weight:800;display:block}.mycard .row .cap{font-size:11px;opacity:.85}
 .rank-item{background:#fff;border-radius:14px;padding:14px 15px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}

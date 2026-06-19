@@ -153,15 +153,12 @@ function renderProfesores(){
               '</div>'+
             '</div>'+
           '</div>'+
-          // Bio bloque negro como series
+          // Bio + Certificaciones en bloque negro
           '<div style="background:var(--negro);padding:16px 18px">'+
             '<div style="font-size:10px;font-weight:800;color:var(--lima);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">Sobre el entrenador</div>'+
-            '<p style="font-size:14px;color:rgba(255,255,255,.88);line-height:1.65;margin:0">'+prof.bio+'</p>'+
-          '</div>'+
-          // Certificaciones
-          '<div style="padding:16px 18px">'+
-            '<div style="font-size:10px;font-weight:800;color:var(--verde-osc);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Certificaciones</div>'+
-            certsH+
+            '<p style="font-size:14px;color:rgba(255,255,255,.88);line-height:1.65;margin:0 0 18px">'+prof.bio+'</p>'+
+            '<div style="font-size:10px;font-weight:800;color:var(--lima);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px">Certificaciones</div>'+
+            certsH.replace(/color:var\(--verde-osc\)/g,'color:var(--lima)').replace(/background:var\(--verde-claro\);color:var\(--verde-osc\)/g,'background:rgba(255,255,255,.12);color:#fff')+
           '</div>'+
         '</div>';
     });
