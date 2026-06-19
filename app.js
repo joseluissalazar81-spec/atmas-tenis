@@ -2483,22 +2483,82 @@ async function renderAdminTipos(){
     entries.forEach(function(p){
       var docId=p._id;var tipoActual=p.tipo||"";
       var selId="tipo-sel-"+docId.replace(/[^a-zA-Z0-9]/g,"_");
-      html+='<div class="reserva-card" style="margin-bottom:8px">'+
-        '<div style="font-weight:700;font-size:13px">'+p.nombre+'</div>'+
-        '<div style="font-size:11px;color:var(--suave);margin-bottom:8px">'+(p.rut||p.email||"")+(p._col==="ranking_atmas"?' &middot; <span style="color:#6366f1">ranking</span>':'')+'</div>'+
-        '<select id="'+selId+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;margin-bottom:6px">'+
-        '<option value="">-- Sin asignar --</option>';
+      var col=avatarColor(p.nombre);var ini=initials(p.nombre);
+      var tipoLabel=tipoActual?(tipos[tipoActual]||tipoActual):"Sin asignar";
+      var socioBadge=p.socio?'<span style="background:#15803d;color:#fff;border-radius:8px;padding:1px 7px;font-size:9px;font-weight:800;margin-left:6px">SOCIO ✓</span>':"";
+      var jugadorRank=rankingData.find(function(r){return r[0].toLowerCase()===(p.nombre||"").toLowerCase();});
+      html+='<div class="lcard" style="flex-direction:column;gap:0;padding:12px 14px;cursor:pointer" onclick="verPerfilAdmin('+JSON.stringify(docId)+','+JSON.stringify(p._col)+')" >'+
+        '<div style="display:flex;align-items:center;gap:10px">'+
+          '<div class="avatar" style="background:'+col+';width:36px;height:36px;font-size:13px;flex-shrink:0">'+ini+'</div>'+
+          '<div style="flex:1">'+
+            '<div style="font-weight:800;font-size:13px">'+p.nombre+socioBadge+'</div>'+
+            '<div style="font-size:11px;color:var(--suave)">'+tipoLabel+(jugadorRank?' &middot; '+jugadorRank[1]+' pts':'')+'</div>'+
+          '</div>'+
+          '<span style="font-size:18px;color:var(--gris)">›</span>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'+
+          '<select id="'+selId+'" style="flex:1;padding:7px;border-radius:8px;border:1px solid #e5e7eb;font-size:12px" onclick="event.stopPropagation()">'+
+          '<option value="">-- Sin asignar --</option>';
       Object.keys(tipos).forEach(function(k){
         html+='<option value="'+k+'"'+(tipoActual===k?' selected':'')+'>'+tipos[k]+'</option>';
       });
       html+='</select>'+
-        '<button class="mini" style="background:var(--verde-claro);color:var(--verde-osc)" onclick="guardarTipoUsuario(\''+p._col+'\',\''+docId+'\',\''+selId+'\')">Guardar</button>'+
+          '<button class="mini" style="background:var(--verde-claro);color:var(--verde-osc);flex-shrink:0" onclick="event.stopPropagation();guardarTipoUsuario(\''+p._col+'\',\''+docId+'\',\''+selId+'\')">OK</button>'+
+        '</div>'+
         '</div>';
     });
     cont.innerHTML=html;
   }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
 }
 
+async function verPerfilAdmin(docId,col){
+  var sc=el("sheet-content");var mo=el("modal");if(!sc||!mo)return;
+  sc.innerHTML='<p class="hint">Cargando perfil...</p>';mo.classList.add("show");
+  try{
+    var snap=await db.collection(col).doc(docId).get();
+    var p=snap.exists?snap.data():{nombre:docId};
+    var jugadorRank=rankingData.find(function(r){return r[0].toLowerCase()===(p.nombre||"").toLowerCase();});
+    var col2=avatarColor(p.nombre||"");var ini=initials(p.nombre||"");
+    var tipos={socio_mensual:"Socio mensualidad",socio_partido:"Pago por partido",invitado:"Invitado",arriendo:"Arriendo",academia:"Academia"};
+    var tipoLabel=p.tipo?(tipos[p.tipo]||p.tipo):"Sin asignar";
+    var tipoColor=p.tipo==="socio_mensual"?"#15803d":p.tipo==="socio_partido"?"#1565c0":"#6b7280";
+    var socioBadge=p.socio?'<span style="background:#15803d;color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800">SOCIO ✓</span>':"";
+    var fnacFmt=p.fnac?p.fnac.split("-").reverse().join("/"):"—";
+    var edad="";
+    if(p.fnac){var hoy=new Date();var fn=new Date(p.fnac);edad=" · "+(hoy.getFullYear()-fn.getFullYear())+" años";}
+    var row=function(label,val){return val?'<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f3f4f6"><div style="font-size:12px;color:var(--suave)">'+label+'</div><div style="font-size:13px;font-weight:600;color:var(--texto)">'+val+'</div></div>':"";}
+    var statsH="";
+    if(jugadorRank){
+      statsH='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0">'+
+        ['<div style="text-align:center;background:var(--verde-claro);border-radius:10px;padding:8px"><div style="font-size:18px;font-weight:900;color:var(--verde-mid)">'+jugadorRank[1]+'</div><div style="font-size:9px;color:var(--suave)">PTS</div></div>',
+         '<div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:8px"><div style="font-size:18px;font-weight:900;color:#15803d">'+jugadorRank[3]+'</div><div style="font-size:9px;color:var(--suave)">WINS</div></div>',
+         '<div style="text-align:center;background:#fef2f2;border-radius:10px;padding:8px"><div style="font-size:18px;font-weight:900;color:#dc2626">'+jugadorRank[4]+'</div><div style="font-size:9px;color:var(--suave)">LOST</div></div>',
+         '<div style="text-align:center;background:#f8fafc;border-radius:10px;padding:8px"><div style="font-size:18px;font-weight:900;color:#1e3a5f">'+jugadorRank[5]+'%</div><div style="font-size:9px;color:var(--suave)">PCT</div></div>'].join("")+
+      '</div>';
+    }
+    sc.innerHTML=
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">'+
+        '<div class="avatar" style="background:'+col2+';width:52px;height:52px;font-size:18px;flex-shrink:0">'+ini+'</div>'+
+        '<div><div style="font-weight:900;font-size:17px">'+p.nombre+'</div>'+
+          '<div style="display:flex;gap:6px;align-items:center;margin-top:4px">'+
+            '<span style="background:'+tipoColor+';color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">'+tipoLabel+'</span>'+
+            socioBadge+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      statsH+
+      '<div style="background:#f9fafb;border-radius:12px;padding:0 12px">'+
+        row("RUT",p.rut||"—")+
+        row("Teléfono",p.tel?'<a href="tel:'+p.tel+'" style="color:var(--verde-mid)">'+p.tel+'</a>':"—")+
+        row("Email",p.email||"—")+
+        row("Nacimiento",fnacFmt+edad)+
+        row("Estilo",p.estilo||"—")+
+        row("Golpe",p.golpe||"—")+
+        row("Superficie",p.superficie||"—")+
+      '</div>'+
+      '<button class="btn sec" style="margin-top:14px" onclick="closeModal()">Cerrar</button>';
+  }catch(e){sc.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
+}
 async function guardarTipoUsuario(col,docId,selId){
   var sel=el(selId);if(!sel)return;
   var tipo=sel.value;if(!tipo){toast("Elige un tipo");return;}
