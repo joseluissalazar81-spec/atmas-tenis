@@ -148,12 +148,12 @@
         <div class="section-title">&#127931; &iquest;C&oacute;mo vas a reservar?</div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
           <button class="btn" onclick="setTipoReserva('socio_mensual')">&#127942; Socio mensualidad &mdash; incluido</button>
-          <button class="btn dark" onclick="setTipoReserva('socio_partido')">&#127934; Socio paga partido &mdash; $3.000</button>
-          <button class="btn sec" onclick="setTipoReserva('invitado')">&#128100; Invitado &mdash; $5.000</button>
-          <button class="btn sec" onclick="setTipoReserva('arriendo')">&#128197; Arriendo &mdash; $5.000</button>
+          <button class="btn dark" onclick="setTipoReserva('socio_partido')">&#127934; Socio paga partido &mdash; $15.000/hr</button>
+          <button class="btn sec" onclick="setTipoReserva('invitado')">&#128100; Invitado &mdash; $15.000/hr</button>
+          <button class="btn sec" onclick="setTipoReserva('arriendo')">&#128197; Arriendo &mdash; $15.000/hr</button>
           <button class="btn sec" onclick="setTipoReserva('academia')">&#127979; Academia</button>
         </div>
-        <p class="foot">Canchas 1-2 para socios &middot; Canchas 3-4 para arriendo e invitados</p>
+        <p class="foot">Canchas 1-2 socios &middot; Canchas 3-4 arriendo/invitados &middot; 1hr $15.000 &middot; 2hrs $25.000</p>
       </div>
       <!-- Flujo principal (tras elegir tipo) -->
       <div id="res-main" style="display:none">
@@ -177,6 +177,7 @@
         <div id="res-form" style="display:none;background:#fff;border-radius:18px;padding:16px;margin-top:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)">
           <div class="section-title" style="margin-top:0">Confirmar reserva</div>
           <div id="res-resumen" style="background:var(--verde-claro);border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;line-height:1.5"></div>
+          <div id="res-duracion"></div>
           <div class="field"><label>Tu nombre</label><input id="res-nombre" placeholder="Juan P&eacute;rez"></div>
           <div class="field"><label>Tel&eacute;fono</label><input id="res-tel" type="tel" placeholder="+569 XXXX XXXX"></div>
           <div id="res-monto" style="font-size:15px;font-weight:700;color:var(--verde-osc);margin-bottom:14px"></div>
