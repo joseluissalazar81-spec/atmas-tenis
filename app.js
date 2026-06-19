@@ -628,10 +628,48 @@ const torneos=[
   var tl=el("torneos-list");if(!tl)return;
   var th="";
   torneos.forEach(function(t,i){
-    var bloqueado=t.c==="Cerrado";
-    th+='<div class="tcard"><div class="tn">'+t.n+'</div><div class="tm">'+t.f+'</div><div class="trow"><span class="price">'+t.p+'</span><span class="cupos" style="'+(bloqueado?'background:#fee2e2;color:#b91c1c':'')+'">'+t.c+'</span>'+(bloqueado?'<button class="mini" disabled style="opacity:.4">Cerrado</button>':'<button class="mini wa" onclick="openModal(\'torneo\','+i+')">Inscribirme</button>')+'</div></div>';
+    var cerrado=t.c==="Cerrado";
+    var sinCupos=!cerrado&&t.c&&parseInt(t.c)===0;
+    var bloqueado=cerrado||sinCupos;
+    // Estado visual
+    var estadoBg=bloqueado?"#f1f5f9":"var(--verde-claro)";
+    var estadoColor=bloqueado?"#94a3b8":"var(--verde-osc)";
+    var estadoLabel=cerrado?"Cerrado":sinCupos?"Cupo completo":t.c;
+    var estadoDot=bloqueado?'#94a3b8':'#22c55e';
+    th+=
+      '<div style="background:#fff;border-radius:20px;margin-bottom:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)">'+
+        // Franja de color superior según estado
+        '<div style="height:5px;background:'+(bloqueado?'#e2e8f0':'linear-gradient(90deg,var(--verde),var(--lima))')+'"></div>'+
+        '<div style="padding:18px">'+
+          // Encabezado: nombre + badge estado
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">'+
+            '<div style="font-weight:900;font-size:16px;color:var(--texto);line-height:1.25;flex:1">'+t.n+'</div>'+
+            '<span style="background:'+estadoBg+';color:'+estadoColor+';font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;display:flex;align-items:center;gap:5px">'+
+              '<span style="width:6px;height:6px;border-radius:50%;background:'+estadoDot+';display:inline-block"></span>'+estadoLabel+
+            '</span>'+
+          '</div>'+
+          // Fecha e info
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:14px">'+
+            '<span style="font-size:15px">📅</span>'+
+            '<span style="font-size:13px;color:var(--suave)">'+t.f+'</span>'+
+          '</div>'+
+          // Separador
+          '<div style="border-top:1px solid var(--linea);margin-bottom:14px"></div>'+
+          // Precio + botón
+          '<div style="display:flex;align-items:center;justify-content:space-between">'+
+            '<div>'+
+              '<div style="font-size:11px;color:var(--suave);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Inscripción</div>'+
+              '<div style="font-size:22px;font-weight:900;color:var(--verde-osc)">'+t.p+'</div>'+
+            '</div>'+
+            (bloqueado
+              ? '<span style="background:#f1f5f9;color:#94a3b8;font-size:13px;font-weight:700;padding:12px 20px;border-radius:14px">'+(cerrado?"Cerrado":"Sin cupos")+'</span>'
+              : '<button class="mini wa" style="padding:12px 20px;font-size:14px;border-radius:14px" onclick="openModal(\'torneo\','+i+')">Inscribirme →</button>'
+            )+
+          '</div>'+
+        '</div>'+
+      '</div>';
   });
-  tl.innerHTML=th;
+  tl.innerHTML=th||'<p class="hint">Sin torneos disponibles</p>';
 })();
 
 async function cargarInscripciones(){
