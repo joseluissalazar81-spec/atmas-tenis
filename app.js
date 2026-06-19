@@ -9,6 +9,66 @@ function setVista(v){
   if(v==="h2h")initH2H();
   if(v==="partidos")cargarPartidosPublicos();
 }
+async function verPerfilPublico(nombre){
+  var sc=el("sheet-content");var mo=el("modal");if(!sc||!mo)return;
+  sc.innerHTML='<p class="hint">Cargando...</p>';mo.classList.add("show");
+  var p=rankingData.find(function(r){return r[0]===nombre;});
+  if(!p){sc.innerHTML='<p class="hint">Jugador no encontrado</p>';return;}
+  var pos=rankingData.slice().sort(function(a,b){return b[1]-a[1];}).findIndex(function(r){return r[0]===nombre;})+1;
+  var col=avatarColor(nombre);var ini=initials(nombre);
+  var cat=CAT_A.indexOf(nombre)!==-1?'Categoría A':CAT_B.indexOf(nombre)!==-1?'Categoría B':'';
+  var socioBadge=p[7]===true?'<span style="background:#15803d;color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800;margin-left:6px">SOCIO ✓</span>':"";
+  sc.innerHTML=
+    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">'+
+      '<div class="avatar" style="background:'+col+';width:56px;height:56px;font-size:20px;flex-shrink:0">'+ini+'</div>'+
+      '<div>'+
+        '<div style="font-weight:900;font-size:18px">'+nombre+socioBadge+'</div>'+
+        '<div style="font-size:12px;color:var(--suave);margin-top:3px">'+(cat?cat+' · ':'')+' Puesto #'+pos+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">'+
+      '<div style="text-align:center;background:var(--verde-claro);border-radius:12px;padding:10px 4px">'+
+        '<div style="font-size:22px;font-weight:900;color:var(--verde-mid)">'+p[1]+'</div>'+
+        '<div style="font-size:9px;color:var(--suave);font-weight:600">PTS</div></div>'+
+      '<div style="text-align:center;background:#f0fdf4;border-radius:12px;padding:10px 4px">'+
+        '<div style="font-size:22px;font-weight:900;color:#15803d">'+p[3]+'</div>'+
+        '<div style="font-size:9px;color:var(--suave);font-weight:600">WINS</div></div>'+
+      '<div style="text-align:center;background:#fef2f2;border-radius:12px;padding:10px 4px">'+
+        '<div style="font-size:22px;font-weight:900;color:#dc2626">'+p[4]+'</div>'+
+        '<div style="font-size:9px;color:var(--suave);font-weight:600">LOST</div></div>'+
+      '<div style="text-align:center;background:#f8fafc;border-radius:12px;padding:10px 4px">'+
+        '<div style="font-size:20px;font-weight:900;color:#1e3a5f">'+p[5]+'%</div>'+
+        '<div style="font-size:9px;color:var(--suave);font-weight:600">PCT</div></div>'+
+    '</div>'+
+    '<div class="section-title" style="margin-top:0">Partidos jugados</div>'+
+    '<div id="perfil-pub-partidos"><p class="hint">Cargando...</p></div>'+
+    '<button class="btn sec" style="margin-top:12px" onclick="closeModal()">Cerrar</button>';
+  // Cargar partidos del jugador
+  try{
+    var snap=await db.collection("partidos_atmas").where("estado","==","aprobado").get();
+    var partidos=[];
+    snap.forEach(function(doc){var d=doc.data();if(d.jugador1===nombre||d.jugador2===nombre)partidos.push(d);});
+    partidos.sort(function(a,b){return(b.fecha||"")>(a.fecha||"")?1:-1;});
+    var pp=el("perfil-pub-partidos");if(!pp)return;
+    if(!partidos.length){pp.innerHTML='<p class="hint">Sin partidos registrados aún</p>';return;}
+    var h="";
+    partidos.forEach(function(r){
+      var gano=r.ganador===nombre;
+      var rival=gano?r.perdedor:r.ganador;
+      var fechaFmt=r.fecha?r.fecha.split("-").reverse().join("/"):"-";
+      h+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6">'+
+        '<div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;background:'+(gano?"#dcfce7":"#fee2e2")+';color:'+(gano?"#15803d":"#dc2626")+'">'+(gano?"W":"L")+'</div>'+
+        '<div style="flex:1">'+
+          '<div style="font-size:13px;font-weight:700">'+(gano?"vs ":"vs ")+rival+'</div>'+
+          '<div style="font-size:11px;color:var(--suave)">'+(r.sets||"—")+' · '+fechaFmt+'</div>'+
+        '</div>'+
+        '<div style="font-size:11px;font-weight:700;color:'+(gano?"#15803d":"#dc2626")+'">'+(gano?"Ganó":"Perdió")+'</div>'+
+      '</div>';
+    });
+    pp.innerHTML=h;
+  }catch(e){var pp2=el("perfil-pub-partidos");if(pp2)pp2.innerHTML='<p class="hint">Error al cargar partidos</p>';}
+}
+
 async function cargarPartidosPublicos(){
   var cont=el("lista-partidos-publica");if(!cont)return;
   cont.innerHTML='<p class="hint">Cargando...</p>';
@@ -168,7 +228,7 @@ function renderRanking(){
     var cat=CAT_A.indexOf(p[0])!==-1?'<span style="font-size:9px;font-weight:700;background:var(--verde-claro);color:var(--verde-osc);border-radius:10px;padding:1px 6px;margin-left:5px">A</span>':CAT_B.indexOf(p[0])!==-1?'<span style="font-size:9px;font-weight:700;background:#e8f4fd;color:#1565c0;border-radius:10px;padding:1px 6px;margin-left:5px">B</span>':"";
     var socioBadge=p[7]===true?'<span style="font-size:9px;font-weight:800;background:#15803d;color:#fff;border-radius:10px;padding:1px 7px;margin-left:5px">SOCIO ✓</span>':"";
     var itemStyle=p[7]===true?'border-left:3px solid #15803d;':'';
-    rh+='<div class="rank-item '+c+'" style="'+itemStyle+'"><div class="rank-pos">'+(i+1)+'</div><div class="avatar" style="background:'+col+'">'+ini+'</div><div class="rank-info"><div class="nm">'+p[0]+cat+socioBadge+'</div><div class="sub">'+p[3]+'G &middot; '+p[4]+'P &middot; '+p[2]+' jugados</div><div class="bar"><i style="width:'+(p[1]/maxPts*100)+'%"></i></div></div><div class="rank-pts"><div class="p">'+p[1]+'</div><div class="pct">'+p[5]+'%</div></div></div>';
+    rh+='<div class="rank-item '+c+'" style="'+itemStyle+';cursor:pointer" onclick="verPerfilPublico(\''+p[0].replace(/'/g,"\\'")+'\')"><div class="rank-pos">'+(i+1)+'</div><div class="avatar" style="background:'+col+'">'+ini+'</div><div class="rank-info"><div class="nm">'+p[0]+cat+socioBadge+'</div><div class="sub">'+p[3]+'G &middot; '+p[4]+'P &middot; '+p[2]+' jugados</div><div class="bar"><i style="width:'+(p[1]/maxPts*100)+'%"></i></div></div><div class="rank-pts"><div class="p">'+p[1]+'</div><div class="pct">'+p[5]+'%</div></div></div>';
   });
   var rl=el("ranking-list");if(rl)rl.innerHTML=rh||'<p class="hint">Sin datos</p>';
   // Actualizar tarjeta líder dinámica
