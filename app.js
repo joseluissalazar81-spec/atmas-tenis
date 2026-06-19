@@ -526,12 +526,39 @@ async function cargarMisReservas(nombre){
 async function renderPerfilAdmin(p,pBody){
   try{
     var hoy=new Date().toISOString().split("T")[0];
-    pBody.innerHTML='<div style="background:linear-gradient(135deg,var(--verde-osc),var(--verde-mid));border-radius:20px;padding:18px;color:#fff;margin-bottom:14px"><div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><div class="avatar" style="background:rgba(255,255,255,.25);width:54px;height:54px;font-size:19px;flex-shrink:0">'+initials(p.nombre)+'</div><div style="flex:1"><div style="font-weight:900;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;opacity:.85">Director &middot; ATMAS</div></div><span style="background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700">ADMIN</span></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center"><div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 4px"><div style="font-size:22px;font-weight:800" id="pa-res-hoy">...</div><div style="font-size:10px;opacity:.85">Reservas hoy</div></div><div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 4px"><div style="font-size:22px;font-weight:800" id="pa-insc">...</div><div style="font-size:10px;opacity:.85">Inscripciones</div></div><div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 4px"><div style="font-size:18px;font-weight:800" id="pa-total">...</div><div style="font-size:10px;opacity:.85">Recaudado hoy</div></div></div></div><div class="section-title">MIS OPCIONES</div><div style="display:flex;flex-direction:column;gap:8px"><button class="btn" style="font-size:15px;padding:14px" onclick="go(\'admin\')">&#128197; Gestionar actividades del dia</button><button class="btn dark" onclick="openModal(\'jugador\')">+ Agregar jugador al ranking</button><button class="btn dark" onclick="openModal(\'partido\')">+ Registrar partido</button><button class="btn sec" onclick="go(\'cancha\')">Reservar cancha</button><button class="btn sec" style="font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesion</button></div><p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
+    var statStyle='background:rgba(255,255,255,.15);border-radius:12px;padding:10px 4px;cursor:pointer;transition:.15s';
+    pBody.innerHTML='<div style="background:linear-gradient(135deg,var(--verde-osc),var(--verde-mid));border-radius:20px;padding:18px;color:#fff;margin-bottom:14px">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'+
+      '<div class="avatar" style="background:rgba(255,255,255,.25);width:54px;height:54px;font-size:19px;flex-shrink:0">'+initials(p.nombre)+'</div>'+
+      '<div style="flex:1"><div style="font-weight:900;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;opacity:.85">Director &middot; ATMAS</div></div>'+
+      '<span style="background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700">ADMIN</span></div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">'+
+      '<div style="'+statStyle+'" onclick="go(\'admin\')" title="Ver reservas">'+
+        '<div style="font-size:22px;font-weight:800" id="pa-res-hoy">...</div>'+
+        '<div style="font-size:10px;opacity:.85">Reservas hoy</div></div>'+
+      '<div style="'+statStyle+'" onclick="go(\'admin\')" title="Ver inscripciones">'+
+        '<div style="font-size:22px;font-weight:800" id="pa-insc">...</div>'+
+        '<div style="font-size:10px;opacity:.85">Inscripciones</div></div>'+
+      '<div style="'+statStyle+'" onclick="go(\'admin\')" title="Ver recaudado">'+
+        '<div style="font-size:18px;font-weight:800" id="pa-total">...</div>'+
+        '<div style="font-size:10px;opacity:.85">Recaudado hoy</div>'+
+        '<div style="font-size:9px;opacity:.65">confirmadas</div></div>'+
+      '</div></div>'+
+      '<div class="section-title">MIS OPCIONES</div>'+
+      '<div style="display:flex;flex-direction:column;gap:8px">'+
+      '<button class="btn" style="font-size:15px;padding:14px" onclick="go(\'admin\')">&#128197; Gestionar actividades del d&iacute;a</button>'+
+      '<button class="btn dark" onclick="openModal(\'jugador\')">+ Agregar jugador al ranking</button>'+
+      '<button class="btn dark" onclick="openModal(\'partido\')">+ Registrar partido</button>'+
+      '<button class="btn sec" onclick="go(\'cancha\')">Reservar cancha</button>'+
+      '<button class="btn sec" style="font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesi&oacute;n</button></div>'+
+      '<p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
     var snapHoy=await db.collection("reservas").where("fecha","==",hoy).get();
-    var resHoy=[];snapHoy.forEach(function(d){resHoy.push(d.data());});
+    var resHoy=[];snapHoy.forEach(function(d){var r=d.data();if(r.estado!=="cancelada")resHoy.push(r);});
     var erh=el("pa-res-hoy");var etotal=el("pa-total");
     if(erh)erh.textContent=resHoy.length;
-    if(etotal)etotal.textContent="$"+resHoy.reduce(function(s,r){return s+(r.monto||0);},0).toLocaleString("es-CL");
+    // Solo contar como recaudado las que están confirmadas_pagadas (transferencia verificada por admin)
+    var recaudado=resHoy.filter(function(r){return r.estado==="confirmada_pagada";}).reduce(function(s,r){return s+(r.monto||0);},0);
+    if(etotal)etotal.textContent=recaudado>0?"$"+recaudado.toLocaleString("es-CL"):"$0";
     var snap3=await db.collection("inscripciones_atmas").get();
     var einsc=el("pa-insc");if(einsc)einsc.textContent=snap3.size;
   }catch(e){console.warn("renderPerfilAdmin error:",e);}
