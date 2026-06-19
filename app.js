@@ -843,6 +843,8 @@ function openModal(tipo,idx){
       var plan=planes[idx]||planes.individual;
       var optsHtml=plan.opciones.map(function(o){return'<option value="'+o.v+'">'+o.l+' &middot; $'+o.v.toLocaleString("es-CL")+'</option>';}).join("");
       html='<h3>Inscripcion &middot; '+plan.t+'</h3><div class="field"><label>Nombre</label><input id="cls-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>Plan</label><select id="cls-plan" onchange="actualizarPagoClase()">'+optsHtml+'</select></div><div id="cls-pago"></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';setTimeout(actualizarPagoClase,50);
+    }else if(tipo==="oferta-dunlop"){
+      html='<h3>🎾 Tarro Dunlop FORT</h3><div style="background:#f0fdf4;border-radius:12px;padding:14px;margin-bottom:16px"><div style="font-weight:700;font-size:15px;color:#1a2e1a">All Court · 3 pelotas</div><div style="font-size:22px;font-weight:900;color:var(--verde-osc);margin-top:4px">$10.500</div></div><div class="field"><label>Tu nombre</label><input id="dun-nombre" placeholder="Ej: Juan Pérez"></div><div class="field"><label>Cantidad</label><input id="dun-cant" type="number" min="1" value="1"></div><button class="btn wa" onclick="pedirDunlopWA()">📲 Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
     }else if(tipo==="encordado"){
       html='<h3>Solicitar encordado ATMAS</h3><div class="field"><label>Tu nombre</label><input id="enc-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>Tipo</label><select id="enc-tipo"><option>Control</option><option>Competencia</option><option>Potencia</option><option>Hibrido</option></select></div><button class="btn wa" onclick="enviarEncordadoWA()">Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
     }else if(tipo==="partido"){
@@ -879,6 +881,7 @@ function openModal(tipo,idx){
 }
 
 function actualizarPagoClase(){var sel=el("cls-plan");if(!sel)return;var monto=parseInt(sel.value);var ecp=el("cls-pago");if(ecp)ecp.innerHTML=pagoHTML(monto,"inscripcion academia",MP.inscripcion);}
+function pedirDunlopWA(){var nombre=((el("dun-nombre")||{}).value||"").trim();var cant=((el("dun-cant")||{}).value)||"1";var msg=encodeURIComponent("Hola ATMAS! Quiero pedir "+cant+" tarro(s) Dunlop FORT. Nombre: "+(nombre||"sin indicar"));closeModal();window.open("https://wa.me/56956343558?text="+msg,"_blank");}
 function enviarEncordadoWA(){var nombre=((el("enc-nombre")||{}).value||"").trim();var tipo=(el("enc-tipo")||{}).value||"Control";var msg=encodeURIComponent("Hola ATMAS! Quiero solicitar encordado. Nombre: "+(nombre||"sin indicar")+" Tipo: "+tipo);closeModal();window.open("https://wa.me/56956343558?text="+msg,"_blank");}
 
 async function confirmarJugador(){
