@@ -2487,7 +2487,7 @@ async function renderAdminTipos(){
       var tipoLabel=tipoActual?(tipos[tipoActual]||tipoActual):"Sin asignar";
       var socioBadge=p.socio?'<span style="background:#15803d;color:#fff;border-radius:8px;padding:1px 7px;font-size:9px;font-weight:800;margin-left:6px">SOCIO ✓</span>':"";
       var jugadorRank=rankingData.find(function(r){return r[0].toLowerCase()===(p.nombre||"").toLowerCase();});
-      html+='<div class="lcard" style="flex-direction:column;gap:0;padding:12px 14px;cursor:pointer" onclick="verPerfilAdmin('+JSON.stringify(docId)+','+JSON.stringify(p._col)+')" >'+
+      html+='<div class="lcard" style="flex-direction:column;gap:0;padding:12px 14px;cursor:pointer" onclick="verPerfilAdmin(\''+docId.replace(/'/g,"\\'")+'\',\''+p._col+'\')" >'+
         '<div style="display:flex;align-items:center;gap:10px">'+
           '<div class="avatar" style="background:'+col+';width:36px;height:36px;font-size:13px;flex-shrink:0">'+ini+'</div>'+
           '<div style="flex:1">'+
