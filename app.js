@@ -657,41 +657,21 @@ const torneos=[
     var cerrado=t.c==="Cerrado";
     var sinCupos=!cerrado&&t.c&&parseInt(t.c)===0;
     var bloqueado=cerrado||sinCupos;
-    // Estado visual
-    var estadoBg=bloqueado?"#f1f5f9":"var(--verde-claro)";
-    var estadoColor=bloqueado?"#94a3b8":"var(--verde-osc)";
     var estadoLabel=cerrado?"Cerrado":sinCupos?"Cupo completo":t.c;
-    var estadoDot=bloqueado?'#94a3b8':'#22c55e';
-    var clickAttr=bloqueado?'':' onclick="openModal(\'torneo\','+i+')" style="cursor:pointer" role="button" tabindex="0"';
     th+=
-      '<div'+clickAttr+' style="background:#fff;border-radius:20px;margin-bottom:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);transition:transform .1s,box-shadow .1s;'+(bloqueado?'opacity:.75':'active:transform:scale(.98)')+'" '+(bloqueado?'':'onmousedown="this.style.transform=\'scale(.98)\'" onmouseup="this.style.transform=\'\'" ontouchstart="this.style.transform=\'scale(.98)\'" ontouchend="this.style.transform=\'\'"')+'>'+
-        // Franja de color superior
-        '<div style="height:5px;background:'+(bloqueado?'#e2e8f0':'linear-gradient(90deg,var(--verde),var(--lima))')+'"></div>'+
-        '<div style="padding:14px">'+
-          // Encabezado: nombre + badge
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">'+
-            '<div style="font-weight:800;font-size:14px;color:var(--texto);line-height:1.25;flex:1">'+t.n+'</div>'+
-            '<span style="background:'+estadoBg+';color:'+estadoColor+';font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;display:flex;align-items:center;gap:4px">'+
-              '<span style="width:5px;height:5px;border-radius:50%;background:'+estadoDot+';display:inline-block"></span>'+estadoLabel+
-            '</span>'+
-          '</div>'+
-          // Fecha
-          '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px">'+
-            '<span style="font-size:13px">📅</span>'+
-            '<span style="font-size:12px;color:var(--suave)">'+t.f+'</span>'+
-          '</div>'+
-          '<div style="border-top:1px solid var(--linea);margin-bottom:10px"></div>'+
-          // Precio + CTA
-          '<div style="display:flex;align-items:center;justify-content:space-between">'+
-            '<div>'+
-              '<div style="font-size:10px;color:var(--suave);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Inscripción</div>'+
-              '<div style="font-size:17px;font-weight:800;color:var(--verde-osc)">'+t.p+'</div>'+
-            '</div>'+
-            (bloqueado
-              ? '<span style="background:#f1f5f9;color:#94a3b8;font-size:12px;font-weight:700;padding:8px 14px;border-radius:12px">'+(cerrado?"Cerrado":"Sin cupos")+'</span>'
-              : '<span style="background:var(--verde-osc);color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:12px;pointer-events:none">Ver más →</span>'
-            )+
-          '</div>'+
+      '<div class="tcard" '+(bloqueado
+        ?'style="opacity:.6;border-left-color:#cbd5e1;pointer-events:none"'
+        :'onclick="openModal(\'torneo\','+i+')" style="cursor:pointer" ontouchstart="this.style.opacity=\'.8\'" ontouchend="this.style.opacity=\'1\'"'
+      )+'>'+
+        '<div class="tn">'+t.n+'</div>'+
+        '<div class="tm">&#128197; '+t.f+'</div>'+
+        '<div class="trow">'+
+          '<span class="price">'+t.p+'</span>'+
+          (bloqueado
+            ?'<span class="cupos" style="background:#f1f5f9;color:#94a3b8">'+estadoLabel+'</span>'
+            :'<span class="cupos">'+estadoLabel+'</span>'
+          )+
+          (bloqueado?'':'<button class="mini wa" style="margin-left:auto;pointer-events:none">Ver m&aacute;s &rarr;</button>')+
         '</div>'+
       '</div>';
   });
