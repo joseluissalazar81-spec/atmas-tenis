@@ -1,5 +1,5 @@
 function toast(m){var t=document.getElementById("toast");if(!t)return;t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("show");},3000);}
-function go(s){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});var sc=document.getElementById(s);if(sc)sc.classList.add("active");document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.s===s);});var ct=document.querySelector(".content");if(ct)ct.scrollTop=0;if(s==="perfil")renderPerfil();if(s==="admin")renderAdmin();if(s==="cancha")renderCalendario();if(s==="mis-reservas")renderMisReservas();}
+function go(s){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});var sc=document.getElementById(s);if(sc)sc.classList.add("active");document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.s===s);});var ct=document.querySelector(".content");if(ct)ct.scrollTop=0;if(s==="perfil")renderPerfil();if(s==="admin")renderAdmin();if(s==="cancha")renderCalendario();if(s==="mis-reservas")renderMisReservas();if(s==="academia"){renderProgramasAcademia();var _p=getPerfil();if(_p&&_p.nombre)cargarPortafolioAlumno(_p.nombre);}}
 function closeModal(){var m=document.getElementById("modal");if(m)m.classList.remove("show");}
 function setVista(v){
   ["rank","h2h","cuadro"].forEach(function(k){
@@ -985,7 +985,8 @@ async function renderAdmin(){
     '<button id="atab-ranking" onclick="adminTab(this,\'ranking\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">📊 Ranking</button>'+
     '<button id="atab-agenda" onclick="adminTab(this,\'agenda\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">📅 Agenda</button>'+
     '<button id="atab-config" onclick="adminTab(this,\'config\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">⚙️ Config</button>'+
-    '<button id="atab-ingresos" onclick="adminTab(this,\'ingresos\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid);grid-column:1/-1">💰 Ingresos</button>'+
+    '<button id="atab-ingresos" onclick="adminTab(this,\'ingresos\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">💰 Ingresos</button>'+
+    '<button id="atab-evaluar" onclick="adminTab(this,\'evaluar\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">&#128104;&#8205;&#127979; Evaluar</button>'+
     '</div>';
   h+='<div id="admin-tab-reservas"><div class="section-title">Reservas de canchas</div><div id="admin-reservas-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-sanciones" style="display:none"><div class="section-title">Sanciones activas</div><div id="admin-sanciones-cont"><p class="hint">Cargando...</p></div></div>';
@@ -1009,6 +1010,7 @@ async function renderAdmin(){
   h+='<button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div></div>';
   h+='<div id="admin-tab-agenda" style="display:none"><div class="admin-section"><div class="section-title">📅 Agenda Clases Individuales</div><div id="admin-slots-cont"><p class="hint">Cargando...</p></div></div></div>';
   h+='<div id="admin-tab-config" style="display:none"><div id="admin-config-cont"><p class="hint">Cargando...</p></div></div>';
+  h+='<div id="admin-tab-evaluar" style="display:none"><div class="admin-section"><div class="section-title">&#128104;&#8205;&#127979; Evaluar Alumnos</div><div id="admin-evaluar-cont"><p class="hint">Cargando...</p></div></div></div>';
   h+='<div id="admin-tab-ingresos" style="display:none"><div class="admin-section">'+
     '<div class="section-title">💰 Informe de Ingresos</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
@@ -1027,7 +1029,7 @@ async function renderAdmin(){
 }
 
 function adminTab(el_,tab){if(tab===undefined){tab=el_;}
-  ["reservas","sanciones","torneos","ranking","agenda","config","ingresos"].forEach(function(t){
+  ["reservas","sanciones","torneos","ranking","agenda","config","ingresos","evaluar"].forEach(function(t){
     var div=el("admin-tab-"+t);if(div)div.style.display=t===tab?"":"none";
     var btn=el("atab-"+t);if(btn){btn.style.background=t===tab?"var(--verde)":"#fff";btn.style.color=t===tab?"#fff":"var(--verde-mid)";}
   });
@@ -1037,6 +1039,7 @@ function adminTab(el_,tab){if(tab===undefined){tab=el_;}
   if(tab==="config"){renderAdminConfig();setTimeout(cargarCodigosLista,300);}
   if(tab==="torneos"){loadAdminTorneos();cargarListaTorneos();}
   if(tab==="ingresos")iniciarInformeIngresos();
+  if(tab==="evaluar")renderAdminEvaluar();
 }
 function iniciarInformeIngresos(){
   var hoy=new Date().toISOString().split("T")[0];
@@ -2572,4 +2575,318 @@ async function guardarTipoUsuario(col,docId,selId){
       toast("Tipo asignado: "+(CONFIG_RES.labelTipo[tipo]||tipo));
     }else{toast("Error: "+e.message);}
   }
+}
+
+/* ─── CATÁLOGO DE PROGRAMAS FORMATIVOS ───────────────────────── */
+var PROGRAMAS_ACADEMIA=[
+  {
+    id:"escuela_ninos",
+    nombre:"Escuela Niños",
+    emoji:"👦",
+    color:"#f59e0b",
+    duracion:"3 meses",
+    edadTarget:"5 - 12 años",
+    horariosEjemplo:"Sáb 09:30-11:00 · Mié 16:00-17:30",
+    objetivos:["Desarrollar coordinación motriz y psicomotricidad","Aprender los golpes básicos con pelota roja y naranja","Fomentar el amor por el tenis y el deporte en equipo","Crear hábitos de esfuerzo, disciplina y fair play"],
+    resultadosEsperados:["Ejecuta rally de derecha con consistencia de 5+ pelotas","Controla el bote de pelota roja/naranja con ambas manos","Conoce las reglas básicas y el puntaje del tenis","Se desplaza lateral y frontalmente de forma coordinada"],
+    planSemanal:[
+      {dia:"Lunes",actividad:"Coordinación y calentamiento lúdico"},
+      {dia:"Miércoles",actividad:"Fundamentos de derecha y revés (pelota roja)"},
+      {dia:"Viernes",actividad:"Juegos de puntería y mini-partidos"},
+      {dia:"Sábado",actividad:"Rally libre, saque y juego competitivo adaptado"}
+    ],
+    rubricas:["Saque","Derecha","Revés","Volea","Desplazamiento","Táctica","Mentalidad"]
+  },
+  {
+    id:"adultos_iniciacion",
+    nombre:"Adultos Iniciación",
+    emoji:"🎾",
+    color:"#3b82f6",
+    duracion:"3 meses",
+    edadTarget:"Adultos principiantes",
+    horariosEjemplo:"Lun 19:00-20:30 · Jue 19:00-20:30",
+    objetivos:["Aprender los fundamentos técnicos del tenis desde cero","Desarrollar consistencia en rally de fondo de cancha","Comprender el sistema de puntaje y las reglas del juego","Ganar confianza para jugar partidos amistosos"],
+    resultadosEsperados:["Mantiene rally cruzado de derecha de 8+ pelotas","Sirve con movimiento técnico básico correctamente","Comprende y aplica el puntaje durante el juego","Juega partidos completos con reglas reales"],
+    planSemanal:[
+      {dia:"Lunes",actividad:"Calentamiento y trabajo técnico de derecha"},
+      {dia:"Martes",actividad:"Revés y movimiento lateral"},
+      {dia:"Jueves",actividad:"Saque y devolución"},
+      {dia:"Sábado",actividad:"Juego libre supervisado y correcciones"}
+    ],
+    rubricas:["Saque","Derecha","Revés","Volea","Desplazamiento","Táctica","Mentalidad"]
+  },
+  {
+    id:"perfeccionamiento",
+    nombre:"Perfeccionamiento",
+    emoji:"⬆️",
+    color:"#8b5cf6",
+    duracion:"3 meses",
+    edadTarget:"Nivel intermedio",
+    horariosEjemplo:"Mar 18:30-20:00 · Jue 18:30-20:00 · Sáb 08:00-09:30",
+    objetivos:["Incorporar patrones tácticos de juego ofensivo y defensivo","Mejorar la técnica del saque con mayor velocidad y variedad","Desarrollar consistencia bajo presión de puntos reales","Construir puntos con criterio desde la línea de base"],
+    resultadosEsperados:["Ejecuta punto ganador con approach y volea en 60%+ de los intentos","Sirve primero con 60%+ de efectividad","Construye puntos con variación de ritmo y dirección","Mantiene concentración táctica durante sets completos"],
+    planSemanal:[
+      {dia:"Martes",actividad:"Patrones tácticos de fondo: cruzado y línea"},
+      {dia:"Jueves",actividad:"Saque + approach + volea (punto construido)"},
+      {dia:"Viernes",actividad:"Juego de presión: tie-breaks y situaciones de partido"},
+      {dia:"Sábado",actividad:"Partido supervisado con análisis y corrección"}
+    ],
+    rubricas:["Saque","Derecha","Revés","Volea","Desplazamiento","Táctica","Mentalidad"]
+  },
+  {
+    id:"competencia",
+    nombre:"Competencia",
+    emoji:"🏆",
+    color:"#ef4444",
+    duracion:"3 meses",
+    edadTarget:"Nivel avanzado",
+    horariosEjemplo:"Lun 18:30-20:00 · Mié 18:30-20:00 · Sáb 08:00-10:00",
+    objetivos:["Preparar al jugador para torneos y competencia real","Desarrollar mentalidad competitiva y gestión de la presión","Perfeccionar golpes específicos y situaciones de match play","Analizar el juego propio y del rival para adaptar táctica"],
+    resultadosEsperados:["Compite en torneos internos con autonomía táctica","Gestiona situaciones de presión (break point, tie-break) con calma","Ejecuta plan de juego adaptado al rival","Muestra liderazgo emocional en momentos clave del partido"],
+    planSemanal:[
+      {dia:"Lunes",actividad:"Entrenamiento físico-técnico de alta intensidad"},
+      {dia:"Miércoles",actividad:"Match play: situaciones específicas de partido"},
+      {dia:"Viernes",actividad:"Video análisis y preparación táctica"},
+      {dia:"Sábado",actividad:"Torneo interno o sparring supervisado"}
+    ],
+    rubricas:["Saque","Derecha","Revés","Volea","Desplazamiento","Táctica","Mentalidad"]
+  }
+];
+
+var RUBRICA_LABELS={1:"Iniciando",2:"En proceso",3:"Logrado",4:"Destacado"};
+var RUBRICA_COLORS={1:"#9ca3af",2:"#f59e0b",3:"#84cc16",4:"#16a34a"};
+
+function renderProgramasAcademia(){
+  var cont=el("programas-list");if(!cont)return;
+  try{
+    var h="";
+    PROGRAMAS_ACADEMIA.forEach(function(prog){
+      h+='<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:4px solid '+prog.color+'">'+
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">'+
+          '<div>'+
+            '<div style="font-size:15px;font-weight:800;color:#1f2937">'+prog.emoji+' '+prog.nombre+'</div>'+
+            '<div style="font-size:11px;color:#6b7280;margin-top:2px">'+prog.edadTarget+'</div>'+
+          '</div>'+
+          '<span style="background:'+prog.color+'22;color:'+prog.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0">'+prog.duracion+'</span>'+
+        '</div>'+
+        '<ul style="margin:0 0 10px 16px;padding:0;list-style:disc">'+
+          prog.objetivos.slice(0,3).map(function(o){return'<li style="font-size:12px;color:#4b5563;margin-bottom:3px">'+o+'</li>';}).join('')+
+        '</ul>'+
+        '<button class="mini" onclick="verDetallePrograma(\''+prog.id+'\')" style="background:'+prog.color+';color:#fff;border:none;font-size:11px;padding:6px 14px;border-radius:20px;cursor:pointer;font-weight:700">Ver detalle &rarr;</button>'+
+      '</div>';
+    });
+    cont.innerHTML=h||'<p class="hint">Sin programas</p>';
+  }catch(e){console.warn("renderProgramasAcademia error:",e);}
+}
+
+function verDetallePrograma(id){
+  var prog=PROGRAMAS_ACADEMIA.find(function(p){return p.id===id;});
+  if(!prog)return;
+  var sc=el("sheet-content");var mo=el("modal");if(!sc||!mo)return;
+  function showTab(t){
+    ["programa","plan","rubricas"].forEach(function(k){
+      var d=el("ptab-cont-"+k);if(d)d.style.display=k===t?"":"none";
+      var b=el("ptab-btn-"+k);if(b){b.style.background=k===t?prog.color:"#f3f4f6";b.style.color=k===t?"#fff":"#374151";}
+    });
+  }
+  window._showProgTab=showTab;
+  var html=
+    '<div style="background:linear-gradient(135deg,'+prog.color+','+prog.color+'cc);border-radius:16px;padding:18px;margin-bottom:16px;color:#fff">'+
+      '<div style="font-size:32px;margin-bottom:6px">'+prog.emoji+'</div>'+
+      '<div style="font-size:20px;font-weight:900;line-height:1.1">'+prog.nombre+'</div>'+
+      '<div style="font-size:12px;opacity:.85;margin-top:4px">'+prog.edadTarget+' · '+prog.duracion+'</div>'+
+      '<div style="font-size:11px;opacity:.75;margin-top:4px">'+prog.horariosEjemplo+'</div>'+
+    '</div>'+
+    // Tabs
+    '<div style="display:flex;gap:6px;margin-bottom:14px">'+
+      '<button id="ptab-btn-programa" onclick="window._showProgTab(\'programa\')" style="flex:1;border:none;border-radius:20px;padding:8px 4px;font-size:11px;font-weight:700;cursor:pointer;background:'+prog.color+';color:#fff">📋 Programa</button>'+
+      '<button id="ptab-btn-plan" onclick="window._showProgTab(\'plan\')" style="flex:1;border:none;border-radius:20px;padding:8px 4px;font-size:11px;font-weight:700;cursor:pointer;background:#f3f4f6;color:#374151">📅 Plan semanal</button>'+
+      '<button id="ptab-btn-rubricas" onclick="window._showProgTab(\'rubricas\')" style="flex:1;border:none;border-radius:20px;padding:8px 4px;font-size:11px;font-weight:700;cursor:pointer;background:#f3f4f6;color:#374151">🎯 Rúbricas</button>'+
+    '</div>'+
+    // Tab: Programa
+    '<div id="ptab-cont-programa">'+
+      '<div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Objetivos</div>'+
+      prog.objetivos.map(function(o){return'<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:'+prog.color+';font-size:14px;flex-shrink:0">✓</span><span style="font-size:13px;color:#374151">'+o+'</span></div>';}).join('')+
+      '<div style="font-size:12px;font-weight:800;color:#374151;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.5px">Resultados esperados</div>'+
+      prog.resultadosEsperados.map(function(r){return'<div style="display:flex;gap:8px;margin-bottom:6px"><span style="font-size:14px;flex-shrink:0">⭐</span><span style="font-size:13px;color:#374151">'+r+'</span></div>';}).join('')+
+    '</div>'+
+    // Tab: Plan semanal
+    '<div id="ptab-cont-plan" style="display:none">'+
+      '<div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Plan semanal</div>'+
+      prog.planSemanal.map(function(d){return'<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border-radius:10px;margin-bottom:6px"><div style="background:'+prog.color+';color:#fff;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap;flex-shrink:0">'+d.dia+'</div><div style="font-size:13px;color:#374151">'+d.actividad+'</div></div>';}).join('')+
+    '</div>'+
+    // Tab: Rúbricas
+    '<div id="ptab-cont-rubricas" style="display:none">'+
+      '<div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Dimensiones de evaluación</div>'+
+      '<div style="background:#f0fdf4;border-radius:12px;padding:12px;margin-bottom:12px">'+
+        '<div style="font-size:12px;color:#374151;line-height:1.7">'+
+          Object.keys(RUBRICA_LABELS).map(function(k){return'<div style="display:flex;align-items:center;gap:8px;padding:3px 0"><span style="background:'+RUBRICA_COLORS[k]+';color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700">'+k+'</span><span style="font-size:12px;color:#374151">'+RUBRICA_LABELS[k]+'</span></div>';}).join('')+
+        '</div>'+
+      '</div>'+
+      prog.rubricas.map(function(r){return'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f3f4f6"><span style="font-size:13px;font-weight:700;color:#1f2937">'+r+'</span><div style="display:flex;gap:4px">'+[1,2,3,4].map(function(n){return'<span style="background:'+RUBRICA_COLORS[n]+';color:#fff;border-radius:20px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800">'+n+'</span>';}).join('')+'</div></div>';}).join('')+
+    '</div>'+
+    '<button class="btn sec" style="margin-top:16px" onclick="closeModal()">Cerrar</button>';
+  sc.innerHTML=html;
+  mo.classList.add("show");
+}
+
+/* ─── ADMIN: EVALUAR ALUMNOS ─────────────────────────────────── */
+function renderAdminEvaluar(){
+  var cont=el("admin-evaluar-cont");if(!cont)return;
+  var alumnos=rankingData.slice().sort(function(a,b){return a[0].localeCompare(b[0]);});
+  var h='<div class="field" style="margin-bottom:10px"><input id="eval-search" placeholder="Buscar alumno..." oninput="filtrarAlumnos()" style="width:100%;border:1.5px solid var(--gris);border-radius:10px;padding:9px 12px;font-size:13px;box-sizing:border-box"></div>';
+  h+='<div id="eval-alumnos-list">';
+  alumnos.forEach(function(p){
+    var col=avatarColor(p[0]);var ini=initials(p[0]);
+    h+='<div class="lcard" style="cursor:pointer" onclick="abrirEvaluacionAlumno(\''+p[0].replace(/'/g,"\\'")+'\')">'+
+      '<div class="avatar" style="background:'+col+';width:36px;height:36px;font-size:13px;flex-shrink:0">'+ini+'</div>'+
+      '<div style="flex:1"><div class="nm">'+p[0]+'</div><div class="ds">'+p[1]+' pts</div></div>'+
+      '<span style="font-size:18px;color:var(--gris)">&#8250;</span>'+
+    '</div>';
+  });
+  h+='</div>';
+  cont.innerHTML=h;
+}
+
+function filtrarAlumnos(){
+  var q=(el("eval-search")||{}).value||"";q=q.toLowerCase().trim();
+  var list=el("eval-alumnos-list");if(!list)return;
+  var items=list.querySelectorAll(".lcard");
+  items.forEach(function(item){
+    var nombre=(item.querySelector(".nm")||{}).textContent||"";
+    item.style.display=nombre.toLowerCase().includes(q)||!q?"":"none";
+  });
+}
+
+function abrirEvaluacionAlumno(nombre){
+  var sc=el("sheet-content");var mo=el("modal");if(!sc||!mo)return;
+  var progOpts=PROGRAMAS_ACADEMIA.map(function(p){return'<option value="'+p.id+'">'+p.emoji+' '+p.nombre+'</option>';}).join("");
+  var rubricas=PROGRAMAS_ACADEMIA[0].rubricas;
+  var rubricasHtml=rubricas.map(function(r,ri){
+    return'<div style="margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:#1f2937;margin-bottom:6px">'+r+'</div>'+
+      '<div style="display:flex;gap:6px">'+
+        [1,2,3,4].map(function(n){
+          return'<button id="eval-rb-'+ri+'-'+n+'" onclick="seleccionarRubrica('+ri+','+n+')" style="flex:1;height:30px;border-radius:20px;border:1.5px solid '+RUBRICA_COLORS[n]+';background:#fff;color:'+RUBRICA_COLORS[n]+';font-size:11px;font-weight:700;cursor:pointer">'+n+'</button>';
+        }).join('')+
+      '</div>'+
+    '</div>';
+  }).join("");
+  window._evalAlumno={nombre:nombre,rubricas:{},programaId:PROGRAMAS_ACADEMIA[0].id,totalRub:rubricas.length};
+  var html=
+    '<div style="font-size:17px;font-weight:900;margin-bottom:4px">Evaluar alumno</div>'+
+    '<div style="font-size:13px;color:var(--suave);margin-bottom:14px">'+nombre+'</div>'+
+    '<div class="field"><label>Programa</label><select id="eval-programa" onchange="window._evalAlumno.programaId=this.value" style="width:100%;border:1.5px solid var(--gris);border-radius:10px;padding:9px;font-size:13px">'+progOpts+'</select></div>'+
+    '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#374151;margin-bottom:10px">Rúbricas (1-4)</div>'+
+    rubricasHtml+
+    '<div class="field"><label>Observaciones del entrenador</label><textarea id="eval-obs" rows="3" style="width:100%;border:1.5px solid var(--gris);border-radius:10px;padding:9px;font-size:13px;box-sizing:border-box;resize:vertical" placeholder="Fortalezas, áreas de mejora, recomendaciones..."></textarea></div>'+
+    '<button class="btn" onclick="guardarEvaluacion(\''+nombre.replace(/'/g,"\\'")+'\')">Guardar evaluación</button>'+
+    '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
+  sc.innerHTML=html;
+  mo.classList.add("show");
+}
+
+function seleccionarRubrica(ri,valor){
+  var rubricas=PROGRAMAS_ACADEMIA[0].rubricas;
+  var rubNombre=rubricas[ri];
+  if(!window._evalAlumno)return;
+  window._evalAlumno.rubricas[rubNombre]=valor;
+  // Actualizar estilos botones de esta fila
+  [1,2,3,4].forEach(function(n){
+    var btn=el("eval-rb-"+ri+"-"+n);
+    if(!btn)return;
+    if(n===valor){
+      btn.style.background=RUBRICA_COLORS[n];
+      btn.style.color="#fff";
+    }else{
+      btn.style.background="#fff";
+      btn.style.color=RUBRICA_COLORS[n];
+    }
+  });
+}
+
+async function guardarEvaluacion(nombre){
+  if(!window._evalAlumno){toast("Error: sin datos");return;}
+  var rubricas=PROGRAMAS_ACADEMIA[0].rubricas;
+  // Verificar que todas las rúbricas tienen valor
+  var rubricasEval=window._evalAlumno.rubricas;
+  for(var i=0;i<rubricas.length;i++){
+    if(!rubricasEval[rubricas[i]]){toast("Evalúa todas las rúbricas ("+rubricas[i]+")");return;}
+  }
+  var programaId=(el("eval-programa")||{}).value||window._evalAlumno.programaId;
+  var observaciones=((el("eval-obs")||{}).value||"").trim();
+  var today=new Date().toISOString().split("T")[0];
+  try{
+    await db.collection("progreso_alumnos").doc(slugify(nombre)).set({
+      nombre:nombre,
+      programa:programaId,
+      fecha:today,
+      rubricas:rubricasEval,
+      observaciones:observaciones,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeModal();
+    toast("Evaluación guardada para "+nombre);
+  }catch(e){console.warn("guardarEvaluacion error:",e);toast("Error al guardar: "+e.message);}
+}
+
+/* ─── PORTAFOLIO DE PROGRESO DEL ALUMNO ─────────────────────── */
+async function cargarPortafolioAlumno(nombre){
+  var sec=el("mi-portafolio-section");var cont=el("mi-portafolio-cont");if(!sec||!cont)return;
+  try{
+    var snap=await db.collection("progreso_alumnos").doc(slugify(nombre)).get();
+    if(!snap.exists){sec.style.display="none";return;}
+    var data=snap.data();
+    var prog=PROGRAMAS_ACADEMIA.find(function(p){return p.id===data.programa;})||{nombre:"Programa",emoji:"🎾"};
+    var fechaFmt=data.fecha?data.fecha.split("-").reverse().join("/"):"";
+    var rubricas=PROGRAMAS_ACADEMIA[0].rubricas;
+    var rubricasData=data.rubricas||{};
+    // Calcular promedio
+    var total=0;var count=0;
+    rubricas.forEach(function(r){if(rubricasData[r]){total+=rubricasData[r];count++;}});
+    var prom=count>0?(total/count):0;
+    var motivacion=prom>=3.5?"¡Desempeño destacado! Sigue así.":prom>=2.5?"Buen progreso, cerca del objetivo.":prom>=1.5?"En camino, cada entrenamiento cuenta.":"Inicio del camino. ¡El esfuerzo da frutos!";
+    var h=
+      '<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07)">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+          '<div>'+
+            '<div style="font-size:14px;font-weight:800">'+prog.emoji+' '+prog.nombre+'</div>'+
+            '<div style="font-size:11px;color:var(--suave);margin-top:2px">Última evaluación: '+fechaFmt+'</div>'+
+          '</div>'+
+          '<div style="text-align:center;background:var(--verde-claro);border-radius:12px;padding:8px 12px">'+
+            '<div style="font-size:20px;font-weight:900;color:var(--verde-osc)">'+prom.toFixed(1)+'</div>'+
+            '<div style="font-size:9px;color:var(--suave)">PROM</div>'+
+          '</div>'+
+        '</div>'+
+        // Barras de progreso por rúbrica
+        rubricas.map(function(r){
+          var val=rubricasData[r]||0;
+          var pct=(val/4)*100;
+          var col=val===4?"#16a34a":val===3?"#84cc16":val===2?"#f59e0b":"#9ca3af";
+          var lbl=RUBRICA_LABELS[val]||"—";
+          return'<div style="margin-bottom:10px">'+
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'+
+              '<span style="font-size:12px;font-weight:700;color:#374151">'+r+'</span>'+
+              '<span style="font-size:11px;font-weight:600;color:'+col+'">'+lbl+'</span>'+
+            '</div>'+
+            '<div style="height:8px;border-radius:4px;background:#f3f4f6">'+
+              '<div style="height:8px;border-radius:4px;background:'+col+';width:'+pct+'%;transition:width .3s"></div>'+
+            '</div>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+      // Observaciones
+      (data.observaciones?
+        '<div style="background:#f0fdf4;border-radius:12px;padding:12px;margin-bottom:10px">'+
+          '<div style="font-size:11px;font-weight:800;color:var(--verde-osc);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Observaciones del entrenador</div>'+
+          '<div style="font-size:13px;color:#374151;line-height:1.6">'+data.observaciones+'</div>'+
+        '</div>'
+      :"")+
+      // Mensaje motivacional
+      '<div style="background:var(--negro);border-radius:12px;padding:12px;text-align:center">'+
+        '<div style="font-size:13px;font-weight:700;color:var(--lima)">'+motivacion+'</div>'+
+      '</div>';
+    cont.innerHTML=h;
+    sec.style.display="";
+  }catch(e){console.warn("cargarPortafolioAlumno error:",e);sec.style.display="none";}
 }
