@@ -171,6 +171,15 @@ function renderRanking(){
     rh+='<div class="rank-item '+c+'" style="'+itemStyle+'"><div class="rank-pos">'+(i+1)+'</div><div class="avatar" style="background:'+col+'">'+ini+'</div><div class="rank-info"><div class="nm">'+p[0]+cat+socioBadge+'</div><div class="sub">'+p[3]+'G &middot; '+p[4]+'P &middot; '+p[2]+' jugados</div><div class="bar"><i style="width:'+(p[1]/maxPts*100)+'%"></i></div></div><div class="rank-pts"><div class="p">'+p[1]+'</div><div class="pct">'+p[5]+'%</div></div></div>';
   });
   var rl=el("ranking-list");if(rl)rl.innerHTML=rh||'<p class="hint">Sin datos</p>';
+  // Actualizar tarjeta líder dinámica
+  if(lista.length>0){
+    var lider=lista[0];
+    var ln=el("lider-nombre");var lp=el("lider-pts");var lj=el("lider-jugados");var lpct=el("lider-pct");
+    if(ln)ln.textContent="#1 · "+lider[0];
+    if(lp)lp.textContent=lider[1];
+    if(lj)lj.textContent=lider[2];
+    if(lpct)lpct.textContent=lider[5]+"%";
+  }
 }
 
 async function actualizarStats(){

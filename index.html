@@ -114,7 +114,7 @@
     <section class="screen" id="escalerilla">
       <div class="seg"><button id="vRank" class="on" onclick="setVista('rank')">Ranking</button><button id="vH2H" onclick="setVista('h2h')">H2H</button><button id="vCuadro" onclick="setVista('cuadro')">Cuadros</button><button id="vPartidos" onclick="setVista('partidos')">Partidos</button></div>
       <div id="vista-rank">
-        <div class="mycard"><div class="pos">L&iacute;der &middot; Escalerilla Jun-Ago 2026</div><div class="name">#1 &middot; Manuel Illanes</div><div class="row"><div><span class="big">20</span><span class="cap">Puntos</span></div><div><span class="big">4</span><span class="cap">Jugados</span></div><div><span class="big">100%</span><span class="cap">Rendimiento</span></div></div></div>
+        <div class="mycard" id="mycard-lider"><div class="pos">L&iacute;der &middot; Escalerilla Jun-Ago 2026</div><div class="name" id="lider-nombre">#1 &middot; —</div><div class="row"><div><span class="big" id="lider-pts">0</span><span class="cap">Puntos</span></div><div><span class="big" id="lider-jugados">0</span><span class="cap">Jugados</span></div><div><span class="big" id="lider-pct">0%</span><span class="cap">Rendimiento</span></div></div></div>
         <button class="btn" onclick="openModal('partido')">+ Registrar partido</button>
         <button class="btn dark" onclick="openModal('jugador')">+ Agregar jugador</button>
         <div class="section-title">Ranking del club</div>
