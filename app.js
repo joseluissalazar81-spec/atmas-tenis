@@ -448,7 +448,31 @@ function renderPerfil(){
     var pct=jugador?jugador[5]:0;
     var statsHtml=jugador?'<div class="mycard" style="margin-bottom:14px"><div class="pos">Posicion #'+pos+' &middot; Escalerilla ATMAS</div><div class="name">'+p.nombre+'</div><div class="row"><div><span class="big">'+jugador[1]+'</span><span class="cap">Puntos</span></div><div><span class="big">'+jugador[3]+'</span><span class="cap">Ganados</span></div><div><span class="big">'+jugador[4]+'</span><span class="cap">Perdidos</span></div><div><span class="big">'+pct+'%</span><span class="cap">Rendimiento</span></div></div></div>':'<div class="aviso">Aun no tienes partidos en la escalerilla. Juega y sube tu ranking!</div>';
     var estiloTag=(p.estilo||p.golpe)?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+[p.estilo,p.golpe,p.superficie].filter(Boolean).map(function(x){return'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600">'+x+'</span>';}).join('')+'</div>':"";
-    pBody.innerHTML='<div style="display:flex;align-items:center;gap:13px;background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><div class="avatar" style="background:'+col+';width:54px;height:54px;font-size:19px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div style="font-weight:800;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;color:var(--suave)">RUT: '+p.rut+'</div><div style="font-size:12px;color:var(--suave);margin-top:2px">'+(p.tel||"")+' </div>'+estiloTag+'</div>'+socioTag+'</div>'+statsHtml+'<div id="mis-partidos-pend"></div><div class="section-title">Mis ultimos partidos</div><div id="historial-list"><p style="color:var(--suave);font-size:13px;padding:8px 4px">Cargando...</p></div><div class="section-title">Mis proximas reservas</div><div id="mis-reservas-list"><p style="color:var(--suave);font-size:13px;padding:8px 4px">Cargando...</p></div><button class="btn" onclick="openModal(\'partido\')">+ Registrar partido</button><button class="btn sec" style="margin-top:8px" onclick="openModal(\'caracteristicas\')">Mi estilo de juego</button><button class="btn dark" style="margin-top:8px" onclick="openModal(\'socio\')">Membresia ATMAS</button><button class="btn sec" style="margin-top:8px" onclick="go(\'cancha\')">Reservar cancha</button><button class="btn sec" style="margin-top:8px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesion</button><p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
+    pBody.innerHTML=
+      '<div style="display:flex;align-items:center;gap:13px;background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><div class="avatar" style="background:'+col+';width:54px;height:54px;font-size:19px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div style="font-weight:800;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;color:var(--suave)">RUT: '+p.rut+'</div><div style="font-size:12px;color:var(--suave);margin-top:2px">'+(p.tel||"")+'</div>'+estiloTag+'</div>'+socioTag+'</div>'+
+      statsHtml+
+      // Accesos rápidos
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
+        '<button class="acc" onclick="go(\'escalerilla\')" style="text-align:center;padding:14px 8px">'+
+          '<div style="font-size:22px">🏆</div>'+
+          '<div style="font-size:13px;font-weight:700;margin-top:4px">Escalerilla</div>'+
+          '<div style="font-size:11px;color:var(--suave)">Ver ranking</div>'+
+        '</button>'+
+        '<button class="acc" onclick="go(\'mis-reservas\')" style="text-align:center;padding:14px 8px">'+
+          '<div style="font-size:22px">📋</div>'+
+          '<div style="font-size:13px;font-weight:700;margin-top:4px">Mis reservas</div>'+
+          '<div style="font-size:11px;color:var(--suave)">Historial</div>'+
+        '</button>'+
+      '</div>'+
+      '<div id="mis-partidos-pend"></div>'+
+      '<div class="section-title">Mis &uacute;ltimos partidos</div>'+
+      '<div id="historial-list"><p style="color:var(--suave);font-size:13px;padding:8px 4px">Cargando...</p></div>'+
+      '<button class="btn" onclick="openModal(\'partido\')">+ Registrar partido</button>'+
+      '<button class="btn sec" style="margin-top:8px" onclick="openModal(\'caracteristicas\')">Mi estilo de juego</button>'+
+      '<button class="btn dark" style="margin-top:8px" onclick="openModal(\'socio\')">Membres&iacute;a ATMAS</button>'+
+      '<button class="btn sec" style="margin-top:8px" onclick="go(\'cancha\')">Reservar cancha</button>'+
+      '<button class="btn sec" style="margin-top:8px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesi&oacute;n</button>'+
+      '<p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
     cargarMisReservas(p.nombre);cargarPartidosPendientes(p.nombre);cargarHistorial(p.nombre);mostrarPopupTorneos();
   }catch(e){console.warn("renderPerfil error:",e);}
 }
@@ -581,6 +605,8 @@ async function renderPerfilAdmin(p,pBody){
       '<button class="btn dark" onclick="openModal(\'jugador\')">+ Agregar jugador al ranking</button>'+
       '<button class="btn dark" onclick="openModal(\'partido\')">+ Registrar partido</button>'+
       '<button class="btn sec" onclick="go(\'cancha\')">Reservar cancha</button>'+
+      '<button class="btn sec" style="margin-top:8px" onclick="go(\'escalerilla\')">&#127942; Ver escalerilla</button>'+
+      '<button class="btn sec" style="margin-top:8px" onclick="go(\'mis-reservas\')">&#128203; Mis reservas</button>'+
       '<button class="btn sec" style="font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesi&oacute;n</button></div>'+
       '<p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
     var snapHoy=await db.collection("reservas").where("fecha","==",hoy).get();
