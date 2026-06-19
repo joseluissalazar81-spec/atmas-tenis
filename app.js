@@ -800,6 +800,7 @@ async function renderAdmin(){
   h+='<button id="atab-sanciones" onclick="adminTab(this,\'sanciones\')">Sanciones</button>';
   h+='<button id="atab-torneos" onclick="adminTab(this,\'torneos\')">Torneos</button>';
   h+='<button id="atab-ranking" onclick="adminTab(this,\'ranking\')">Ranking</button>';
+  h+='<button id="atab-config" onclick="adminTab(this,\'config\')">Config</button>';
   h+='</div>';
   h+='<div id="admin-tab-reservas"><div class="section-title">Reservas de canchas</div><div id="admin-reservas-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-sanciones" style="display:none"><div class="section-title">Sanciones activas</div><div id="admin-sanciones-cont"><p class="hint">Cargando...</p></div></div>';
@@ -809,6 +810,7 @@ async function renderAdmin(){
   h+='</div>';
   h+='<div id="admin-tab-ranking" style="display:none"><div class="admin-section"><div class="section-title">Tipos de usuario</div><div id="admin-tipos-cont"><p class="hint">Cargando...</p></div></div><div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div>';
   h+='<button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button></div></div>';
+  h+='<div id="admin-tab-config" style="display:none"><div id="admin-config-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div style="height:20px"></div>';
   eab.innerHTML=h;
   renderAdminReservas();
@@ -818,12 +820,13 @@ async function renderAdmin(){
 }
 
 function adminTab(el_,tab){if(tab===undefined){tab=el_;}
-  ["reservas","sanciones","torneos","ranking"].forEach(function(t){
+  ["reservas","sanciones","torneos","ranking","config"].forEach(function(t){
     var div=el("admin-tab-"+t);if(div)div.style.display=t===tab?"":"none";
     var btn=el("atab-"+t);if(btn)btn.className=t===tab?"on":"";
   });
   if(tab==="sanciones")renderAdminSanciones();
   if(tab==="ranking")renderAdminTipos();
+  if(tab==="config")renderAdminConfig();
 }
 
 async function loadAdminTorneos(){
@@ -1255,28 +1258,50 @@ function mostrarFormRes(){
 function actualizarResumenForm(){
   var cancha=CONFIG_RES.canchas.find(function(c){return c.id===resState.canchaId;});
   var fechaFmt=new Date(resState.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});
-  // Calcular hora fin según duración seleccionada
   var hIni=parseInt(resState.horaInicio);
   var hFinNum=hIni+resState.duracion;
   var horaFinStr=(hFinNum<10?"0"+hFinNum:hFinNum)+":00";
   resState.horaFin=horaFinStr;
-  var rs=el("res-resumen");if(rs)rs.innerHTML='<b>'+(cancha?cancha.nombre:"Cancha "+resState.canchaId)+'</b> &middot; '+fechaFmt+'<br>'+resState.horaInicio+' &ndash; '+horaFinStr+' ('+resState.duracion+'h)';
-  // Opción de duración solo si el slot no es fijo 2h (weekday o FDS libre)
+  var rs=el("res-resumen");if(rs)rs.innerHTML='<b>'+(cancha?cancha.nombre:"Cancha "+resState.canchaId)+'</b> &middot; '+fechaFmt+'<br>'+resState.horaInicio+' &ndash; '+horaFinStr;
+  // Selector de duración (solo si no es bloque fijo 2h de FDS)
   var durDiv=el("res-duracion");
   if(durDiv){
     var esFijo=esFDS(resState.fecha)&&hIni<14;
     if(esFijo){
-      durDiv.innerHTML='';// fijo 2h, no mostrar selector
+      durDiv.innerHTML='';
     }else{
-      durDiv.innerHTML='<div style="display:flex;gap:8px;margin-bottom:10px">'+
-        '<button class="mini'+(resState.duracion===1?" on":"")+'" style="flex:1;padding:8px 0" onclick="cambiarDuracion(1)">1 hora — $'+(tarifaTipo(resState.tipo,1)||0).toLocaleString("es-CL")+'</button>'+
-        '<button class="mini'+(resState.duracion===2?" on":"")+'" style="flex:1;padding:8px 0" onclick="cambiarDuracion(2)">2 horas — $'+(tarifaTipo(resState.tipo,2)||0).toLocaleString("es-CL")+'</button>'+
+      var t1=tarifaTipo(resState.tipo,1),t2=tarifaTipo(resState.tipo,2);
+      var lbl1=t1>0?"1 hora &mdash; $"+t1.toLocaleString("es-CL"):"1 hora &mdash; incluido";
+      var lbl2=t2>0?"2 horas &mdash; $"+t2.toLocaleString("es-CL"):"2 horas &mdash; incluido";
+      durDiv.innerHTML='<div style="display:flex;gap:8px;margin-bottom:12px">'+
+        '<button class="mini'+(resState.duracion===1?" on":"")+'" style="flex:1;padding:9px 0;font-size:13px" onclick="cambiarDuracion(1)">'+lbl1+'</button>'+
+        '<button class="mini'+(resState.duracion===2?" on":"")+'" style="flex:1;padding:9px 0;font-size:13px" onclick="cambiarDuracion(2)">'+lbl2+'</button>'+
         '</div>';
     }
   }
   var tarifa=tarifaTipo(resState.tipo,resState.duracion);
-  var md=el("res-monto");if(md)md.textContent=tarifa>0?"Total: $"+tarifa.toLocaleString("es-CL"):"Sin costo adicional";
-  var btn=el("res-btn");if(btn)btn.textContent=tarifa>0?"Pagar con MercadoPago — $"+tarifa.toLocaleString("es-CL"):"Confirmar reserva";
+  // Panel de pago al estilo "Datos de transferencia"
+  var md=el("res-monto");
+  if(md){
+    if(tarifa>0){
+      var t=PAGO;
+      var linkMP=resState.duracion===2?MP.cancha2hrs:MP.cancha1hr;
+      md.innerHTML='<div class="pago-box" style="margin-bottom:0">'+
+        '<div class="pago-title"><span style="font-size:16px">💳</span> Datos de transferencia</div>'+
+        '<div class="pago-row"><span>Nombre</span><b>'+t.nombre+'</b></div>'+
+        '<div class="pago-row"><span>RUT</span><b>'+t.rut+'</b></div>'+
+        '<div class="pago-row"><span>Banco</span><b>'+t.banco+'</b></div>'+
+        '<div class="pago-row"><span>Tipo</span><b>'+t.tipo+'</b></div>'+
+        '<div class="pago-row"><span>N&ordm; Cuenta</span><b>'+t.cuenta+'</b></div>'+
+        '<div class="pago-row"><span>Email</span><b>'+t.email+'</b></div>'+
+        '<div class="pago-row"><span>Monto</span><b style="font-size:16px;color:var(--verde-osc)">$'+tarifa.toLocaleString("es-CL")+'</b></div>'+
+        '</div>'+
+        '<p style="font-size:12px;color:#6b7280;text-align:center;margin:10px 0 12px">Transfiere y envía el comprobante por WhatsApp para confirmar tu reserva.</p>';
+    }else{
+      md.innerHTML='<p style="color:var(--verde-osc);font-weight:700;font-size:14px;margin-bottom:12px">✓ Sin costo adicional &mdash; incluido en tu membresía</p>';
+    }
+  }
+  var btn=el("res-btn");if(btn)btn.textContent=tarifa>0?"Enviar comprobante por WhatsApp":"Confirmar reserva";
 }
 
 function cambiarDuracion(d){resState.duracion=d;actualizarResumenForm();}
@@ -1341,9 +1366,19 @@ async function confirmarReserva(){
     };
     var docRef=await db.collection("reservas").add(reservaData);
     if(tarifa>0){
-      await iniciarPagoMP(docRef.id,tarifa,"Reserva "+(cancha?cancha.nombre:"Cancha ")+resState.canchaId+" ATMAS");
+      // Abrir WhatsApp con comprobante
+      var fechaFmt=new Date(resState.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});
+      var msg="Hola ATMAS! Adjunto comprobante de transferencia para reserva:\n"+
+        "• "+(cancha?cancha.nombre:"Cancha "+resState.canchaId)+"\n"+
+        "• "+fechaFmt+"\n"+
+        "• "+resState.horaInicio+" – "+resState.horaFin+"\n"+
+        "• Monto: $"+tarifa.toLocaleString("es-CL")+"\n"+
+        "• Nombre: "+nombre;
+      window.open("https://wa.me/56956343558?text="+encodeURIComponent(msg),"_blank");
+      toast("Reserva registrada. Envía el comprobante por WhatsApp.");
+      ocultarFormRes();resState.horaInicio=null;resState.horaFin=null;renderSlots();
     }else{
-      toast("¡Reserva confirmada! "+resState.horaInicio+" "+cancha.nombre);
+      toast("¡Reserva confirmada! "+resState.horaInicio+" "+(cancha?cancha.nombre:""));
       ocultarFormRes();resState.horaInicio=null;resState.horaFin=null;renderSlots();
     }
   }catch(e){toast("Error: "+e.message);}
@@ -1523,6 +1558,76 @@ async function renderAdminSanciones(){
     cont.innerHTML=count?html:'<p class="hint">Sin sanciones activas</p>';
   }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
 }
+
+var _configCache=null;
+async function renderAdminConfig(){
+  var cont=el("admin-config-cont");if(!cont)return;
+  cont.innerHTML='<p class="hint">Cargando...</p>';
+  // Leer config desde Firestore o usar valores por defecto
+  var cfg={};
+  try{var snap=await db.collection("config_app").doc("precios").get();if(snap.exists)cfg=snap.data();}catch(e){}
+  _configCache=cfg;
+  var c1h=cfg.cancha1h||15000,c2h=cfg.cancha2h||25000;
+  var ac1=cfg.academia_iniciacion||60000,ac2=cfg.academia_intermedio||70000,ac3=cfg.academia_avanzado||80000,ac4=cfg.academia_individual_4c||120000,ac5=cfg.academia_individual_8c||200000;
+  var wp=cfg.wp||"56956343558";
+  // Cuenta bancaria
+  var bnombre=cfg.banco_nombre||PAGO.nombre,brut=cfg.banco_rut||PAGO.rut,bbanco=cfg.banco_banco||PAGO.banco,btipo=cfg.banco_tipo||PAGO.tipo,bcuenta=cfg.banco_cuenta||PAGO.cuenta,bemail=cfg.banco_email||PAGO.email;
+  function fi(id,lbl,val,type){return '<div class="field"><label>'+lbl+'</label><input id="cfg-'+id+'" type="'+(type||"text")+'" value="'+val+'"></div>';}
+  var h='<div class="admin-section"><div class="section-title">Precios de canchas</div>'+
+    fi("c1h","1 hora (todos excepto socio mensual)",c1h,"number")+
+    fi("c2h","2 horas",c2h,"number")+
+    '</div>'+
+    '<div class="admin-section"><div class="section-title">Precios clases academia</div>'+
+    fi("ac1","Iniciación (3-7 años) /mes",ac1,"number")+
+    fi("ac2","Intermedios /mes",ac2,"number")+
+    fi("ac3","Avanzados /mes",ac3,"number")+
+    fi("ac4","Individuales · 4 clases",ac4,"number")+
+    fi("ac5","Individuales · 8 clases",ac5,"number")+
+    '</div>'+
+    '<div class="admin-section"><div class="section-title">Datos de cuenta transferencia</div>'+
+    fi("bnombre","Nombre titular",bnombre)+
+    fi("brut","RUT",brut)+
+    fi("bbanco","Banco",bbanco)+
+    fi("btipo","Tipo de cuenta",btipo)+
+    fi("bcuenta","Número de cuenta",bcuenta)+
+    fi("bemail","Email",bemail)+
+    fi("wp","WhatsApp (sin +)",wp)+
+    '</div>'+
+    '<button class="btn" onclick="guardarAdminConfig()">Guardar cambios</button>';
+  cont.innerHTML=h;
+}
+
+async function guardarAdminConfig(){
+  function gv(id){var e=el("cfg-"+id);return e?e.value.trim():"";}
+  var data={
+    cancha1h:parseInt(gv("c1h"))||15000,cancha2h:parseInt(gv("c2h"))||25000,
+    academia_iniciacion:parseInt(gv("ac1"))||60000,academia_intermedio:parseInt(gv("ac2"))||70000,
+    academia_avanzado:parseInt(gv("ac3"))||80000,academia_individual_4c:parseInt(gv("ac4"))||120000,academia_individual_8c:parseInt(gv("ac5"))||200000,
+    banco_nombre:gv("bnombre"),banco_rut:gv("brut"),banco_banco:gv("bbanco"),banco_tipo:gv("btipo"),banco_cuenta:gv("bcuenta"),banco_email:gv("bemail"),wp:gv("wp")
+  };
+  try{
+    await db.collection("config_app").doc("precios").set(data,{merge:true});
+    // Actualizar CONFIG_RES en memoria
+    CONFIG_RES.tarifa1h.socio_partido=data.cancha1h;CONFIG_RES.tarifa1h.invitado=data.cancha1h;CONFIG_RES.tarifa1h.arriendo=data.cancha1h;CONFIG_RES.tarifa1h.academia_individual=data.cancha1h;CONFIG_RES.tarifa1h.academia_grupal=data.cancha1h;
+    CONFIG_RES.tarifa2h.socio_partido=data.cancha2h;CONFIG_RES.tarifa2h.invitado=data.cancha2h;CONFIG_RES.tarifa2h.arriendo=data.cancha2h;CONFIG_RES.tarifa2h.academia_individual=data.cancha2h;CONFIG_RES.tarifa2h.academia_grupal=data.cancha2h;
+    // Actualizar PAGO en memoria
+    PAGO.nombre=data.banco_nombre;PAGO.rut=data.banco_rut;PAGO.banco=data.banco_banco;PAGO.tipo=data.banco_tipo;PAGO.cuenta=data.banco_cuenta;PAGO.email=data.banco_email;
+    toast("Configuración guardada ✓");
+  }catch(e){toast("Error: "+e.message);}
+}
+
+// Al iniciar, cargar config desde Firestore si existe
+(function cargarConfigInicial(){
+  db.collection("config_app").doc("precios").get().then(function(snap){
+    if(!snap.exists)return;
+    var d=snap.data();
+    if(d.cancha1h){CONFIG_RES.tarifa1h.socio_partido=CONFIG_RES.tarifa1h.invitado=CONFIG_RES.tarifa1h.arriendo=CONFIG_RES.tarifa1h.academia_individual=CONFIG_RES.tarifa1h.academia_grupal=d.cancha1h;}
+    if(d.cancha2h){CONFIG_RES.tarifa2h.socio_partido=CONFIG_RES.tarifa2h.invitado=CONFIG_RES.tarifa2h.arriendo=CONFIG_RES.tarifa2h.academia_individual=CONFIG_RES.tarifa2h.academia_grupal=d.cancha2h;}
+    if(d.banco_nombre)PAGO.nombre=d.banco_nombre;if(d.banco_rut)PAGO.rut=d.banco_rut;
+    if(d.banco_banco)PAGO.banco=d.banco_banco;if(d.banco_tipo)PAGO.tipo=d.banco_tipo;
+    if(d.banco_cuenta)PAGO.cuenta=d.banco_cuenta;if(d.banco_email)PAGO.email=d.banco_email;
+  }).catch(function(){});
+})();
 
 function adminSalir(){adminUnlocked=false;go('inicio');}
 
