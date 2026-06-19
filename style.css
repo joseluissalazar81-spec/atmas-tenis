@@ -78,7 +78,7 @@ header p{font-size:11px;color:var(--suave);white-space:nowrap}
 @keyframes up{from{transform:translateY(100%)}to{transform:none}}
 .sheet h3{font-size:18px;font-weight:800;margin-bottom:14px}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--negro);color:#fff;padding:12px 20px;border-radius:30px;font-size:14px;opacity:0;pointer-events:none;transition:.3s;z-index:100;max-width:88%;text-align:center}
-.toast.show{opacity:1}
+.toast.show{opacity:1;pointer-events:auto;cursor:pointer}
 .foot{text-align:center;font-size:11px;color:var(--suave);margin-top:16px;font-style:italic}
 .admin-header{background:linear-gradient(135deg,var(--verde-osc),var(--verde-mid));border-radius:20px;padding:18px 18px 14px;color:#fff;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
 .admin-header h2{font-size:18px;font-weight:900}
