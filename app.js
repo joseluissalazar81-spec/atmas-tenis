@@ -845,9 +845,10 @@ async function cargarInscripciones(){
   try{
     var snap=await db.collection("inscripciones_atmas").where("torneo","==","Torneo Novicios 5").get();
     var inscritos=[];snap.forEach(function(doc){inscritos.push(doc.data().nombre);});
+    // Jugadores fijos confirmados
+    ["Marcelo Escalona","Felipe Muñoz"].forEach(function(n){if(inscritos.indexOf(n)===-1)inscritos.unshift(n);});
     var nh="";
-    inscritos.forEach(function(n){var col=avatarColor(n);var ini=initials(n);nh+='<div class="lcard"><div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div class="nm">'+n+'</div></div><span>OK</span></div>';});
-    if(inscritos.indexOf("Marcelo Escalona")===-1)inscritos.unshift("Marcelo Escalona");
+    inscritos.forEach(function(n){var col=avatarColor(n);var ini=initials(n);nh+='<div class="lcard"><div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div class="nm">'+n+'</div></div><span style="color:#15803d;font-size:12px;font-weight:700">✓</span></div>';});
     var lleno=inscritos.length>=16;
     for(var i=inscritos.length;i<16;i++)nh+='<div class="lcard"><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--suave)">'+(i+1)+'</div><div style="flex:1"><div class="ds">Cupo disponible</div></div>'+(lleno?'<span style="color:#b91c1c;font-size:11px">Completo</span>':'<button class="mini" onclick="openModal(\'torneo\',1)">Unirme</button>')+'</div>';
     enl.innerHTML=nh;
