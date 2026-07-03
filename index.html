@@ -4,15 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ATMAS &middot; Academia de Tenis AT+</title>
+<link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ATMAS">
+<meta name="theme-color" content="#2f6b1a">
+<meta name="description" content="Ranking, torneos y reservas · Club Las Avestruces, Quilicura">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<meta name="apple-mobile-web-app-title" content="ATMAS">
-<meta name="theme-color" content="#2f6b1a">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -409,5 +411,12 @@
   <div class="toast" id="toast" onclick="this.classList.remove('show')"></div>
 </div>
 <script src="app.js"></script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("/sw.js").catch(function(e){console.warn("SW error:",e);});
+  });
+}
+</script>
 </body>
 </html>

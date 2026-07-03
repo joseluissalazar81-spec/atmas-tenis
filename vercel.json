@@ -7,7 +7,9 @@
   ],
   "routes": [
     {"src": "/api/(.*)", "dest": "/api/$1"},
-    {"src": "/(.*\\.(js|css|png|jpg|svg|ico))", "dest": "/$1"},
+    {"src": "/sw.js", "dest": "/sw.js", "headers": {"Cache-Control": "no-cache, no-store, must-revalidate", "Service-Worker-Allowed": "/"}},
+    {"src": "/manifest.json", "dest": "/manifest.json", "headers": {"Cache-Control": "public, max-age=86400"}},
+    {"src": "/(.*\\.(js|css|png|jpg|svg|ico|json))", "dest": "/$1"},
     {"src": "/(.*)", "dest": "/index.html"}
   ]
 }

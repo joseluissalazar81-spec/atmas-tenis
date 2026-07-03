@@ -107,7 +107,32 @@ var db=_noopDb;
 try{
   firebase.initializeApp({apiKey:"AIzaSyC5WSNETjUxYfUpMr6nkOk8jjDqrD44Snw",authDomain:"atmas-tenis.firebaseapp.com",projectId:"atmas-tenis",storageBucket:"atmas-tenis.firebasestorage.app",messagingSenderId:"545823553419",appId:"1:545823553419:web:7131283910ded048c9a18e"});
   db=firebase.firestore();
+  db.enablePersistence({synchronizeTabs:true}).catch(function(e){
+    if(e.code==="failed-precondition"){console.warn("Persistencia offline: múltiples tabs abiertas");}
+    else if(e.code==="unimplemented"){console.warn("Persistencia offline no soportada en este browser");}
+  });
 }catch(e){console.warn("Firebase no disponible:",e);}
+
+/* ─── ESTADO DE RED ───────────────────────────────────────────── */
+(function(){
+  var banner=null;
+  function showOfflineBanner(){
+    if(banner)return;
+    banner=document.createElement("div");
+    banner.id="offline-banner";
+    banner.textContent="Sin conexión · mostrando datos en caché";
+    banner.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;font-size:12px;font-weight:700;padding:8px 18px;border-radius:0 0 12px 12px;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,.3);letter-spacing:.3px";
+    document.body.appendChild(banner);
+  }
+  function hideOfflineBanner(){
+    if(!banner)return;
+    banner.remove();banner=null;
+    toast("Conexión restaurada ✓");
+  }
+  window.addEventListener("offline",showOfflineBanner);
+  window.addEventListener("online",hideOfflineBanner);
+  if(!navigator.onLine)showOfflineBanner();
+})();
 
 /* ─── CONSTANTES ──────────────────────────────────────────────── */
 const PAGO={nombre:"Marcelo Andrés Escalona Gálvez",rut:"12.637.853-K",banco:"Mercado Pago",tipo:"Cuenta Vista",cuenta:"1057752328",email:"locampinotenisclub@hotmail.com"};
@@ -214,6 +239,8 @@ function iniciarRankingLive(){
       console.warn("Ranking listener error:",e);
       rankingData=SEED_PLAYERS.map(function(p){return p.slice();});
       renderRanking();
+      var el2=el("ranking-list");
+      if(el2){var existing=el2.querySelector(".rank-error");if(!existing){var errBanner=document.createElement("div");errBanner.className="rank-error";errBanner.style.cssText="background:#fef9c3;border:1px solid #fbbf24;border-radius:10px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center";errBanner.innerHTML='<span>⚠️ Sin conexión · datos en caché</span><button onclick="iniciarRankingLive();this.parentNode.remove()" style="background:none;border:1px solid #92400e;border-radius:6px;padding:3px 8px;font-size:11px;color:#92400e;cursor:pointer">Reintentar</button>';el2.prepend(errBanner);}}
     });
   }catch(e){
     rankingData=SEED_PLAYERS.map(function(p){return p.slice();});
@@ -874,8 +901,17 @@ async function cargarInscripcionesZonaNorte(){
 cargarInscripciones();
 cargarInscripcionesZonaNorte();
 
+/* ─── DOBLE-SUBMIT GUARD ──────────────────────────────────────── */
+var _submitting={};
+function btnLoad(id,loading,txt){
+  var b=el(id);if(!b)return;
+  if(loading){b.disabled=true;b.dataset.orig=b.textContent;b.textContent=txt||"Guardando...";}
+  else{b.disabled=false;b.textContent=b.dataset.orig||b.textContent;}
+}
+
 /* ─── PARTIDOS ────────────────────────────────────────────────── */
 async function guardarPartido(){
+  if(_submitting.partido)return;
   var yo=((el("pt-yo")||{}).value||"").trim();
   var rival=(el("pt-rival")||{}).value||"";
   var resultado=(el("pt-resultado")||{}).value||"gane";
@@ -888,9 +924,12 @@ async function guardarPartido(){
   var ctxOtro=((el("pt-contexto-otro")||{}).value||"").trim();
   var contexto=(ctx==="otro"&&ctxOtro)?ctxOtro:ctx;
   if(!yo){toast("Escribe tu nombre");return;}
+  if(!rival){toast("Selecciona el rival");return;}
+  if(!fecha){toast("Selecciona la fecha del partido");return;}
   var ganador=resultado==="gane"?yo:rival;
   var perdedor=resultado==="gane"?rival:yo;
   var sets=[s1,s2,s3].filter(function(s){return s&&s!=="--";}).join(", ");
+  _submitting.partido=true;btnLoad("btn-guardar-partido",true,"Enviando...");
   try{
     await db.collection("partidos_atmas").add({
       jugador1:yo,jugador2:rival,ganador:ganador,perdedor:perdedor,
@@ -903,12 +942,15 @@ async function guardarPartido(){
     if(sc)sc.innerHTML='<div style="text-align:center;padding:16px 0"><div style="font-size:48px">&#128203;</div><div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido enviado</div><div style="font-size:13px;color:var(--suave);line-height:1.6">Enviado al rival para confirmar.<br>Si disputa el resultado, Marcelo Escalona decide.<br>Los puntos se suman una vez confirmado.</div></div><button class="btn sec" style="margin-top:16px" onclick="closeModal()">Entendido</button>';
     if(mo)mo.classList.add("show");
   }catch(e){console.warn("guardarPartido error:",e);toast("Error al guardar. Intenta de nuevo.");}
+  finally{_submitting.partido=false;btnLoad("btn-guardar-partido",false);}
 }
 
 function pendAprobar(i){var q=window._pendQ[i];if(q)aprobarPartido(q.id,q.gan,q.per);}
 function pendRechazar(i){var q=window._pendQ[i];if(q)rechazarPartido(q.id);}
 
 async function aprobarPartido(docId,ganador,perdedor){
+  if(_submitting["apr_"+docId])return;
+  _submitting["apr_"+docId]=true;
   try{
     var ganRef=db.collection("ranking_atmas").doc(slugify(ganador));
     var perRef=db.collection("ranking_atmas").doc(slugify(perdedor));
@@ -924,12 +966,12 @@ async function aprobarPartido(docId,ganador,perdedor){
       tx.update(partRef,{estado:"aprobado"});
     });
     toast("Partido aprobado. Puntos sumados.");
-    // Buscar sets del partido para la tarjeta
     var pSnap=await db.collection("partidos_atmas").doc(docId).get();
     var pData=pSnap.exists?pSnap.data():{};
     mostrarTarjetaPartido(ganador,perdedor,pData.sets||"",pData.contexto||"");
     renderAdmin();
-  }catch(e){console.warn("aprobarPartido error:",e);toast("Error al aprobar partido.");}
+  }catch(e){console.warn("aprobarPartido error:",e);toast("Error al aprobar partido. Verifica tu conexión.");}
+  finally{delete _submitting["apr_"+docId];}
 }
 
 async function rechazarPartido(docId){
@@ -948,6 +990,7 @@ var calConteo={};
 var slotSeleccionado=null;var slotDurHrs=1;var slotMonto=15000;
 
 async function reservarCancha(){
+  if(_submitting.reserva)return;
   var nombre=((el("can-nombre")||{}).value||"").trim();
   var tel=((el("can-tel")||{}).value||"").trim();
   var fecha=calFechaSel;
@@ -955,10 +998,13 @@ async function reservarCancha(){
   var monto=slotMonto||15000;var durHrs=slotDurHrs||1;
   var durText=durHrs===2?"2 horas - $25.000":"1 hora - $15.000";
   if(!nombre){toast("Escribe tu nombre");return;}
-  if(!slotSeleccionado){toast("Selecciona un horario");return;}
+  if(!tel){toast("Escribe tu teléfono de contacto");return;}
+  if(!fecha){toast("Selecciona una fecha en el calendario");return;}
+  if(!slotSeleccionado){toast("Selecciona un horario disponible");return;}
   var hIni=parseInt(slotSeleccionado.split(":")[0]);
   var horaFin=String(hIni+durHrs).padStart(2,"0")+":00";
   var fechaFmt=fecha?fecha.split("-").reverse().join("/"):"-";
+  _submitting.reserva=true;btnLoad("btn-reservar-cancha",true,"Reservando...");
   try{
     await db.collection("reservas").add({nombre:nombre,tel:tel,fecha:fecha,hora:slotSeleccionado,horaFin:horaFin,cancha:cancha,duracion:durText,durHrs:durHrs,monto:monto,ts:firebase.firestore.FieldValue.serverTimestamp()});
     var horaConf=slotSeleccionado;
@@ -967,7 +1013,8 @@ async function reservarCancha(){
     var esc=el("slots-container");
     if(esc)esc.innerHTML='<div style="text-align:center;padding:16px 0"><div style="font-size:48px">&#127937;</div><div style="font-weight:900;color:var(--verde-osc);font-size:17px;margin:8px 0">Cancha reservada!</div><div style="font-size:13px;color:var(--suave)">'+fechaFmt+' &middot; '+horaConf+' - '+horaFin+'<br>'+cancha+'</div></div>'+pagoHTML(monto,"arriendo de cancha",monto===15000?MP.cancha1hr:MP.cancha2hrs);
     var cf=el("can-form");if(cf)cf.style.display="none";
-  }catch(e){console.warn("reservarCancha error:",e);toast("Error al reservar. Intenta de nuevo.");}
+  }catch(e){console.warn("reservarCancha error:",e);toast("Error al reservar. Verifica tu conexión e intenta de nuevo.");}
+  finally{_submitting.reserva=false;btnLoad("btn-reservar-cancha",false);}
 }
 
 /* ─── MODALES ─────────────────────────────────────────────────── */
@@ -996,7 +1043,7 @@ function openModal(tipo,idx){
         '<div class="field"><label>Tu nombre</label><input id="ti-nombre" placeholder="Ej: Juan Pérez" value="'+(perfil.nombre||'')+'"></div>'+
         '<div class="field"><label>Teléfono</label><input id="ti-tel" type="tel" placeholder="+569 XXXX XXXX" value="'+(perfil.tel||'')+'"></div>'+
         turnoField+
-        '<button class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:12px">✓ Confirmar inscripción</button>'+
+        '<button id="btn-inscribir-torneo" class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:12px">✓ Confirmar inscripción</button>'+
         pagoHTML(t.monto,t.n,mpLink)+
         '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';
     }else if(tipo==="clase"&&idx==="individual"){
@@ -1030,7 +1077,7 @@ function openModal(tipo,idx){
         '<div class="field"><label>Especificar (si aplica)</label><input id="pt-contexto-otro" placeholder="Ej: Final Torneo Verano"></div>'+
         '<div class="field"><label>Cancha</label><select id="pt-cancha"><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div>'+
         '<div class="field"><label>Fecha</label><input id="pt-fecha" type="date" value="'+new Date().toISOString().split("T")[0]+'"></div>'+
-        '<button class="btn" onclick="guardarPartido()">Guardar partido</button>'+
+        '<button id="btn-guardar-partido" class="btn" onclick="guardarPartido()">Guardar partido</button>'+
         '<button class="btn sec" onclick="closeModal()">Cancelar</button>';
     }else if(tipo==="socio"){openSocioModal();return;
     }else if(tipo==="caracteristicas"){
@@ -1064,20 +1111,25 @@ async function confirmarJugador(){
 }
 
 async function inscribirTorneo(idx){
+  if(_submitting["ins_"+idx])return;
   var nombre=((el("ti-nombre")||{}).value||"").trim();
   var tel=((el("ti-tel")||{}).value||"").trim();
   var turnoEl=el("ti-turno");var turno=turnoEl?turnoEl.value:"";
   var t=torneos[idx];if(!t){toast("Torneo no encontrado");return;}
-  if(!nombre){toast("Escribe tu nombre");return;}
+  if(!nombre){toast("Escribe tu nombre completo");return;}
+  if(!tel){toast("Escribe tu número de teléfono");return;}
+  _submitting["ins_"+idx]=true;
+  var btnI=el("btn-inscribir-torneo");if(btnI){btnI.disabled=true;btnI.dataset.orig=btnI.textContent;btnI.textContent="Inscribiendo...";}
   try{
     var totalSnap=await db.collection("inscripciones_atmas").where("torneo","==",t.n).get();
     if(totalSnap.size>=16){toast("Torneo completo. No hay mas cupos.");return;}
     var existe=await db.collection("inscripciones_atmas").where("torneo","==",t.n).where("nombre","==",nombre).get();
-    if(!existe.empty){toast("Ya estas inscrito en este torneo");return;}
+    if(!existe.empty){toast("Ya estás inscrito en este torneo ✓");return;}
     await db.collection("inscripciones_atmas").add({nombre:nombre,tel:tel,torneo:t.n,turno:turno,monto:t.monto,estado:"pendiente_pago",ts:firebase.firestore.FieldValue.serverTimestamp()});
-    toast("Inscripcion registrada - Ahora completa el pago");
+    toast("Inscripción registrada — completa el pago para confirmar tu cupo");
     notificarMarcelo("🏆 Nueva inscripción torneo\nJugador: "+nombre+"\nTorneo: "+t.n+"\nMonto: $"+Number(t.monto).toLocaleString("es-CL")+"\nTel: "+tel);
-  }catch(e){toast("Error al inscribir. Intenta de nuevo.");}
+  }catch(e){toast("Error al inscribir. Verifica tu conexión e intenta de nuevo.");}
+  finally{_submitting["ins_"+idx]=false;if(btnI){btnI.disabled=false;btnI.textContent=btnI.dataset.orig||"Confirmar inscripción";}}
 }
 
 /* ─── MEMBRESIA ───────────────────────────────────────────────── */
@@ -2182,11 +2234,14 @@ async function reservarSlot(id,fecha,hora){
 }
 
 async function confirmarReservaSlot(id,fecha,hora){
+  if(_submitting["slot_"+id])return;
   var nombre=((el("slot-nombre")||{}).value||"").trim();
   var tel=((el("slot-tel")||{}).value||"").trim();
   var objetivo=(el("slot-objetivo")||{}).value||"";
   var detalle=((el("slot-detalle")||{}).value||"").trim();
   if(!nombre){toast("Ingresa tu nombre");return;}
+  if(!tel){toast("Ingresa tu teléfono de contacto");return;}
+  _submitting["slot_"+id]=true;
   try{
     await db.collection("slots_individuales").doc(id).update({
       estado:"reservado",nombre_reserva:nombre,tel_reserva:tel,
@@ -2204,7 +2259,8 @@ async function confirmarReservaSlot(id,fecha,hora){
       '</div>';
     toast("Clase reservada ✓");
     notificarMarcelo("📅 Nueva reserva clase individual\nAlumno: "+nombre+"\nFecha: "+fecha+" "+hora+"\nObjetivo: "+objetivo+(detalle?"\nDetalle: "+detalle:"")+"\nTel: "+tel);
-  }catch(e){toast("Error: "+e.message);}
+  }catch(e){toast("Error al reservar: "+e.message);}
+  finally{delete _submitting["slot_"+id];}
 }
 
 /* ─── ADMIN: GESTIONAR SLOTS ──────────────────────────────────── */
@@ -2769,12 +2825,15 @@ async function cargarPlanillaResultados(){
   }catch(e){if(cont)cont.innerHTML='<p class="hint">Error al cargar</p>';}
 }
 async function eliminarPartido(docId){
-  if(!confirm("¿Eliminar este partido? Los puntos NO se revierten automáticamente."))return;
+  if(!confirm("⚠️ ¿Eliminar este partido?\n\nLos puntos NO se revierten automáticamente. Esta acción no se puede deshacer."))return;
+  if(_submitting["del_"+docId])return;
+  _submitting["del_"+docId]=true;
   try{
     await db.collection("partidos_atmas").doc(docId).delete();
     toast("Partido eliminado");
     cargarPlanillaResultados();
-  }catch(e){toast("Error: "+e.message);}
+  }catch(e){toast("Error al eliminar: "+e.message);}
+  finally{delete _submitting["del_"+docId];}
 }
 
 /* ─── CATÁLOGO DE PROGRAMAS FORMATIVOS ───────────────────────── */
