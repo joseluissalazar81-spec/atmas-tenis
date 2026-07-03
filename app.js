@@ -2479,6 +2479,24 @@ async function renderAdminConfig(){
   cont.innerHTML=h;
 }
 
+async function autoLimpiarPruebas(){
+  try{
+    var flag=await db.collection("config_app").doc("cleanup_pruebas_jun2026").get();
+    if(flag.exists)return;
+    var snap=await db.collection("partidos_atmas").get();
+    var batch=db.batch();var n=0;
+    snap.forEach(function(doc){
+      var d=doc.data();
+      if(d.jugador1==="Jorge Luis Borges"||d.jugador2==="Jorge Luis Borges"||d.ganador==="Jorge Luis Borges"||d.perdedor==="Jorge Luis Borges"){
+        batch.delete(doc.ref);n++;
+      }
+    });
+    if(n>0)await batch.commit();
+    await db.collection("config_app").doc("cleanup_pruebas_jun2026").set({done:true,borrados:n});
+    if(n>0)cargarFeedActividad();
+  }catch(e){console.warn("autoLimpiarPruebas:",e);}
+}
+
 async function limpiarPartidosPrueba(){
   if(!confirm("¿Eliminar TODOS los partidos de prueba de Jorge Luis Borges?\n\nEsta acción no se puede deshacer."))return;
   try{
@@ -2521,11 +2539,13 @@ async function guardarAdminConfig(){
 async function cargarFeedActividad(){
   var cont=el("feed-actividad");if(!cont)return;
   try{
-    var snap=await db.collection("partidos_atmas").orderBy("ts","desc").limit(8).get();
-    if(snap.empty){cont.innerHTML='<p class="hint">Sin partidos registrados aún</p>';return;}
+    var snap=await db.collection("partidos_atmas").where("estado","==","aprobado").limit(30).get();
+    if(snap.empty){cont.innerHTML='<p class="hint">Sin partidos aprobados aún</p>';return;}
+    var docs=[];snap.forEach(function(d){docs.push(d.data());});
+    docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return tb-ta;});
+    docs=docs.slice(0,8);
     var h="";
-    snap.forEach(function(doc){
-      var r=doc.data();
+    docs.forEach(function(r){
       var col=avatarColor(r.ganador||"?");var ini=initials(r.ganador||"?");
       var fecha=r.ts?new Date(r.ts.toDate()).toLocaleDateString("es-CL",{day:"numeric",month:"short"}):"";
       var ctx=r.contexto?'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:8px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">'+r.contexto+'</span>':"";
@@ -2665,6 +2685,7 @@ function adminSalir(){adminUnlocked=false;go('inicio');}
   try{resetearRankingFirestore().then(function(){iniciarRankingLive();generarYRenderCuadros();});}catch(e){}
   try{seedCuadroNovicios3().then(function(){iniciarCuadroLive();});}catch(e){}
   try{iniciarZonaNorteLive();}catch(e){}
+  try{autoLimpiarPruebas();}catch(e){}
   if(auth){
     // Manejar resultado del redirect de Google antes de signInAnonymously
     auth.getRedirectResult().then(function(result){
