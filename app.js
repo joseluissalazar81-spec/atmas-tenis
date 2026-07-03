@@ -1,3 +1,4 @@
+var tt;
 function toast(m){var t=document.getElementById("toast");if(!t)return;t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("show");},3000);}
 function go(s){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});var sc=document.getElementById(s);if(sc)sc.classList.add("active");document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.s===s);});var ct=document.querySelector(".content");if(ct)ct.scrollTop=0;if(s==="perfil")renderPerfil();if(s==="admin")renderAdmin();if(s==="cancha")renderCalendario();if(s==="mis-reservas")renderMisReservas();if(s==="academia"){renderProgramasAcademia();var _p=getPerfil();if(_p&&_p.nombre)cargarPortafolioAlumno(_p.nombre);}}
 function closeModal(){var m=document.getElementById("modal");if(m)m.classList.remove("show");}
@@ -2481,7 +2482,7 @@ async function renderAdminConfig(){
 
 async function autoLimpiarPruebas(){
   try{
-    var flag=await db.collection("config_app").doc("cleanup_pruebas_jun2026").get();
+    var flag=await db.collection("config_app").doc("cleanup_pruebas_jul2026_v2").get();
     if(flag.exists)return;
     var snap=await db.collection("partidos_atmas").get();
     var batch=db.batch();var n=0;
@@ -2492,7 +2493,7 @@ async function autoLimpiarPruebas(){
       }
     });
     if(n>0)await batch.commit();
-    await db.collection("config_app").doc("cleanup_pruebas_jun2026").set({done:true,borrados:n});
+    await db.collection("config_app").doc("cleanup_pruebas_jul2026_v2").set({done:true,borrados:n});
     if(n>0)cargarFeedActividad();
   }catch(e){console.warn("autoLimpiarPruebas:",e);}
 }
