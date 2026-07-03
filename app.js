@@ -475,8 +475,11 @@ async function crearCuenta(){
   try{
     var cred=await auth.createUserWithEmailAndPassword(em,pw);
     var p={nombre:nombre,rut:rut,tel:"",fnac:"",socio:false,email:em};
-    savePerfil(p);mostrarApp();renderPerfil();go("inicio");
-    toast("Bienvenido/a "+nombre+"!");
+    var pv=await vincularRankingExistente(p);
+    var enRanking=(pv.jugados>0||pv.pts>0);
+    savePerfil(p);mostrarApp();renderPerfil();
+    if(enRanking){go("escalerilla");toast("¡Bienvenido, "+nombre+"! Tu historial fue vinculado ✓");}
+    else{go("inicio");toast("Bienvenido/a "+nombre+"!");}
   }catch(e){
     if(e.code==="auth/email-already-in-use"){
       // Si es Gmail, probablemente ya tiene cuenta Google
@@ -546,10 +549,13 @@ async function onAuthStateChanged(user){
       mostrarApp();renderPerfil();go("inicio");
       toast("Bienvenido, "+p.nombre+"!");
     }else{
-      // Usuario Google sin perfil: crear uno con sus datos de Google y entrar directo
+      // Usuario Google sin perfil: crear uno con sus datos de Google
       var p={nombre:user.displayName||user.email||"Usuario",rut:"",tel:"",fnac:"",socio:false,email:user.email||""};
-      savePerfil(p);mostrarApp();renderPerfil();go("perfil");
-      toast("Bienvenido! Completa tu RUT en Mi Perfil.");
+      var pv=await vincularRankingExistente(p);
+      var enRanking=(pv.jugados>0||pv.pts>0);
+      savePerfil(p);mostrarApp();renderPerfil();
+      if(enRanking){go("escalerilla");toast("¡Bienvenido, "+p.nombre+"! Tu historial fue vinculado ✓");}
+      else{go("perfil");toast("Bienvenido! Completa tu RUT en Mi Perfil.");}
     }
   }catch(e){
     console.warn("onAuthStateChanged error:",e);
@@ -561,6 +567,44 @@ async function onAuthStateChanged(user){
 
 if(auth){auth.onAuthStateChanged(onAuthStateChanged);}
 
+async function vincularMiRanking(){
+  var p=getPerfil();if(!p||!p.nombre){toast("Primero completa tu perfil");return;}
+  toast("Buscando tu historial...");
+  try{
+    var docId=slugify(p.nombre);
+    var snap=await db.collection("ranking_atmas").doc(docId).get();
+    if(!snap.exists){
+      toast("Tu nombre \""+p.nombre+"\" no coincide con ningún jugador del ranking. Pedile a Marcelo que lo verifique.");
+      return;
+    }
+    var rd=snap.data();
+    p.pts=rd.pts||0;p.jugados=rd.jugados||0;p.ganados=rd.ganados||0;
+    p.perdidos=rd.perdidos||0;p.pct=rd.pct||0;
+    if(rd.socio)p.socio=true;
+    if(p.rut)await db.collection("ranking_atmas").doc(docId).set({rut:p.rut,tel:p.tel||""},{merge:true});
+    savePerfil(p);renderPerfil();
+    toast("✓ Historial vinculado — "+p.jugados+" partido(s), "+p.pts+" puntos");
+  }catch(e){toast("Error al vincular: "+e.message);}
+}
+
+async function vincularRankingExistente(perfil){
+  try{
+    var docId=slugify(perfil.nombre);
+    var snap=await db.collection("ranking_atmas").doc(docId).get();
+    if(!snap.exists)return perfil;
+    var rd=snap.data();
+    perfil.pts=rd.pts||0;perfil.jugados=rd.jugados||0;perfil.ganados=rd.ganados||0;
+    perfil.perdidos=rd.perdidos||0;perfil.pct=rd.pct||0;
+    if(rd.socio)perfil.socio=true;
+    var update={};
+    if(perfil.rut)update.rut=perfil.rut;
+    if(perfil.tel)update.tel=perfil.tel;
+    if(perfil.email)update.email=perfil.email;
+    if(Object.keys(update).length)await db.collection("ranking_atmas").doc(docId).set(update,{merge:true});
+    return perfil;
+  }catch(e){console.warn("vincularRankingExistente:",e);return perfil;}
+}
+
 async function completarPerfil(){
   var nombre=((el("reg-nombre")||{}).value||"").trim();
   var rut=((el("reg-rut")||{}).value||"").trim();
@@ -568,7 +612,14 @@ async function completarPerfil(){
   var fnac=(el("reg-fnac")||{}).value||"";
   if(!nombre||!rut){toast("Nombre y RUT son obligatorios");return;}
   var p={nombre:nombre,rut:rut,tel:tel,fnac:fnac,socio:false};
-  savePerfil(p);mostrarApp();renderPerfil();go("inicio");toast("Bienvenido "+nombre+"!");
+  var enRanking=false;
+  try{
+    var pv=await vincularRankingExistente(p);
+    enRanking=(pv.jugados>0||pv.pts>0);
+  }catch(e){}
+  savePerfil(p);mostrarApp();renderPerfil();
+  if(enRanking){go("escalerilla");toast("¡Bienvenido, "+nombre+"! Tu historial fue vinculado ✓");}
+  else{go("inicio");toast("Bienvenido "+nombre+"!");}
 }
 
 async function recuperarPerfil(){
@@ -652,6 +703,7 @@ function renderPerfil(){
       '<button class="btn sec" style="margin-top:8px" onclick="openModal(\'caracteristicas\')">Mi estilo de juego</button>'+
       '<button class="btn dark" style="margin-top:8px" onclick="openModal(\'socio\')">Membres&iacute;a ATMAS</button>'+
       '<button class="btn sec" style="margin-top:8px" onclick="go(\'cancha\')">Reservar cancha</button>'+
+      (!p.jugados?'<button class="btn sec" style="margin-top:8px;border-color:#6366f1;color:#6366f1" onclick="vincularMiRanking()">🔗 Vincular mi historial de ranking</button>':'')+
       '<button class="btn sec" style="margin-top:8px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesi&oacute;n</button>'+
       '<p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
     cargarMisReservas(p.nombre);cargarPartidosPendientes(p.nombre);cargarHistorial(p.nombre);mostrarPopupTorneos();
