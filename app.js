@@ -2,9 +2,10 @@ function toast(m){var t=document.getElementById("toast");if(!t)return;t.textCont
 function go(s){document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active");});var sc=document.getElementById(s);if(sc)sc.classList.add("active");document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.s===s);});var ct=document.querySelector(".content");if(ct)ct.scrollTop=0;if(s==="perfil")renderPerfil();if(s==="admin")renderAdmin();if(s==="cancha")renderCalendario();if(s==="mis-reservas")renderMisReservas();if(s==="academia"){renderProgramasAcademia();var _p=getPerfil();if(_p&&_p.nombre)cargarPortafolioAlumno(_p.nombre);}}
 function closeModal(){var m=document.getElementById("modal");if(m)m.classList.remove("show");}
 function setVista(v){
+  var btnIds={rank:"vRank",h2h:"vH2H",cuadro:"vCuadro",partidos:"vPartidos"};
   ["rank","h2h","cuadro","partidos"].forEach(function(k){
     var d=document.getElementById("vista-"+k);if(d)d.style.display=v===k?"block":"none";
-    var b=document.getElementById("v"+k.charAt(0).toUpperCase()+k.slice(1));if(b)b.classList.toggle("on",v===k);
+    var b=document.getElementById(btnIds[k]);if(b)b.classList.toggle("on",v===k);
   });
   if(v==="h2h")initH2H();
   if(v==="partidos")cargarPartidosPublicos();
@@ -73,11 +74,13 @@ async function cargarPartidosPublicos(){
   var cont=el("lista-partidos-publica");if(!cont)return;
   cont.innerHTML='<p class="hint">Cargando...</p>';
   try{
-    var snap=await db.collection("partidos_atmas").where("estado","==","aprobado").orderBy("ts","desc").limit(100).get();
+    var snap=await db.collection("partidos_atmas").where("estado","==","aprobado").limit(100).get();
     if(snap.empty){cont.innerHTML='<p class="hint">Aún no hay partidos registrados</p>';return;}
+    var allDocs=[];snap.forEach(function(doc){allDocs.push(doc.data());});
+    allDocs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return tb-ta;});
     var h="";var n=0;
-    snap.forEach(function(doc){
-      n++;var r=doc.data();
+    allDocs.forEach(function(r){
+      n++;
       var fechaFmt=r.fecha?r.fecha.split("-").reverse().join("/"):"-";
       h+='<div style="background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07)">'+
         '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
@@ -630,8 +633,8 @@ function renderPerfil(){
 async function cargarHistorial(nombre){
   var ehl=el("historial-list");if(!ehl)return;
   try{
-    var snap1=await db.collection("partidos_atmas").where("ganador","==",nombre).where("estado","==","aprobado").orderBy("ts","desc").limit(5).get();
-    var snap2=await db.collection("partidos_atmas").where("perdedor","==",nombre).where("estado","==","aprobado").orderBy("ts","desc").limit(5).get();
+    var snap1=await db.collection("partidos_atmas").where("ganador","==",nombre).where("estado","==","aprobado").limit(10).get();
+    var snap2=await db.collection("partidos_atmas").where("perdedor","==",nombre).where("estado","==","aprobado").limit(10).get();
     var docs=[];
     snap1.forEach(function(d){docs.push(Object.assign({},d.data(),{_gane:true,_fecha:d.data().fecha||""}));});
     snap2.forEach(function(d){docs.push(Object.assign({},d.data(),{_gane:false,_fecha:d.data().fecha||""}));});
@@ -784,7 +787,7 @@ async function renderPerfilAdmin(p,pBody){
 const ZONA_NORTE_INSCRITOS=["Franco Gutiérrez","Marcelo Escalona","Ariel Araya","Fabián Cataldo"];
 
 var ZONA_NORTE_SEED={
-  nombre:"Ranking Zona Norte - Sexta Fecha",fecha:"Sabado 21 Junio 2026",
+  nombre:"Ranking Zona Norte - Fecha 7",fecha:"Sabado 18 Julio 2026",
   octavos:[
     {a:"Ariel Araya",b:"Hipólito Bello",hora:"12:00",gan:null,res:null},
     {a:"Rodrigo Bernal",b:"Roro Turchan",hora:"12:00",gan:null,res:null},
@@ -850,7 +853,7 @@ async function cargarInscripciones(){
     var nh="";
     inscritos.forEach(function(n){var col=avatarColor(n);var ini=initials(n);nh+='<div class="lcard"><div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div class="nm">'+n+'</div></div><span style="color:#15803d;font-size:12px;font-weight:700">✓</span></div>';});
     var lleno=inscritos.length>=16;
-    for(var i=inscritos.length;i<16;i++)nh+='<div class="lcard"><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--suave)">'+(i+1)+'</div><div style="flex:1"><div class="ds">Cupo disponible</div></div>'+(lleno?'<span style="color:#b91c1c;font-size:11px">Completo</span>':'<button class="mini" onclick="openModal(\'torneo\',1)">Unirme</button>')+'</div>';
+    for(var i=inscritos.length;i<16;i++)nh+='<div class="lcard"><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--suave)">'+(i+1)+'</div><div style="flex:1"><div class="ds">Cupo disponible</div></div>'+(lleno?'<span style="color:#b91c1c;font-size:11px">Completo</span>':'<button class="mini" onclick="openModal(\'torneo\',0)">Unirme</button>')+'</div>';
     enl.innerHTML=nh;
   }catch(e){console.warn("cargarInscripciones error:",e);}
 }
@@ -858,13 +861,13 @@ async function cargarInscripciones(){
 async function cargarInscripcionesZonaNorte(){
   var ezl=el("zonanorte-list");if(!ezl)return;
   try{
-    var snap=await db.collection("inscripciones_atmas").where("torneo","==","Ranking Zona Norte - Sexta Fecha").get();
+    var snap=await db.collection("inscripciones_atmas").where("torneo","==","Ranking Zona Norte - Fecha 7").get();
     var nuevos=[];snap.forEach(function(doc){var n=doc.data().nombre;if(!ZONA_NORTE_INSCRITOS.includes(n))nuevos.push(n);});
     var todos=ZONA_NORTE_INSCRITOS.concat(nuevos);
     var nh="";
     todos.forEach(function(n,i){var col=avatarColor(n);var ini=initials(n);var esConf=ZONA_NORTE_INSCRITOS.includes(n);nh+='<div class="lcard"><div style="width:24px;text-align:center;font-size:11px;font-weight:800;color:var(--suave)">'+(i+1)+'</div><div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div class="nm">'+n+'</div></div><span style="font-size:10px;color:'+(esConf?"var(--verde-osc)":"#6366f1")+'">'+(esConf?"Conf.":"Pend.")+'</span></div>';});
     var lleno=todos.length>=16;
-    for(var i=todos.length;i<16;i++)nh+='<div class="lcard"><div style="width:24px;text-align:center;font-size:11px;color:var(--suave)">'+(i+1)+'</div><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--suave)">+</div><div style="flex:1"><div class="ds">Cupo disponible</div></div>'+(lleno?'<span style="color:#b91c1c;font-size:11px">Completo</span>':'<button class="mini" onclick="openModal(\'torneo\',0)">Inscribirme</button>')+'</div>';
+    for(var i=todos.length;i<16;i++)nh+='<div class="lcard"><div style="width:24px;text-align:center;font-size:11px;color:var(--suave)">'+(i+1)+'</div><div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--suave)">+</div><div style="flex:1"><div class="ds">Cupo disponible</div></div>'+(lleno?'<span style="color:#b91c1c;font-size:11px">Completo</span>':'<button class="mini" onclick="openModal(\'torneo\',1)">Inscribirme</button>')+'</div>';
     ezl.innerHTML=nh;
   }catch(e){console.warn("cargarInscripcionesZonaNorte error:",e);}
 }
@@ -2299,7 +2302,7 @@ async function guardarSocioEnFirestore(tier){
   try{
     var p=getPerfil();if(!p||!p.nombre)return;
     var docId=slugify(p.nombre);
-    await db.collection("ranking_atmas").doc(docId).update({socio:true,socioTier:tier});
+    await db.collection("ranking_atmas").doc(docId).set({socio:true,socioTier:tier},{merge:true});
     p.socio=true;savePerfil(p);
     renderRanking();
   }catch(e){console.warn("guardarSocioEnFirestore error:",e);}
@@ -2583,6 +2586,7 @@ function adminSalir(){adminUnlocked=false;go('inicio');}
 (function(){
   try{resetearRankingFirestore().then(function(){iniciarRankingLive();generarYRenderCuadros();});}catch(e){}
   try{seedCuadroNovicios3().then(function(){iniciarCuadroLive();});}catch(e){}
+  try{iniciarZonaNorteLive();}catch(e){}
   if(auth){
     // Manejar resultado del redirect de Google antes de signInAnonymously
     auth.getRedirectResult().then(function(result){
