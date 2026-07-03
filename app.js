@@ -781,7 +781,7 @@ async function renderPerfilAdmin(p,pBody){
 }
 
 /* ─── TORNEOS ─────────────────────────────────────────────────── */
-const ZONA_NORTE_INSCRITOS=["Marcelo Escalona","Ariel Araya","Rodrigo Bernal","Osvaldo Valdivia","Marco Carrasco","Hipólito Bello","Ignacio Soto","Roro Navarro","Mauro Morales","Seba Brito","Edgardo Pacheco","Pablo Ortiz","Oscar Henríquez","Roro Turchan"];
+const ZONA_NORTE_INSCRITOS=["Franco Gutiérrez","Marcelo Escalona","Ariel Araya","Fabián Cataldo"];
 
 var ZONA_NORTE_SEED={
   nombre:"Ranking Zona Norte - Sexta Fecha",fecha:"Sabado 21 Junio 2026",
@@ -802,12 +802,12 @@ var ZONA_NORTE_SEED={
   semis:[{a:null,b:null,hora:"18:00",gan:null},{a:null,b:null,hora:"18:00",gan:null}],
   final:{a:null,b:null,hora:"20:00",gan:null}
 };
-// Lista jugadores Zona Norte Sexta Fecha
-var ZONA_NORTE_JUGADORES=["Marcelo Escalona","Ariel Araya","Rodrigo Bernal","Osvaldo Valdivia","Marco Carrasco","Hipólito Bello","Ignacio Soto","Roro Navarro","Mauro Morales","Seba Brito","Edgardo Pacheco","Pablo Ortiz","Oscar Henríquez","Roro Turchan","Disponible","Disponible"];
+// Lista jugadores Zona Norte Fecha 7
+var ZONA_NORTE_JUGADORES=["Franco Gutiérrez","Marcelo Escalona","Ariel Araya","Fabián Cataldo","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible"];
 const torneos=[
-  {n:"Torneo Novicios 5",f:"22 agosto 2026 &middot; 16:00 y 17:30",p:"$20.000",c:"15 cupos",monto:20000},
-  {n:"Ranking Zona Norte - Sexta Fecha",f:"21 junio 2026 &middot; Full Tenis",p:"$20.000",c:"Cerrado",monto:20000},
-  {n:"Torneo Novicios 4",f:"11 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"Cerrado",monto:20000},
+  {n:"Torneo Novicios 5",f:"22 agosto 2026 &middot; 16:00 y 17:30",p:"$20.000",c:"10 cupos",monto:20000},
+  {n:"Ranking Zona Norte - Fecha 7",f:"18 julio 2026 &middot; 12:00 a 14:00 &middot; Full Tenis",p:"$20.000",c:"12 cupos",monto:20000},
+  {n:"Torneo Novicios 4",f:"18 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"Cerrado",monto:20000},
   {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"Cerrado",monto:15000},
   {n:"Nueva Escalerilla Jun-Ago",f:"Series A y B &middot; $15.000 por partido",p:"$35.000",c:"4 cupos",monto:35000}
 ];
@@ -846,7 +846,7 @@ async function cargarInscripciones(){
     var snap=await db.collection("inscripciones_atmas").where("torneo","==","Torneo Novicios 5").get();
     var inscritos=[];snap.forEach(function(doc){inscritos.push(doc.data().nombre);});
     // Jugadores fijos confirmados
-    ["Marcelo Escalona","Felipe Muñoz"].forEach(function(n){if(inscritos.indexOf(n)===-1)inscritos.unshift(n);});
+    ["Máximo Escalona","Felipe Muñoz","Alex Berrocal","Fabián Araneda","Mauricio Melo","Marcos Hernández"].forEach(function(n){if(inscritos.indexOf(n)===-1)inscritos.push(n);});
     var nh="";
     inscritos.forEach(function(n){var col=avatarColor(n);var ini=initials(n);nh+='<div class="lcard"><div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div class="nm">'+n+'</div></div><span style="color:#15803d;font-size:12px;font-weight:700">✓</span></div>';});
     var lleno=inscritos.length>=16;
