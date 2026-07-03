@@ -2471,8 +2471,30 @@ async function renderAdminConfig(){
     '<div style="display:flex;gap:6px;margin-bottom:12px"><input id="nc-label" placeholder="Nombre (ej: Socio Juan)" style="flex:1;border:1.5px solid var(--gris);border-radius:10px;padding:9px;font-size:13px"><button class="btn" style="padding:9px 14px;font-size:13px" onclick="crearCodigoSocio()">+ Crear</button></div>'+
     '<div id="codigos-lista"><p class="hint">Cargando...</p></div>'+
     '</div>'+
-    '<button class="btn" onclick="guardarAdminConfig()">Guardar cambios</button>';
+    '<button class="btn" onclick="guardarAdminConfig()">Guardar cambios</button>'+
+    '<div class="admin-section" style="margin-top:16px;border:1.5px solid #fca5a5;border-radius:14px;padding:14px">'+
+      '<div class="section-title" style="color:#dc2626;margin-top:0">⚠️ Zona peligrosa</div>'+
+      '<button class="btn sec" style="border-color:#dc2626;color:#dc2626;margin-top:4px" onclick="limpiarPartidosPrueba()">🗑️ Eliminar partidos de prueba (Jorge Luis Borges)</button>'+
+    '</div>';
   cont.innerHTML=h;
+}
+
+async function limpiarPartidosPrueba(){
+  if(!confirm("¿Eliminar TODOS los partidos de prueba de Jorge Luis Borges?\n\nEsta acción no se puede deshacer."))return;
+  try{
+    var snap=await db.collection("partidos_atmas").get();
+    var batch=db.batch();var n=0;
+    snap.forEach(function(doc){
+      var d=doc.data();
+      if(d.jugador1==="Jorge Luis Borges"||d.jugador2==="Jorge Luis Borges"||d.ganador==="Jorge Luis Borges"||d.perdedor==="Jorge Luis Borges"){
+        batch.delete(doc.ref);n++;
+      }
+    });
+    if(n===0){toast("No se encontraron partidos de prueba");return;}
+    await batch.commit();
+    toast("✓ "+n+" partido(s) de prueba eliminados");
+    cargarPlanillaResultados();
+  }catch(e){toast("Error al eliminar: "+e.message);}
 }
 
 async function guardarAdminConfig(){
