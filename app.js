@@ -853,7 +853,10 @@ async function renderPerfilAdmin(p,pBody){
       '<button class="btn sec" style="margin-top:8px" onclick="go(\'escalerilla\')">&#127942; Ver escalerilla</button>'+
       '<button class="btn sec" style="margin-top:8px" onclick="go(\'mis-reservas\')">&#128203; Mis reservas</button>'+
       '<button class="btn sec" style="font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesi&oacute;n</button></div>'+
+      '<div class="section-title" style="margin-top:18px">Historial de partidos</div>'+
+      '<div id="admin-historial-cont"><p class="hint">Cargando...</p></div>'+
       '<p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
+    cargarHistorialAdmin();
     var snapHoy=await db.collection("reservas").where("fecha","==",hoy).get();
     var resHoy=[];snapHoy.forEach(function(d){var r=d.data();if(r.estado!=="cancelada")resHoy.push(r);});
     var erh=el("pa-res-hoy");var etotal=el("pa-total");
@@ -864,6 +867,35 @@ async function renderPerfilAdmin(p,pBody){
     var snap3=await db.collection("inscripciones_atmas").get();
     var einsc=el("pa-insc");if(einsc)einsc.textContent=snap3.size;
   }catch(e){console.warn("renderPerfilAdmin error:",e);}
+}
+
+async function cargarHistorialAdmin(){
+  var cont=el("admin-historial-cont");if(!cont)return;
+  try{
+    var snap=await db.collection("partidos_atmas").limit(100).get();
+    if(snap.empty){cont.innerHTML='<p class="hint">Sin partidos registrados</p>';return;}
+    var docs=[];snap.forEach(function(d){docs.push({id:d.id,...d.data()});});
+    docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return tb-ta;});
+    var estadoColor={aprobado:"#15803d",pendiente_admin:"#b45309",pendiente_rival:"#1d4ed8",rechazado:"#dc2626",programado:"#6b7280"};
+    var estadoLabel={aprobado:"✓ Aprobado",pendiente_admin:"⏳ Pendiente admin",pendiente_rival:"⏳ Pendiente rival",rechazado:"✗ Rechazado",programado:"📅 Programado"};
+    var h='<div style="font-size:11px;color:var(--suave);margin-bottom:8px">'+docs.length+' partidos</div>';
+    docs.forEach(function(r){
+      var col=avatarColor(r.ganador||r.jugador1||"?");var ini=initials(r.ganador||r.jugador1||"?");
+      var fecha=r.ts&&r.ts.seconds?new Date(r.ts.seconds*1000).toLocaleDateString("es-CL"):(r.fecha||"");
+      var est=r.estado||"";var estC=estadoColor[est]||"#9ca3af";var estL=estadoLabel[est]||est;
+      h+='<div class="lcard" style="padding:10px 12px;margin-bottom:6px">'+
+        '<div class="avatar" style="background:'+col+';width:34px;height:34px;font-size:12px;flex-shrink:0">'+ini+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-weight:700;font-size:13px">'+
+            (r.ganador?'<span style="color:#15803d">'+r.ganador+'</span> vs '+r.perdedor:r.jugador1+' vs '+r.jugador2)+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--suave)">'+(r.sets||"")+(r.contexto?" · "+r.contexto:"")+(fecha?" · "+fecha:"")+'</div>'+
+        '</div>'+
+        '<span style="background:'+estC+';color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800;white-space:nowrap">'+estL+'</span>'+
+      '</div>';
+    });
+    cont.innerHTML=h;
+  }catch(e){var c=el("admin-historial-cont");if(c)c.innerHTML='<p class="hint">Error al cargar historial</p>';}
 }
 
 /* ─── TORNEOS ─────────────────────────────────────────────────── */
@@ -1276,9 +1308,9 @@ function openModal(tipo,idx){
           '</div>'+
           '<div id="form-res" style="display:none">'+
             '<div style="font-size:12px;color:var(--suave);margin-bottom:12px">Registrá el resultado de un partido ya jugado.</div>'+
-            '<div class="field"><label>Tu nombre / Ganador</label><input id="pt-yo" value="'+miNombre+'" placeholder="Tu nombre" readonly style="background:#f4f5f7"></div>'+
-            '<div class="field"><label>Oponente</label><select id="pt-rival">'+oh+'</select></div>'+
-            '<div class="field"><label>Resultado</label><select id="pt-resultado"><option value="gane">Gané</option><option value="perdi">Perdí</option></select></div>'+
+            '<div class="field"><label>Jugador 1 (Ganador)</label><select id="pt-yo">'+oh2+'</select></div>'+
+            '<div class="field"><label>Jugador 2 (Perdedor)</label><select id="pt-rival">'+oh+'</select></div>'+
+            '<div class="field"><label>Resultado</label><select id="pt-resultado" style="display:none"><option value="gane">Gané</option></select></div>'+
             '<div class="field"><label>Sets</label><div class="sets"><input id="pt-s1" placeholder="6-3"><input id="pt-s2" placeholder="4-6"><input id="pt-s3" placeholder="--"></div></div>'+
             '<div class="field"><label>Contexto</label><select id="pt-contexto">'+ctxOpts+'</select></div>'+
             '<div class="field"><label>Especificar (si aplica)</label><input id="pt-contexto-otro" placeholder="Ej: Final Torneo Verano"></div>'+
