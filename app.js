@@ -276,7 +276,7 @@ function renderRanking(){
 async function actualizarStats(){
   var elJ=el("stat-jugadores");
   if(elJ)elJ.textContent=rankingData.length||SEED_PLAYERS.length;
-  try{var snap=await db.collection("partidos_atmas").get();var elP=el("stat-partidos");if(elP)elP.textContent=snap.size;}catch(e){}
+  try{var snap=await db.collection("partidos_atmas").where("estado","==","aprobado").get();var elP=el("stat-partidos");if(elP)elP.textContent=snap.size;}catch(e){}
 }
 
 var CAT_A=["Mauricio Morales","Sebastián Brito","Osvaldo Valdivia","Emilio Alzérreca","Oscar Henríquez","Patricio Chamorro","Rodrigo Bernal","Hipólito Bello","Edgardo Pacheco","Pablo Ortiz","Rodrigo Navarro","Carlos Tapia","Néstor Zárate","Pablo Concha"];
@@ -1430,9 +1430,9 @@ async function inscribirTorneo(idx){
   var btnI=el("btn-inscribir-torneo");if(btnI){btnI.disabled=true;btnI.dataset.orig=btnI.textContent;btnI.textContent="Inscribiendo...";}
   try{
     var totalSnap=await db.collection("inscripciones_atmas").where("torneo","==",t.n).get();
-    if(totalSnap.size>=16){toast("Torneo completo. No hay mas cupos.");return;}
-    var existe=await db.collection("inscripciones_atmas").where("torneo","==",t.n).where("nombre","==",nombre).get();
-    if(!existe.empty){toast("Ya estás inscrito en este torneo ✓");return;}
+    if(totalSnap.size>=(t.cupos||16)){toast("Torneo completo. No hay mas cupos.");return;}
+    var existe=false;totalSnap.forEach(function(d){if(d.data().nombre===nombre)existe=true;});
+    if(existe){toast("Ya estás inscrito en este torneo ✓");return;}
     await db.collection("inscripciones_atmas").add({nombre:nombre,tel:tel,torneo:t.n,turno:turno,monto:t.monto,estado:"pendiente_pago",ts:firebase.firestore.FieldValue.serverTimestamp()});
     toast("Inscripción registrada — completa el pago para confirmar tu cupo");
     notificarMarcelo("🏆 Nueva inscripción torneo\nJugador: "+nombre+"\nTorneo: "+t.n+"\nMonto: $"+Number(t.monto).toLocaleString("es-CL")+"\nTel: "+tel);
@@ -2443,8 +2443,8 @@ async function registrarFalta(userId,nombreUsuario,reservaId,fecha){
   data.nombre=nombreUsuario||data.nombre;
   var now=new Date();
   if(data.faltas===1){data.estado="advertencia";data.bloqHasta=null;data.bloqIndef=false;}
-  else if(data.faltas===2){data.estado="bloqueado";data.bloqHasta=new Date(now.getTime()+72*3600*1000);data.bloqIndef=false;}
-  else if(data.faltas===3){data.estado="bloqueado";data.bloqHasta=new Date(now.getTime()+7*24*3600*1000);data.bloqIndef=false;}
+  else if(data.faltas===2){data.estado="bloqueado";data.bloqHasta=firebase.firestore.Timestamp.fromDate(new Date(now.getTime()+72*3600*1000));data.bloqIndef=false;}
+  else if(data.faltas===3){data.estado="bloqueado";data.bloqHasta=firebase.firestore.Timestamp.fromDate(new Date(now.getTime()+7*24*3600*1000));data.bloqIndef=false;}
   else{data.estado="bloqueado";data.bloqHasta=null;data.bloqIndef=true;}
   await ref.set(data);
   return data;
@@ -2883,8 +2883,8 @@ async function guardarAdminConfig(){
     academia_iniciacion:parseInt(gv("ac1"))||60000,academia_intermedio:parseInt(gv("ac2"))||70000,
     academia_avanzado:parseInt(gv("ac3"))||80000,academia_individual_4c:parseInt(gv("ac4"))||120000,academia_individual_8c:parseInt(gv("ac5"))||200000,
     banco_nombre:gv("bnombre"),banco_rut:gv("brut"),banco_banco:gv("bbanco"),banco_tipo:gv("btipo"),banco_cuenta:gv("bcuenta"),banco_email:gv("bemail"),wp:gv("wp"),
-    cod_antiguo:"ATMAS80",cod_nuevo:"ATMAS100"
   };
+  // No sobreescribir códigos de socio
   try{
     await db.collection("config_app").doc("precios").set(data,{merge:true});
     // Actualizar CONFIG_RES en memoria
