@@ -3025,6 +3025,9 @@ function iniciarNotificacionesAdmin(){
         var p=getPerfil();if(!p||!esAdmin(p.nombre||"",p.email||""))return;
         var n=snap.size;
         var badge=el("badge-notifs");if(badge){badge.textContent=n>9?"9+":String(n);badge.style.display=n>0?"":"none";}
+        // Campana en header
+        var campana=el("btn-campana");if(campana)campana.style.display="";
+        var badgeCamp=el("badge-campana");if(badgeCamp){badgeCamp.textContent=n>9?"9+":String(n);badgeCamp.style.display=n>0?"":"none";}
         if(n>_notifsAnterior&&_notifsAnterior>=0&&n>0){
           // Nueva notificación — tostar y vibrar
           var docs=[];snap.forEach(function(d){docs.push(d.data());});
@@ -3041,6 +3044,53 @@ function iniciarNotificacionesAdmin(){
       });
   }catch(e){console.warn("iniciarNotificacionesAdmin:",e);}
 }
+function togglePanelNotifs(){
+  var panel=el("notif-panel");if(!panel)return;
+  if(panel.style.display==="none"||!panel.style.display){
+    panel.style.display="";
+    renderPanelNotifs();
+  }else{
+    cerrarPanelNotifs();
+  }
+}
+function cerrarPanelNotifs(){var panel=el("notif-panel");if(panel)panel.style.display="none";}
+
+async function renderPanelNotifs(){
+  var cont=el("notif-panel-list");if(!cont)return;
+  cont.innerHTML='<p style="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0">Cargando...</p>';
+  try{
+    var snap=await db.collection("notificaciones_admin").limit(30).get();
+    if(snap.empty){cont.innerHTML='<p style="text-align:center;color:#9ca3af;font-size:13px;padding:24px 0">Sin notificaciones</p>';return;}
+    var docs=[];snap.forEach(function(d){docs.push({id:d.id,...d.data()});});
+    docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return tb-ta;});
+    var iconos={"🏟️ Nueva reserva":"🏟️","👤 Nuevo usuario":"👤","📅 Clase individual":"📅"};
+    var h="";
+    docs.forEach(function(n){
+      var ts=n.ts&&n.ts.seconds?new Date(n.ts.seconds*1000):null;
+      var fechaStr=ts?ts.toLocaleDateString("es-CL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+      var icono=Object.keys(iconos).find(function(k){return(n.tipo||"").startsWith(k.replace(/[^a-zA-Z\s]/g,"").trim());});
+      icono=(n.tipo||"🔔").split(" ")[0];
+      var bg=n.leida?"#fff":"#f0fdf4";
+      var dot=n.leida?"":'<span style="width:8px;height:8px;background:#16a34a;border-radius:50%;flex-shrink:0;margin-top:4px"></span>';
+      h+='<div style="display:flex;gap:10px;padding:12px 8px;border-bottom:1px solid #f3f4f6;background:'+bg+';cursor:pointer" onclick="marcarNotifLeida(\''+n.id+'\')">'+
+        '<div style="font-size:22px;flex-shrink:0">'+icono+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-weight:700;font-size:13px;color:#111">'+n.nombre+'</div>'+
+          (n.detalle?'<div style="font-size:11px;color:#6b7280;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+n.detalle+'</div>':'')+
+          (n.tel?'<div style="font-size:11px;color:#6b7280">📞 '+n.tel+'</div>':'')+
+          '<div style="font-size:10px;color:#9ca3af;margin-top:3px">'+fechaStr+'</div>'+
+        '</div>'+
+        dot+
+        '</div>';
+    });
+    cont.innerHTML=h;
+  }catch(e){cont.innerHTML='<p style="color:#dc2626;font-size:12px;padding:12px">Error al cargar</p>';}
+}
+
+async function marcarNotifLeida(id){
+  try{await db.collection("notificaciones_admin").doc(id).update({leida:true});renderPanelNotifs();}catch(e){}
+}
+
 async function confirmarPagoNotif(notifId,reservaId){
   try{
     await db.collection("reservas").doc(reservaId).update({estado:"confirmada"});
@@ -3071,9 +3121,6 @@ async function renderNotificacionesAdmin(){
       var esReserva=!!n.reservaId;
       var bgCard=n.leida?"#f9fafb":(esReserva?"#f0fdf4":"#fefce8");
       var bdCard=n.leida?"#e5e7eb":(esReserva?"#86efac":"#fbbf24");
-      var btnConf=esReserva&&!n.pagada
-        ?'<button class="btn" style="margin-top:8px;padding:7px 14px;font-size:12px" onclick="confirmarPagoNotif(\''+n.id+'\',\''+n.reservaId+'\')">✓ Confirmar pago</button>'
-        :(esReserva&&n.pagada?'<div style="font-size:11px;color:#16a34a;margin-top:6px;font-weight:700">✓ Pago confirmado</div>':'');
       h+='<div style="background:'+bgCard+';border:1.5px solid '+bdCard+';border-radius:12px;padding:10px 12px;margin-bottom:8px">'+
         '<div style="font-weight:800;font-size:14px">'+(n.leida?"":"🆕 ")+(n.tipo?n.tipo+' · ':'')+n.nombre+'</div>'+
         (n.detalle?'<div style="font-size:12px;color:#374151;margin-top:2px">'+n.detalle+'</div>':'')+
@@ -3081,7 +3128,6 @@ async function renderNotificacionesAdmin(){
         (n.rut?'<div style="font-size:12px;color:#6b7280">🪪 '+n.rut+'</div>':'')+
         (n.email?'<div style="font-size:12px;color:#6b7280">✉️ '+n.email+'</div>':'')+
         '<div style="font-size:11px;color:#9ca3af;margin-top:4px">'+(fecha?fecha:"")+'</div>'+
-        btnConf+
       '</div>';
     });
     cont.innerHTML=h;
