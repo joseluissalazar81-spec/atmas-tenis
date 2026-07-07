@@ -9,7 +9,7 @@ function setVista(v){
     var b=document.getElementById(btnIds[k]);if(b)b.classList.toggle("on",v===k);
   });
   if(v==="h2h")initH2H();
-  if(v==="partidos")cargarPartidosPublicos();
+  if(v==="partidos"){cargarPartidosProgramados();cargarPartidosPublicos();}
 }
 async function verPerfilPublico(nombre){
   var sc=el("sheet-content");var mo=el("modal");if(!sc||!mo)return;
@@ -1013,6 +1013,108 @@ async function guardarPartido(){
   finally{_submitting.partido=false;btnLoad("btn-guardar-partido",false);}
 }
 
+function modoPartido(modo){
+  var fp=el("form-prog");var fr=el("form-res");
+  var mb=el("modo-prog");var rb=el("modo-res");
+  if(!fp||!fr)return;
+  if(modo==="prog"){
+    fp.style.display="";fr.style.display="none";
+    if(mb){mb.className="btn";mb.style.flex="1";mb.style.fontSize="13px";mb.style.padding="10px";}
+    if(rb){rb.className="btn sec";rb.style.flex="1";rb.style.fontSize="13px";rb.style.padding="10px";}
+  }else{
+    fp.style.display="none";fr.style.display="";
+    if(mb){mb.className="btn sec";mb.style.flex="1";mb.style.fontSize="13px";mb.style.padding="10px";}
+    if(rb){rb.className="btn";rb.style.flex="1";rb.style.fontSize="13px";rb.style.padding="10px";}
+  }
+}
+
+async function programarPartido(){
+  if(_submitting.prog)return;
+  var j1=(el("prog-j1")||{}).value||"";
+  var j2=(el("prog-j2")||{}).value||"";
+  var fecha=(el("prog-fecha")||{}).value||"";
+  var hora=(el("prog-hora")||{}).value||"";
+  var cancha=(el("prog-cancha")||{}).value||"Cancha 1";
+  var ctx=(el("prog-ctx")||{}).value||"Escalerilla ATMAS";
+  if(!j1||!j2){toast("Seleccioná los dos jugadores");return;}
+  if(j1===j2){toast("Los jugadores deben ser distintos");return;}
+  if(!fecha){toast("Seleccioná la fecha");return;}
+  _submitting.prog=true;btnLoad("btn-prog-partido",true,"Creando...");
+  try{
+    await db.collection("partidos_atmas").add({
+      jugador1:j1,jugador2:j2,ganador:"",perdedor:"",sets:"",
+      cancha:cancha,fecha:fecha,hora:hora,contexto:ctx,
+      estado:"programado",
+      ts:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeModal();
+    toast("✓ Partido programado — "+j1+" vs "+j2+" · "+fecha+(hora?" "+hora:""));
+    cargarPartidosProgramados();
+  }catch(e){toast("Error al crear: "+e.message);}
+  finally{_submitting.prog=false;btnLoad("btn-prog-partido",false);}
+}
+
+async function cargarPartidosProgramados(){
+  var cont=el("partidos-programados");if(!cont)return;
+  try{
+    var snap=await db.collection("partidos_atmas").where("estado","==","programado").get();
+    if(snap.empty){cont.innerHTML='<p class="hint">Sin partidos programados</p>';return;}
+    var docs=[];snap.forEach(function(d){docs.push({id:d.id,data:d.data()});});
+    docs.sort(function(a,b){return(a.data.fecha||"")>(b.data.fecha||"")?1:-1;});
+    var h="";
+    var p=getPerfil()||{};var esAdm=esAdmin(p.nombre||"",p.email||"");
+    docs.forEach(function(doc){
+      var r=doc.data;
+      var fechaFmt=r.fecha?r.fecha.split("-").reverse().join("/"):"-";
+      h+='<div style="background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:3px solid #6366f1">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+          '<div style="flex:1">'+
+            '<div style="font-size:13px;font-weight:800">'+r.jugador1+' <span style="color:var(--suave);font-weight:400">vs</span> '+r.jugador2+'</div>'+
+            '<div style="font-size:11px;color:var(--suave);margin-top:3px">📅 '+fechaFmt+(r.hora?' · 🕐 '+r.hora:'')+'</div>'+
+            '<div style="font-size:10px;color:#6366f1;font-weight:600;margin-top:2px">'+r.cancha+' · '+r.contexto+'</div>'+
+          '</div>'+
+          (esAdm?'<button class="mini" style="background:#dcfce7;color:#15803d;flex-shrink:0" onclick="completarResultado(\''+doc.id+'\',\''+r.jugador1.replace(/'/g,"\\'")+'\',\''+r.jugador2.replace(/'/g,"\\'")+'\')" >✏️ Resultado</button>':'<span style="font-size:10px;font-weight:700;color:#6366f1">Programado</span>')+
+        '</div>'+
+      '</div>';
+    });
+    cont.innerHTML=h;
+  }catch(e){cont.innerHTML='<p class="hint">Error cargando</p>';}
+}
+
+function completarResultado(docId,j1,j2){
+  var sc=el("sheet-content");var mo=el("modal");if(!sc||!mo)return;
+  var oh='<option value="'+j1+'">'+j1+'</option><option value="'+j2+'">'+j2+'</option>';
+  sc.innerHTML=
+    '<h3 style="margin-bottom:14px">Completar resultado</h3>'+
+    '<div style="font-size:13px;font-weight:700;margin-bottom:12px">'+j1+' vs '+j2+'</div>'+
+    '<div class="field"><label>Ganador</label><select id="cr-ganador">'+oh+'</select></div>'+
+    '<div class="field"><label>Sets</label><div class="sets"><input id="cr-s1" placeholder="6-3"><input id="cr-s2" placeholder="4-6"><input id="cr-s3" placeholder="--"></div></div>'+
+    '<button class="btn" onclick="guardarResultadoPartido(\''+docId+'\',\''+j1.replace(/'/g,"\\'")+'\',\''+j2.replace(/'/g,"\\'")+'\')" >✓ Guardar y sumar puntos</button>'+
+    '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
+  mo.classList.add("show");
+}
+
+async function guardarResultadoPartido(docId,j1,j2){
+  if(_submitting["cr_"+docId])return;
+  var ganador=(el("cr-ganador")||{}).value||j1;
+  var perdedor=ganador===j1?j2:j1;
+  var s1=(el("cr-s1")||{}).value||"";
+  var s2=(el("cr-s2")||{}).value||"";
+  var s3=(el("cr-s3")||{}).value||"";
+  var sets=[s1,s2,s3].filter(function(s){return s&&s!=="--";}).join(", ");
+  _submitting["cr_"+docId]=true;
+  try{
+    await db.collection("partidos_atmas").doc(docId).update({
+      ganador:ganador,perdedor:perdedor,sets:sets,
+      jugador1:j1,jugador2:j2,estado:"pendiente_admin",rivalConfirmo:true
+    });
+    await aprobarPartido(docId,ganador,perdedor);
+    closeModal();
+    cargarPartidosProgramados();
+  }catch(e){toast("Error: "+e.message);}
+  finally{delete _submitting["cr_"+docId];}
+}
+
 function pendAprobar(i){var q=window._pendQ[i];if(q)aprobarPartido(q.id,q.gan,q.per);}
 function pendRechazar(i){var q=window._pendQ[i];if(q)rechazarPartido(q.id);}
 
@@ -1128,25 +1230,55 @@ function openModal(tipo,idx){
       html='<h3>Solicitar encordado ATMAS</h3><div class="field"><label>Tu nombre</label><input id="enc-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>Tipo</label><select id="enc-tipo"><option>Control</option><option>Competencia</option><option>Potencia</option><option>Hibrido</option></select></div><button class="btn wa" onclick="enviarEncordadoWA()">Coordinar por WhatsApp</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
     }else if(tipo==="partido"){
       var perfil=getPerfil();var miNombre=perfil?perfil.nombre:"";
+      var esAdm=esAdmin(miNombre,(perfil&&perfil.email)||"");
       var oh="";rankingData.forEach(function(p){if(p[0]!==miNombre)oh+='<option>'+p[0]+'</option>';});
-      html='<h3>Registrar partido</h3>'+
-        '<div class="field"><label>Tu nombre</label><input id="pt-yo" value="'+miNombre+'" placeholder="Tu nombre"'+(miNombre?' readonly style="background:#f4f5f7"':'')+' ></div>'+
-        '<div class="field"><label>Oponente</label><select id="pt-rival">'+oh+'</select></div>'+
-        '<div class="field"><label>Resultado</label><select id="pt-resultado"><option value="gane">Gané</option><option value="perdi">Perdí</option></select></div>'+
-        '<div class="field"><label>Sets</label><div class="sets"><input id="pt-s1" placeholder="6-3"><input id="pt-s2" placeholder="4-6"><input id="pt-s3" placeholder="--"></div></div>'+
-        '<div class="field"><label>Contexto / Torneo</label><select id="pt-contexto">'+
-          '<option value="Escalerilla ATMAS">Escalerilla ATMAS</option>'+
-          '<option value="Ranking Zona Norte">Ranking Zona Norte</option>'+
-          '<option value="Torneo Novicios">Torneo Novicios</option>'+
-          '<option value="Partido amistoso">Partido amistoso</option>'+
-          '<option value="Partido a puntos">Partido a puntos</option>'+
-          '<option value="otro">Otro (especificar abajo)</option>'+
-        '</select></div>'+
-        '<div class="field"><label>Especificar (si aplica)</label><input id="pt-contexto-otro" placeholder="Ej: Final Torneo Verano"></div>'+
-        '<div class="field"><label>Cancha</label><select id="pt-cancha"><option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option></select></div>'+
-        '<div class="field"><label>Fecha</label><input id="pt-fecha" type="date" value="'+new Date().toISOString().split("T")[0]+'"></div>'+
-        '<button id="btn-guardar-partido" class="btn" onclick="guardarPartido()">Guardar partido</button>'+
-        '<button class="btn sec" onclick="closeModal()">Cancelar</button>';
+      var oh2="";rankingData.forEach(function(p){oh2+='<option>'+p[0]+'</option>';});
+      var ctxOpts='<option value="Escalerilla ATMAS">Escalerilla ATMAS</option><option value="Ranking Zona Norte">Ranking Zona Norte</option><option value="Torneo Novicios">Torneo Novicios</option><option value="Partido amistoso">Partido amistoso</option><option value="Partido a puntos">Partido a puntos</option><option value="otro">Otro (especificar abajo)</option>';
+      var canchaOpts='<option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option>';
+      var hoy=new Date().toISOString().split("T")[0];
+      if(esAdm){
+        html=
+          '<div style="display:flex;gap:8px;margin-bottom:16px">'+
+            '<button id="modo-prog" class="btn" style="flex:1;font-size:13px;padding:10px" onclick="modoPartido(\'prog\')">📅 Programar</button>'+
+            '<button id="modo-res" class="btn sec" style="flex:1;font-size:13px;padding:10px" onclick="modoPartido(\'res\')">✓ Resultado</button>'+
+          '</div>'+
+          '<div id="form-prog">'+
+            '<div style="font-size:12px;color:var(--suave);margin-bottom:12px">Crea el partido antes de jugarlo. Completás el resultado después.</div>'+
+            '<div class="field"><label>Jugador 1</label><select id="prog-j1">'+oh2+'</select></div>'+
+            '<div class="field"><label>Jugador 2</label><select id="prog-j2">'+oh2+'</select></div>'+
+            '<div class="field"><label>Fecha</label><input id="prog-fecha" type="date" value="'+hoy+'"></div>'+
+            '<div class="field"><label>Hora</label><input id="prog-hora" type="time" value="10:00"></div>'+
+            '<div class="field"><label>Cancha</label><select id="prog-cancha">'+canchaOpts+'</select></div>'+
+            '<div class="field"><label>Contexto</label><select id="prog-ctx"><option value="Escalerilla ATMAS">Escalerilla ATMAS</option><option value="Ranking Zona Norte">Ranking Zona Norte</option><option value="Torneo Novicios">Torneo Novicios</option><option value="Partido amistoso">Partido amistoso</option></select></div>'+
+            '<button id="btn-prog-partido" class="btn" onclick="programarPartido()">📅 Crear partido</button>'+
+            '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>'+
+          '</div>'+
+          '<div id="form-res" style="display:none">'+
+            '<div style="font-size:12px;color:var(--suave);margin-bottom:12px">Registrá el resultado de un partido ya jugado.</div>'+
+            '<div class="field"><label>Tu nombre / Ganador</label><input id="pt-yo" value="'+miNombre+'" placeholder="Tu nombre" readonly style="background:#f4f5f7"></div>'+
+            '<div class="field"><label>Oponente</label><select id="pt-rival">'+oh+'</select></div>'+
+            '<div class="field"><label>Resultado</label><select id="pt-resultado"><option value="gane">Gané</option><option value="perdi">Perdí</option></select></div>'+
+            '<div class="field"><label>Sets</label><div class="sets"><input id="pt-s1" placeholder="6-3"><input id="pt-s2" placeholder="4-6"><input id="pt-s3" placeholder="--"></div></div>'+
+            '<div class="field"><label>Contexto</label><select id="pt-contexto">'+ctxOpts+'</select></div>'+
+            '<div class="field"><label>Especificar (si aplica)</label><input id="pt-contexto-otro" placeholder="Ej: Final Torneo Verano"></div>'+
+            '<div class="field"><label>Cancha</label><select id="pt-cancha">'+canchaOpts+'</select></div>'+
+            '<div class="field"><label>Fecha</label><input id="pt-fecha" type="date" value="'+hoy+'"></div>'+
+            '<button id="btn-guardar-partido" class="btn" onclick="guardarPartido()">✓ Guardar y sumar puntos</button>'+
+            '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>'+
+          '</div>';
+      }else{
+        html='<h3>Registrar partido</h3>'+
+          '<div class="field"><label>Tu nombre</label><input id="pt-yo" value="'+miNombre+'" placeholder="Tu nombre"'+(miNombre?' readonly style="background:#f4f5f7"':'')+' ></div>'+
+          '<div class="field"><label>Oponente</label><select id="pt-rival">'+oh+'</select></div>'+
+          '<div class="field"><label>Resultado</label><select id="pt-resultado"><option value="gane">Gané</option><option value="perdi">Perdí</option></select></div>'+
+          '<div class="field"><label>Sets</label><div class="sets"><input id="pt-s1" placeholder="6-3"><input id="pt-s2" placeholder="4-6"><input id="pt-s3" placeholder="--"></div></div>'+
+          '<div class="field"><label>Contexto / Torneo</label><select id="pt-contexto">'+ctxOpts+'</select></div>'+
+          '<div class="field"><label>Especificar (si aplica)</label><input id="pt-contexto-otro" placeholder="Ej: Final Torneo Verano"></div>'+
+          '<div class="field"><label>Cancha</label><select id="pt-cancha">'+canchaOpts+'</select></div>'+
+          '<div class="field"><label>Fecha</label><input id="pt-fecha" type="date" value="'+hoy+'"></div>'+
+          '<button id="btn-guardar-partido" class="btn" onclick="guardarPartido()">Guardar partido</button>'+
+          '<button class="btn sec" onclick="closeModal()">Cancelar</button>';
+      }
     }else if(tipo==="socio"){openSocioModal();return;
     }else if(tipo==="caracteristicas"){
       var p2=getPerfil()||{};
