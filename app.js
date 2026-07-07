@@ -867,27 +867,29 @@ async function renderPerfilAdmin(p,pBody){
       '<div id="admin-historial-cont"><p class="hint">Cargando...</p></div>'+
       '<p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
     cargarHistorialAdmin();
-    // Reservas de hoy
-    var snapHoy=await db.collection("reservas").where("fecha","==",hoy).get();
-    var resHoy=[];snapHoy.forEach(function(d){var r=d.data();if(r.estado!=="cancelada")resHoy.push(r);});
+    // Todas las reservas (filtro cliente) + inscripciones
+    var primerDia=hoy.slice(0,7)+"-01";
+    var [snapTodasRes,snapTodasInsc]=await Promise.all([
+      db.collection("reservas").get(),
+      db.collection("inscripciones_atmas").get()
+    ]);
+    var resHoy=[];var recaudado=0;
+    snapTodasRes.forEach(function(d){
+      var r=d.data();
+      if(r.fecha===hoy&&r.estado!=="cancelada")resHoy.push(r);
+      if(r.fecha&&r.fecha>=primerDia&&r.fecha<=hoy&&(r.estado==="confirmada"||r.estado==="confirmada_pagada"))recaudado+=(r.monto||0);
+    });
     var erh=el("pa-res-hoy");var etotal=el("pa-total");
     if(erh)erh.textContent=resHoy.length;
-    // Recaudación del mes actual (reservas confirmadas)
-    var primerDia=hoy.slice(0,7)+"-01";
-    var snapMes=await db.collection("reservas").where("fecha",">=",primerDia).where("fecha","<=",hoy).get();
-    var recaudado=0;
-    snapMes.forEach(function(d){var r=d.data();if(r.estado==="confirmada_pagada"||r.estado==="confirmada")recaudado+=(r.monto||0);});
-    // Sumar inscripciones de torneos confirmadas este mes
-    var snapInscHoy=await db.collection("inscripciones_atmas").get();
-    var einsc=el("pa-insc");if(einsc)einsc.textContent=snapInscHoy.size;
-    snapInscHoy.forEach(function(doc){
+    var einsc=el("pa-insc");if(einsc)einsc.textContent=snapTodasInsc.size;
+    snapTodasInsc.forEach(function(doc){
       var d=doc.data();
       if(d.estado!=="confirmado"&&d.estado!=="pagado")return;
       var fecha=d.fechaPago||"";
       if(!fecha&&d.ts&&d.ts.seconds){fecha=new Date(d.ts.seconds*1000).toISOString().split("T")[0];}
-      if(fecha>=primerDia&&fecha<=hoy)recaudado+=(d.monto||0);
+      if(fecha&&fecha>=primerDia&&fecha<=hoy)recaudado+=(d.monto||0);
     });
-    if(etotal)etotal.textContent=recaudado>0?"$"+recaudado.toLocaleString("es-CL"):"$0";
+    if(etotal)etotal.textContent="$"+recaudado.toLocaleString("es-CL");
   }catch(e){console.warn("renderPerfilAdmin error:",e);}
 }
 
