@@ -1304,7 +1304,15 @@ function openModal(tipo,idx){
       var p2=getPerfil()||{};
       html='<h3>Mi estilo de juego</h3><div class="field"><label>Estilo</label><select id="car-estilo"><option value="">-- Elige --</option><option'+(p2.estilo==="Jugador de fondo"?" selected":"")+'>Jugador de fondo</option><option'+(p2.estilo==="Saque y volea"?" selected":"")+'>Saque y volea</option><option'+(p2.estilo==="Agresivo desde el fondo"?" selected":"")+'>Agresivo desde el fondo</option><option'+(p2.estilo==="Contragolpeador"?" selected":"")+'>Contragolpeador</option></select></div><div class="field"><label>Golpe favorito</label><select id="car-golpe"><option value="">-- Elige --</option><option'+(p2.golpe==="Derecha"?" selected":"")+'>Derecha</option><option'+(p2.golpe==="Reves"?" selected":"")+'>Reves</option><option'+(p2.golpe==="Saque"?" selected":"")+'>Saque</option><option'+(p2.golpe==="Volea"?" selected":"")+'>Volea</option></select></div><div class="field"><label>Superficie preferida</label><select id="car-sup"><option value="">-- Elige --</option><option'+(p2.superficie==="Arcilla"?" selected":"")+'>Arcilla</option><option'+(p2.superficie==="Cemento"?" selected":"")+'>Cemento</option><option'+(p2.superficie==="Grass"?" selected":"")+'>Grass</option></select></div><button class="btn" onclick="guardarCaracteristicas()">Guardar mi estilo</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
     }else if(tipo==="jugador"){
-      html='<h3>Agregar jugador</h3><div class="field"><label>Nombre</label><input id="jg-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>Puntos iniciales</label><input id="jg-pts" type="number" value="0"></div><button class="btn" onclick="confirmarJugador()">Agregar a la escalerilla</button><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
+      html='<h3>Agregar jugador</h3>'+
+        '<div class="field"><label>Nombre completo *</label><input id="jg-nombre" placeholder="Ej: Juan Perez"></div>'+
+        '<div class="field"><label>RUT</label><input id="jg-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)"></div>'+
+        '<div class="field"><label>Tel&eacute;fono</label><input id="jg-tel" type="tel" placeholder="+569 xxxx xxxx"></div>'+
+        '<div class="field"><label>Fecha de nacimiento</label><input id="jg-fnac" type="date"></div>'+
+        '<div class="field"><label>Puntos iniciales</label><input id="jg-pts" type="number" value="0"></div>'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><input type="checkbox" id="jg-socio" style="width:18px;height:18px"><label for="jg-socio" style="font-size:14px;font-weight:600">Es socio del club</label></div>'+
+        '<button class="btn" onclick="confirmarJugador()">Agregar jugador</button>'+
+        '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
     }
     sc.innerHTML=html;
     mo.classList.add("show");
@@ -1322,12 +1330,23 @@ function enviarEncordadoWA(){var nombre=((el("enc-nombre")||{}).value||"").trim(
 
 async function confirmarJugador(){
   var nombre=((el("jg-nombre")||{}).value||"").trim();
+  var rut=((el("jg-rut")||{}).value||"").trim();
+  var tel=((el("jg-tel")||{}).value||"").trim();
+  var fnac=(el("jg-fnac")||{}).value||"";
   var pts=parseInt((el("jg-pts")||{}).value||"0",10)||0;
+  var socio=!!(el("jg-socio")||{}).checked;
   if(!nombre){toast("Escribe el nombre del jugador");return;}
   try{
-    await db.collection("ranking_atmas").doc(slugify(nombre)).set({nombre:nombre,pts:pts,jugados:0,ganados:0,perdidos:0,pct:0},{merge:true});
-    closeModal();toast("Jugador agregado al ranking");
-  }catch(e){toast("Error al agregar jugador");}
+    var jugadorData={nombre:nombre,rut:rut,tel:tel,fnac:fnac,socio:socio,pts:pts,jugados:0,ganados:0,perdidos:0,pct:0,ts:firebase.firestore.FieldValue.serverTimestamp()};
+    var rankId=slugify(nombre);
+    await db.collection("ranking_atmas").doc(rankId).set({nombre:nombre,pts:pts,jugados:0,ganados:0,perdidos:0,pct:0,socio:socio},{merge:true});
+    if(rut){
+      var rutNorm=rut.replace(/\./g,"").replace(/-/g,"");
+      await db.collection("jugadores").doc(rutNorm).set(jugadorData,{merge:true});
+    }
+    closeModal();toast("Jugador agregado ✓");
+    iniciarRankingLive();
+  }catch(e){toast("Error al agregar jugador: "+e.message);}
 }
 
 async function inscribirTorneo(idx){
