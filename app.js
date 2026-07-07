@@ -551,7 +551,7 @@ async function onAuthStateChanged(user){
       toast("Bienvenido, "+p.nombre+"!");
       if(esAdmin(p.nombre||"",user.email||p.email||"")){
         var campanaBtn=el("btn-campana");if(campanaBtn)campanaBtn.style.display="";
-        iniciarNotificacionesAdmin();iniciarBadgePendientes();
+        iniciarNotificacionesAdmin();iniciarBadgePendientes();actualizarBadgesInicio();
       }
     }else{
       // Usuario Google sin perfil: crear uno con sus datos de Google
@@ -682,6 +682,7 @@ function renderPerfil(){
     if(esAdmin(p.nombre,authEmail)){
       adminUnlocked=true;
       var campanaBtn=el("btn-campana");if(campanaBtn)campanaBtn.style.display="";
+      actualizarBadgesInicio();
       renderPerfilAdmin(p,pBody);return;
     }
     var jugador=rankingData.find(function(j){return j[0].toLowerCase()===p.nombre.toLowerCase();});
@@ -3053,6 +3054,25 @@ function iniciarNotificacionesAdmin(){
       });
   }catch(e){console.warn("iniciarNotificacionesAdmin:",e);}
 }
+function setBadgeAcc(id,n){var b=el("badge-acc-"+id);if(!b)return;b.textContent=n>9?"9+":String(n);b.style.display=n>0?"":"none";}
+
+async function actualizarBadgesInicio(){
+  var p=getPerfil();var authEmail=(auth&&auth.currentUser&&auth.currentUser.email)||p&&p.email||"";
+  if(!p||!esAdmin(p.nombre||"",authEmail))return;
+  try{
+    var [snapPartidos,snapReservas,snapInsc,snapSlots]=await Promise.all([
+      db.collection("partidos_atmas").where("estado","in",["pendiente_admin","pendiente_rival"]).get(),
+      db.collection("reservas").where("estado","==","pendiente_pago").get(),
+      db.collection("inscripciones_atmas").where("estado","==","pendiente_pago").get(),
+      db.collection("slots_individuales").where("estado","==","reservado").get()
+    ]);
+    setBadgeAcc("escalerilla",snapPartidos.size);
+    setBadgeAcc("cancha",snapReservas.size);
+    setBadgeAcc("torneos",snapInsc.size);
+    setBadgeAcc("academia",snapSlots.size);
+  }catch(e){}
+}
+
 function togglePanelNotifs(){
   var panel=el("notif-panel");if(!panel)return;
   if(panel.style.display==="none"||!panel.style.display){
