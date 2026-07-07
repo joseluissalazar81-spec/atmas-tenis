@@ -1219,12 +1219,31 @@ function pinPress(k){
   }
 }
 
+async function actualizarAlertaAdmin(){
+  var cont=el("admin-alerta-pend");var txt=el("admin-alerta-txt");if(!cont||!txt)return;
+  try{
+    var snap=await db.collection("partidos_atmas").where("estado","==","pendiente_admin").get();
+    var n=snap.size;
+    if(n>0){
+      txt.textContent=n+" partido"+(n===1?" requiere":"s requieren")+" tu aprobación";
+      cont.style.display="flex";
+    }else{
+      cont.style.display="none";
+    }
+  }catch(e){cont.style.display="none";}
+}
+
 /* ─── ADMIN PANEL ─────────────────────────────────────────────── */
 async function renderAdmin(){
   var eab=el("admin-body");if(!eab)return;
   var h="";
   h+='<div class="admin-header"><div><h2>Panel Admin</h2><p>Club Las Avestruces &middot; ATMAS</p></div>';
   h+='<button onclick="adminSalir()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer">Salir</button></div>';
+  // Banner de pendientes
+  h+='<div id="admin-alerta-pend" style="display:none;background:#fef9c3;border:1.5px solid #fbbf24;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+    '<div><span style="font-size:15px">⚠️</span> <span id="admin-alerta-txt" style="font-size:13px;font-weight:700;color:#92400e"></span></div>'+
+    '<button onclick="adminTab(el(\'atab-ranking\'),\'ranking\')" style="background:#f59e0b;border:none;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer">Ver →</button>'+
+  '</div>';
   h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">'+
     '<button id="atab-reservas" class="on" onclick="adminTab(this,\'reservas\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:var(--verde);color:#fff">📋 Reservas</button>'+
     '<button id="atab-sanciones" onclick="adminTab(this,\'sanciones\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">🚫 Sanciones</button>'+
@@ -1274,6 +1293,8 @@ async function renderAdmin(){
   '</div></div>';
   h+='<div style="height:20px"></div>';
   eab.innerHTML=h;
+  // Actualizar banner de pendientes
+  actualizarAlertaAdmin();
   renderAdminReservas();
   loadAdminTorneos();
   var rh="";rankingData.forEach(function(p,i){rh+='<div class="lcard"><div class="rank-pos" style="width:24px;font-size:12px">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+p[0]+'</div><div class="ds">'+p[1]+' pts &middot; '+p[3]+'G '+p[4]+'P</div></div><button class="mini" style="color:#dc2626" onclick="eliminarJugador(\''+p[0].replace(/'/g,"\\'")+'\')">&times;</button></div>';});
@@ -2588,6 +2609,35 @@ async function guardarAdminConfig(){
   }catch(e){toast("Error: "+e.message);}
 }
 
+/* ─── BADGE PENDIENTES (notificación admin) ───────────────────── */
+var _pendientesListener=null;
+var _pendientesAnterior=0;
+function iniciarBadgePendientes(){
+  if(_pendientesListener)_pendientesListener();
+  try{
+    _pendientesListener=db.collection("partidos_atmas")
+      .where("estado","in",["pendiente_admin","pendiente_rival"])
+      .onSnapshot(function(snap){
+        var n=snap.size;
+        var badge=el("badge-admin");
+        if(!badge)return;
+        var p=getPerfil();
+        var esAdm=p&&esAdmin(p.nombre||"",p.email||"");
+        if(esAdm&&n>0){
+          badge.textContent=n>9?"9+":String(n);
+          badge.style.display="";
+          // Vibrar y sonar si subió el contador (nuevo partido)
+          if(n>_pendientesAnterior&&_pendientesAnterior>=0){
+            if(navigator.vibrate)navigator.vibrate([100,50,100]);
+          }
+        }else{
+          badge.style.display="none";
+        }
+        _pendientesAnterior=n;
+      },function(e){console.warn("badge listener:",e);});
+  }catch(e){console.warn("iniciarBadgePendientes:",e);}
+}
+
 /* ─── FEED ACTIVIDAD RECIENTE ─────────────────────────────────── */
 async function cargarFeedActividad(){
   var cont=el("feed-actividad");if(!cont)return;
@@ -2739,6 +2789,7 @@ function adminSalir(){adminUnlocked=false;go('inicio');}
   try{seedCuadroNovicios3().then(function(){iniciarCuadroLive();});}catch(e){}
   try{iniciarZonaNorteLive();}catch(e){}
   try{autoLimpiarPruebas();}catch(e){}
+  try{iniciarBadgePendientes();}catch(e){}
   if(auth){
     // Manejar resultado del redirect de Google antes de signInAnonymously
     auth.getRedirectResult().then(function(result){

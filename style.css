@@ -79,7 +79,7 @@ header p{font-size:11px;color:var(--suave);white-space:nowrap}
 .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
 .badge.win{background:#dcfce7;color:#15803d}.badge.loss{background:#fee2e2;color:#b91c1c}
 .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;display:flex;border-top:1px solid var(--linea);padding:8px 0 12px;z-index:50}
-.tab{flex:1;text-align:center;font-size:10px;color:var(--verde-mid);cursor:pointer;border:none;background:none}
+.tab{flex:1;text-align:center;font-size:10px;color:var(--verde-mid);cursor:pointer;border:none;background:none;position:relative}
 .tab.active{color:var(--verde-osc);font-weight:700}.tab .ic{font-size:19px;display:block;margin-bottom:2px}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:60}
 .modal.show{display:flex}
