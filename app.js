@@ -883,8 +883,8 @@ async function renderPerfilAdmin(p,pBody){
     snapInscHoy.forEach(function(doc){
       var d=doc.data();
       if(d.estado!=="confirmado"&&d.estado!=="pagado")return;
-      var fecha="";
-      if(d.ts&&d.ts.seconds){fecha=new Date(d.ts.seconds*1000).toISOString().split("T")[0];}
+      var fecha=d.fechaPago||"";
+      if(!fecha&&d.ts&&d.ts.seconds){fecha=new Date(d.ts.seconds*1000).toISOString().split("T")[0];}
       if(fecha>=primerDia&&fecha<=hoy)recaudado+=(d.monto||0);
     });
     if(etotal)etotal.textContent=recaudado>0?"$"+recaudado.toLocaleString("es-CL"):"$0";
@@ -1058,7 +1058,8 @@ async function cargarInscritosAdmin(idx,t){
 
 async function confirmarInscripcion(docId,idx,torneoNombre){
   try{
-    await db.collection("inscripciones_atmas").doc(docId).update({estado:"confirmado"});
+    var fechaPago=new Date().toISOString().split("T")[0];
+    await db.collection("inscripciones_atmas").doc(docId).update({estado:"confirmado",fechaPago:fechaPago});
     toast("Inscripción confirmada ✓");
     cargarInscritosAdmin(idx,torneos[idx]);
     actualizarBadgesInicio();
@@ -1707,9 +1708,9 @@ async function generarInformeIngresos(){
     snapInsc.forEach(function(doc){
       var d=doc.data();
       if(d.estado!=="confirmado"&&d.estado!=="pagado")return;
-      var fecha="";
-      if(d.ts&&d.ts.seconds){fecha=new Date(d.ts.seconds*1000).toISOString().split("T")[0];}
-      else if(d.ts&&d.ts instanceof Date){fecha=d.ts.toISOString().split("T")[0];}
+      // Usar fechaPago (fecha real del pago) o ts como fallback
+      var fecha=d.fechaPago||"";
+      if(!fecha&&d.ts&&d.ts.seconds){fecha=new Date(d.ts.seconds*1000).toISOString().split("T")[0];}
       if(!fecha||fecha<desde||fecha>hasta)return;
       inscConfirmadas.push({tipo:"torneo",monto:d.monto||0,fecha:fecha,nombre:d.nombre,torneo:d.torneo});
     });
@@ -3241,7 +3242,8 @@ async function marcarNotifLeida(id){
 
 async function confirmarInscripcionNotif(notifId,inscripcionId,torneoIdx){
   try{
-    await db.collection("inscripciones_atmas").doc(inscripcionId).update({estado:"confirmado"});
+    var fechaPago=new Date().toISOString().split("T")[0];
+    await db.collection("inscripciones_atmas").doc(inscripcionId).update({estado:"confirmado",fechaPago:fechaPago});
     await db.collection("notificaciones_admin").doc(notifId).update({leida:true,pagada:true});
     toast("Inscripción confirmada ✓");
     renderPanelNotifs();actualizarBadgesInicio();
