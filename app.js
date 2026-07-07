@@ -922,7 +922,7 @@ async function cargarHistorialAdmin(){
 }
 
 /* ─── TORNEOS ─────────────────────────────────────────────────── */
-const ZONA_NORTE_INSCRITOS=["Franco Gutiérrez","Marcelo Escalona","Ariel Araya","Fabián Cataldo"];
+const ZONA_NORTE_INSCRITOS=["Marcelo Escalona","Ariel Araya","Fabián Cataldo","Osvaldo Valdivia"];
 
 var ZONA_NORTE_SEED={
   nombre:"Ranking Zona Norte - Fecha 7",fecha:"Sabado 18 Julio 2026",
@@ -985,7 +985,8 @@ const torneos=[
 // Jugadores fijos confirmados por torneo (hardcoded, pago ya recibido)
 var INSCRITOS_FIJOS={
   "Torneo Novicios 5":["Máximo Escalona","Felipe Muñoz","Alex Berrocal","Fabián Araneda","Mauricio Melo","Marcos Hernández"],
-  "Ranking Zona Norte - Fecha 7":["Franco Gutiérrez","Marcelo Escalona","Ariel Araya","Fabián Cataldo"]
+  "Torneo Novicios 4":["Máximo Escalona","Felipe Muñoz","Jonathan Muñoz","Claudio Rojas","Mauricio Melo","Fabián Araneda","Andres Gutiérrez","Benjamín Díaz","Rodrigo Rocha","Rodrigo Arancibia","Alex Berrocal","Aurelio Saavedra","Pedro González","Andy Céspedes","Joaquín Guerra"],
+  "Ranking Zona Norte - Fecha 7":["Marcelo Escalona","Ariel Araya","Fabián Cataldo","Osvaldo Valdivia"]
 };
 
 async function cargarInscritosAdmin(idx,t){
