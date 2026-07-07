@@ -1746,11 +1746,13 @@ function abrirInformeMes(){
   var primerDia=hoy.slice(0,7)+"-01";
   go("admin");
   setTimeout(function(){
-    var d=el("ing-desde");var h=el("ing-hasta");
-    if(d)d.value=primerDia;if(h)h.value=hoy;
-    generarInformeIngresos();
-    var cont=el("admin-ingresos-cont");
-    if(cont)cont.scrollIntoView({behavior:"smooth"});
+    // Activar tab ingresos (esto hace visible ing-desde/ing-hasta)
+    adminTab(null,"ingresos");
+    setTimeout(function(){
+      var d=el("ing-desde");var h=el("ing-hasta");
+      if(d)d.value=primerDia;if(h)h.value=hoy;
+      generarInformeIngresos();
+    },150);
   },300);
 }
 
