@@ -944,11 +944,11 @@ var ZONA_NORTE_SEED={
   final:{a:null,b:null,hora:"20:00",gan:null}
 };
 // Lista jugadores Zona Norte Fecha 7
-var ZONA_NORTE_JUGADORES=["Franco Gutiérrez","Marcelo Escalona","Ariel Araya","Fabián Cataldo","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible"];
+var ZONA_NORTE_JUGADORES=["Marcelo Escalona","Ariel Araya","Fabián Cataldo","Osvaldo Valdivia","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible"];
 const torneos=[
-  {n:"Torneo Novicios 5",f:"22 agosto 2026 &middot; 16:00 y 17:30",p:"$20.000",c:"10 cupos",monto:20000,img:"/img/torneos/novicios5.jpg"},
+  {n:"Torneo Novicios 5",f:"22 agosto 2026 &middot; 16:00 y 17:30",p:"$20.000",c:"11 cupos",monto:20000,img:"/img/torneos/novicios5.jpg"},
   {n:"Ranking Zona Norte - Fecha 7",f:"18 julio 2026 &middot; 12:00 a 14:00 &middot; Full Tenis",p:"$20.000",c:"12 cupos",monto:20000,img:"/img/torneos/zonanorte7.jpg"},
-  {n:"Torneo Novicios 4",f:"18 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"Cerrado",monto:20000,img:"/img/torneos/novicios4.jpg"},
+  {n:"Torneo Novicios 4",f:"18 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"1 cupo",monto:20000,img:"/img/torneos/novicios4.jpg"},
   {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"Cerrado",monto:15000},
   {n:"Nueva Escalerilla Jun-Ago",f:"Series A y B &middot; $15.000 por partido",p:"$35.000",c:"4 cupos",monto:35000}
 ];
