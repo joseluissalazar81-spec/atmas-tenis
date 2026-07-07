@@ -2370,7 +2370,22 @@ function handlePaymentReturn(){
   window.history.replaceState({},"","/");
   if(pago==="ok"){
     var payId=params.get("payment_id")||"";
-    db.collection("reservas").doc(rid).update({estado:"confirmada_pagada",mpPaymentId:payId}).catch(function(){});
+    db.collection("reservas").doc(rid).update({estado:"confirmada_pagada",mpPaymentId:payId}).then(function(){
+      // Notificar al admin
+      db.collection("reservas").doc(rid).get().then(function(snap){
+        if(!snap.exists)return;
+        var r=snap.data();
+        var p=getPerfil();
+        db.collection("notificaciones_admin").add({
+          tipo:"💳 Pago MP confirmado",
+          nombre:r.nombre||(p&&p.nombre)||"",
+          tel:r.tel||"",
+          detalle:(r.canchaNombre||"Cancha")+" · "+(r.horaInicio||"")+" – "+(r.horaFin||"")+" · "+(r.fecha||"")+(r.monto?" · $"+Number(r.monto).toLocaleString("es-CL"):""),
+          reservaId:rid,mpPaymentId:payId,leida:false,
+          ts:firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(function(){});
+      }).catch(function(){});
+    }).catch(function(){});
     setTimeout(function(){toast("¡Pago confirmado! Tu reserva está lista ✓");},500);
   }else if(pago==="error"){
     db.collection("reservas").doc(rid).update({estado:"cancelada"}).catch(function(){});
@@ -2450,11 +2465,12 @@ async function renderAdminReservas(){
   try{
     var hoy=new Date();var desde=new Date(hoy);desde.setDate(desde.getDate()-2);
     var desdeStr=desde.toISOString().split("T")[0];
-    var snap=await db.collection("reservas").where("fecha",">=",desdeStr).orderBy("fecha","asc").limit(150).get();
+    var snap=await db.collection("reservas").where("fecha",">=",desdeStr).limit(150).get();
     if(snap.empty){cont.innerHTML='<p class="hint">Sin reservas en este período</p>';return;}
+    var docs=[];snap.forEach(function(doc){var r=doc.data();if(r.estado!=="programado_partido")docs.push({id:doc.id,data:r});});
+    docs.sort(function(a,b){var f=a.data.fecha>b.data.fecha?1:a.data.fecha<b.data.fecha?-1:0;if(f!==0)return f;return(a.data.horaInicio||"")>(b.data.horaInicio||"")?1:-1;});
     var html="";var fechaAct="";var hoyStr=hoy.toISOString().split("T")[0];
-    snap.forEach(function(doc){
-      var r=doc.data();
+    docs.forEach(function(item){var doc={id:item.id};var r=item.data;
       if(r.fecha!==fechaAct){if(fechaAct)html+='</div>';fechaAct=r.fecha;html+='<div class="section-title" style="margin-top:12px">'+fechaLarga(r.fecha)+(r.fecha===hoyStr?' — <span style="color:var(--verde-osc)">HOY</span>':'')+'</div><div>';}
       var ec={confirmada:"#2563eb",confirmada_pagada:"#16a34a",pendiente_pago:"#d97706",cancelada:"#9ca3af"};
       var el_={confirmada:"CONF",confirmada_pagada:"PAGADA",pendiente_pago:"PEND",cancelada:"CANC"};
@@ -2478,7 +2494,7 @@ async function renderAdminReservas(){
       html+='</div>';
     });
     if(fechaAct)html+='</div>';
-    cont.innerHTML=html||'<p class="hint">Sin reservas</p>';
+    cont.innerHTML=html||'<p class="hint">Sin reservas en este período</p>';
   }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';console.warn(e);}
 }
 
