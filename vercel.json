@@ -3,7 +3,8 @@
   "builds": [
     {"src": "api/**/*.js", "use": "@vercel/node"},
     {"src": "index.html", "use": "@vercel/static"},
-    {"src": "*.{js,css,png,jpg,svg,ico,json}", "use": "@vercel/static"}
+    {"src": "*.{js,css,png,jpg,svg,ico,json}", "use": "@vercel/static"},
+    {"src": "img/**/*.{png,jpg,jpeg,svg,webp}", "use": "@vercel/static"}
   ],
   "routes": [
     {"src": "/api/(.*)", "dest": "/api/$1"},
