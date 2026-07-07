@@ -2006,17 +2006,21 @@ function getSlotsParaDia(fecha){
 function renderCalendario(){
   handlePaymentReturn();
   var p=getPerfil();
+  var authEmail=(auth&&auth.currentUser&&auth.currentUser.email)||p&&p.email||"";
+  var esAdm=p&&esAdmin(p.nombre||"",authEmail);
+  if(esAdm){
+    // Admin va al panel de reservas en lugar del flujo de arriendo
+    go("admin");
+    setTimeout(function(){
+      var cont=el("admin-tab-reservas");
+      if(cont)cont.scrollIntoView({behavior:"smooth"});
+      renderAdminReservas();
+    },150);
+    return;
+  }
   var tipo=(p&&p.tipo)||null;
   var ts=el("res-tipo-selector"),rm=el("res-main");
-  var esAdm=p&&esAdmin(p.nombre||"",p.email||"");
-  if(esAdm){
-    // Admin va directo al calendario con tipo socio_partido por defecto
-    resState.tipo=resState.tipo||"socio_partido";
-    if(ts)ts.style.display="none";if(rm)rm.style.display="";
-    var cbt0=el("res-cambiar-tipo");if(cbt0)cbt0.style.display="";
-    if(!resState.fecha){resState.fecha=new Date().toISOString().split("T")[0];}
-    actualizarLabelTipo();renderDayStrip();renderCourtTabs();renderSlots();verificarSancionBanner();
-  }else if(!tipo||tipo==="admin"){
+  if(false){
     if(ts)ts.style.display="";if(rm)rm.style.display="none";
     var cbt=el("res-cambiar-tipo");if(cbt)cbt.style.display="none";
   }else{
