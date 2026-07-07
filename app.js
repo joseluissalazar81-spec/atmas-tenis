@@ -2011,12 +2011,14 @@ function renderCalendario(){
   var tipo=(p&&p.tipo)||null;
   var ts=el("res-tipo-selector"),rm=el("res-main");
   if(esAdm){
-    // Admin ve el calendario en modo agenda: todos los arriendos visibles
-    resState.tipo=resState.tipo||"socio_partido";
+    // Admin ve el calendario en modo agenda: todos los arriendos visibles, sin formulario
+    resState.tipo="socio_partido";
     if(ts)ts.style.display="none";if(rm)rm.style.display="";
     var cbt0=el("res-cambiar-tipo");if(cbt0)cbt0.style.display="none";
+    var resF=el("res-form");if(resF)resF.style.display="none";
+    var lblDiv=el("res-tipo-label");if(lblDiv)lblDiv.closest&&lblDiv.closest("div[style]");
     if(!resState.fecha){resState.fecha=new Date().toISOString().split("T")[0];}
-    actualizarLabelTipo();renderDayStrip();renderCourtTabs();renderSlots();verificarSancionBanner();
+    renderDayStrip();renderCourtTabs();renderSlots();
   }else if(!tipo){
     if(ts)ts.style.display="";if(rm)rm.style.display="none";
     var cbt=el("res-cambiar-tipo");if(cbt)cbt.style.display="none";
@@ -2182,16 +2184,22 @@ async function renderSlots(){
       var sel=resState.horaInicio===s.hi;
       var durLabel=s.fijo2h?"2 hrs":"1 hr";
       var click=(!pasado&&!ocup)?'onclick="selectSlotRes(\''+s.hi+'\',\''+s.hf+'\','+(s.fijo2h?2:1)+')"':'';
-      if(esAdm&&ocup&&info){
-        // Admin: slot ocupado muestra nombre + estado + botón confirmar si pendiente
-        var estL=estadoLabel[info.estado]||info.estado;
-        var badgeColor=info.estado==="confirmada_pagada"?"#1a5c0a":info.estado==="confirmada"?"#2f6b1a":info.estado==="programado_partido"?"#1a3a5c":"#7a5c00";
-        var admBtn=info.estado==="pendiente_pago"?'<button class="mini" style="margin-top:4px;font-size:10px" onclick="confirmarPago(\''+info.id+'\')">Confirmar pago</button>':'';
-        htmlS+='<div class="slot-block ocupado" style="cursor:default;min-height:70px">'+
-          '<div class="sl-h">'+s.hi+'</div>'+
-          '<div style="font-size:10px;font-weight:700;color:'+badgeColor+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">'+info.nombre+'</div>'+
-          '<div style="font-size:9px;color:'+badgeColor+'">'+estL+'</div>'+
-          admBtn+
+      if(esAdm){
+        // Admin: vista agenda — solo colores e info, sin formulario de reserva
+        var bgColor,txtColor,etiqueta,cursor;
+        if(pasado){bgColor="#f3f4f6";txtColor="#9ca3af";etiqueta="Pasado";cursor="default";}
+        else if(ocup&&info){
+          var ec2={confirmada:"#dcfce7",confirmada_pagada:"#bbf7d0",pendiente_pago:"#fef9c3",programado_partido:"#dbeafe"};
+          var etc2={confirmada:"#166534",confirmada_pagada:"#14532d",pendiente_pago:"#854d0e",programado_partido:"#1e3a5f"};
+          bgColor=ec2[info.estado]||"#f3f4f6";txtColor=etc2[info.estado]||"#374151";
+          etiqueta=estadoLabel[info.estado]||info.estado;cursor="pointer";
+        }else{bgColor="#fff";txtColor="#166534";etiqueta="Libre";cursor="default";}
+        var infoNombre=(ocup&&info)?info.nombre:"";
+        var onclick2=(ocup&&info)?' onclick="verInfoSlot(\''+info.id.replace(/'/g,"\\'")+'\')"':'';
+        htmlS+='<div class="slot-block" style="background:'+bgColor+';border:1.5px solid '+txtColor+'22;cursor:'+cursor+';min-height:62px"'+onclick2+'>'+
+          '<div class="sl-h" style="color:'+txtColor+'">'+s.hi+'</div>'+
+          (infoNombre?'<div style="font-size:9px;font-weight:700;color:'+txtColor+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">'+infoNombre+'</div>':'<div class="sl-f" style="color:'+txtColor+'">'+s.hf+'</div>')+
+          '<div class="sl-e" style="color:'+txtColor+'">'+etiqueta+'</div>'+
           '</div>';
       }else{
         var cls="slot-block"+(pasado||ocup?" ocupado":sel?" seleccionado":" libre");
@@ -2530,6 +2538,36 @@ async function adminCancelarReserva(id){
   if(!confirm("¿Cancelar esta reserva?"))return;
   try{await db.collection("reservas").doc(id).update({estado:"cancelada"});toast("Reserva cancelada");renderAdminReservas();}
   catch(e){toast("Error: "+e.message);}
+}
+
+async function verInfoSlot(reservaId){
+  try{
+    var doc=await db.collection("reservas").doc(reservaId).get();
+    if(!doc.exists){toast("Reserva no encontrada");return;}
+    var r=doc.data();
+    var fechaFmt=r.fecha?r.fecha.split("-").reverse().join("/"):"-";
+    var estLabels={confirmada:"✓ Confirmada",confirmada_pagada:"✓ Pagada",pendiente_pago:"⏳ Pendiente de pago",programado_partido:"🎾 Partido programado",cancelada:"Cancelada"};
+    var estL=estLabels[r.estado]||r.estado;
+    var btns="";
+    if(r.estado==="pendiente_pago")btns+='<button class="btn" style="margin-top:8px" onclick="confirmarPagoSlot(\''+reservaId+'\')">✓ Confirmar pago</button>';
+    if(r.estado!=="cancelada")btns+='<button class="btn sec" style="margin-top:8px" onclick="adminCancelarReserva(\''+reservaId+'\');closeModal()">Cancelar reserva</button>';
+    showModal('<div style="font-weight:800;font-size:16px;margin-bottom:12px">📋 Detalle reserva</div>'+
+      '<div style="background:var(--verde-claro);border-radius:12px;padding:12px;font-size:13px;line-height:1.8">'+
+      '<b>'+r.nombre+'</b><br>'+
+      (r.cancha||("Cancha "+r.canchaId))+' &middot; '+fechaFmt+'<br>'+
+      (r.horaInicio||"")+(r.horaFin?" – "+r.horaFin:"")+'<br>'+
+      (r.tel?'Tel: '+r.tel+'<br>':'')+
+      (r.monto?'Monto: $'+r.monto.toLocaleString("es-CL")+'<br>':'')+
+      'Estado: '+estL+
+      '</div>'+btns);
+  }catch(e){toast("Error: "+e.message);}
+}
+
+async function confirmarPagoSlot(reservaId){
+  try{
+    await db.collection("reservas").doc(reservaId).update({estado:"confirmada"});
+    toast("Pago confirmado ✓");closeModal();renderSlots();
+  }catch(e){toast("Error: "+e.message);}
 }
 
 async function renderAdminSanciones(){
