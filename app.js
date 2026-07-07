@@ -1109,12 +1109,24 @@ async function programarPartido(){
   if(!fecha){toast("Seleccioná la fecha");return;}
   _submitting.prog=true;btnLoad("btn-prog-partido",true,"Creando...");
   try{
-    await db.collection("partidos_atmas").add({
+    var docRef=await db.collection("partidos_atmas").add({
       jugador1:j1,jugador2:j2,ganador:"",perdedor:"",sets:"",
       cancha:cancha,fecha:fecha,hora:hora,contexto:ctx,
       estado:"programado",
       ts:firebase.firestore.FieldValue.serverTimestamp()
     });
+    // Bloquear el slot en reservas para que no se arriende
+    if(hora){
+      var canchaId=cancha.toLowerCase().replace(" ","");
+      try{
+        await db.collection("reservas").add({
+          nombre:j1+" vs "+j2,canchaId:canchaId,cancha:cancha,
+          fecha:fecha,horaInicio:hora,horaFin:"",
+          estado:"programado_partido",partidoId:docRef.id,
+          ts:firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }catch(e){console.warn("bloqueo reserva:",e);}
+    }
     closeModal();
     toast("✓ Partido programado — "+j1+" vs "+j2+" · "+fecha+(hora?" "+hora:""));
     cargarPartidosProgramados();
@@ -2138,7 +2150,7 @@ async function renderSlots(){
     var snap=await db.collection("reservas")
       .where("canchaId","==",resState.canchaId)
       .where("fecha","==",resState.fecha)
-      .where("estado","in",["confirmada","confirmada_pagada","pendiente_pago"])
+      .where("estado","in",["confirmada","confirmada_pagada","pendiente_pago","programado_partido"])
       .get();
     var ocupadas={};
     snap.forEach(function(doc){
@@ -2301,7 +2313,7 @@ async function confirmarReserva(){
       .where("canchaId","==",resState.canchaId)
       .where("fecha","==",resState.fecha)
       .where("horaInicio","==",resState.horaInicio)
-      .where("estado","in",["confirmada","confirmada_pagada","pendiente_pago"])
+      .where("estado","in",["confirmada","confirmada_pagada","pendiente_pago","programado_partido"])
       .get();
     if(!snap.empty){toast("Ese horario acaba de ser reservado. Elige otro.");renderSlots();ocultarFormRes();return;}
     var rutId=p&&p.rut?p.rut.replace(/\./g,"").replace(/-/g,""):null;
@@ -2955,26 +2967,33 @@ function iniciarBadgePendientes(){
 async function cargarFeedActividad(){
   var cont=el("feed-actividad");if(!cont)return;
   try{
-    var snap=await db.collection("partidos_atmas").where("estado","==","aprobado").limit(30).get();
-    if(snap.empty){cont.innerHTML='<p class="hint">Sin partidos aprobados aún</p>';return;}
-    var docs=[];snap.forEach(function(d){docs.push(d.data());});
+    var snapA=await db.collection("partidos_atmas").where("estado","==","aprobado").limit(20).get();
+    var snapP=await db.collection("partidos_atmas").where("estado","==","programado").limit(10).get();
+    var docs=[];
+    snapA.forEach(function(d){docs.push({...d.data(),_est:"aprobado"});});
+    snapP.forEach(function(d){docs.push({...d.data(),_est:"programado"});});
+    if(!docs.length){cont.innerHTML='<p class="hint">Sin actividad aún</p>';return;}
     docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return tb-ta;});
-    docs=docs.slice(0,8);
+    docs=docs.slice(0,10);
     var h="";
     docs.forEach(function(r){
-      var col=avatarColor(r.ganador||"?");var ini=initials(r.ganador||"?");
-      var fecha=r.ts?new Date(r.ts.toDate()).toLocaleDateString("es-CL",{day:"numeric",month:"short"}):"";
+      var esProg=r._est==="programado";
+      var nombre1=esProg?r.jugador1:r.ganador;
+      var nombre2=esProg?r.jugador2:r.perdedor;
+      var col=avatarColor(nombre1||"?");var ini=initials(nombre1||"?");
+      var fecha=r.ts?new Date(r.ts.toDate()).toLocaleDateString("es-CL",{day:"numeric",month:"short"}):(r.fecha||"");
       var ctx=r.contexto?'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:8px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">'+r.contexto+'</span>':"";
       h+='<div class="feed-card">'+
-        '<div class="fc-avatar" style="background:'+col+'">'+ini+'</div>'+
+        '<div class="fc-avatar" style="background:'+col+(esProg?";opacity:.7":"")+'">'+ini+'</div>'+
         '<div class="fc-body">'+
-          '<div class="fc-name">'+r.ganador+' <span style="font-size:11px;font-weight:400;color:var(--suave)">ganó a</span> '+(r.perdedor||"?")+'</div>'+
-          '<div style="display:flex;align-items:center;gap:4px;margin-top:2px">'+
-            '<span class="fc-sets">'+(r.sets||"")+'</span>'+ctx+
-          '</div>'+
+          (esProg
+            ?'<div class="fc-name">'+nombre1+' <span style="font-size:11px;font-weight:400;color:var(--suave)">vs</span> '+(nombre2||"?")+'</div>'+
+              '<div style="font-size:10px;font-weight:700;color:#6366f1;margin-top:2px">📅 Programado'+(r.fecha?" · "+r.fecha.split("-").reverse().join("/"):"")+(r.hora?" "+r.hora:"")+'</div>'
+            :'<div class="fc-name">'+nombre1+' <span style="font-size:11px;font-weight:400;color:var(--suave)">ganó a</span> '+(nombre2||"?")+'</div>'+
+              '<div style="display:flex;align-items:center;gap:4px;margin-top:2px"><span class="fc-sets">'+(r.sets||"")+'</span>'+ctx+'</div>')+
           '<div class="fc-sub">'+fecha+'</div>'+
         '</div>'+
-        '<div style="font-size:20px">🎾</div>'+
+        '<div style="font-size:20px">'+(esProg?"📅":"🎾")+'</div>'+
       '</div>';
     });
     cont.innerHTML=h;
