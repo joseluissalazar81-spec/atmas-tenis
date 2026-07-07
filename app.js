@@ -993,19 +993,12 @@ async function guardarPartido(){
       rivalConfirmo:soyAdmin,
       ts:firebase.firestore.FieldValue.serverTimestamp()
     });
-    var sc=el("sheet-content");var mo=el("modal");
     if(soyAdmin){
-      // Admin: ofrecer aprobar directo
-      if(sc)sc.innerHTML=
-        '<div style="text-align:center;padding:16px 0">'+
-          '<div style="font-size:48px">&#128203;</div>'+
-          '<div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido registrado</div>'+
-          '<div style="font-size:13px;color:var(--suave);margin-bottom:16px">'+ganador+' ganó a '+perdedor+'<br>'+sets+'</div>'+
-          '<button class="btn" onclick="aprobarPartido(\''+docRef.id+'\',\''+ganador.replace(/'/g,"\\'")+'\',\''+perdedor.replace(/'/g,"\\'")+'\');closeModal()">✓ Aprobar y sumar puntos ahora</button>'+
-          '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Dejar pendiente</button>'+
-        '</div>';
-      if(mo)mo.classList.add("show");
+      // Admin: aprobar directo sin pantalla intermedia
+      await aprobarPartido(docRef.id,ganador,perdedor);
+      closeModal();
     }else{
+      var sc=el("sheet-content");var mo=el("modal");
       notificarMarcelo("🎾 Partido registrado\n"+ganador+" ganó a "+perdedor+"\nSets: "+sets+"\nCancha: "+cancha+" · "+fecha+"\n⏳ Pendiente confirmación de "+perdedor);
       if(sc)sc.innerHTML=
         '<div style="text-align:center;padding:16px 0">'+
@@ -1015,6 +1008,7 @@ async function guardarPartido(){
         '</div><button class="btn sec" style="margin-top:16px" onclick="closeModal()">Entendido</button>';
       if(mo)mo.classList.add("show");
     }
+
   }catch(e){console.warn("guardarPartido error:",e);toast("Error al guardar. Intenta de nuevo.");}
   finally{_submitting.partido=false;btnLoad("btn-guardar-partido",false);}
 }
