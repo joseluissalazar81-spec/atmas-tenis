@@ -1286,6 +1286,7 @@ function openModal(tipo,idx){
       var esAdm=esAdmin(miNombre,(perfil&&perfil.email)||"");
       var oh="";rankingData.forEach(function(p){if(p[0]!==miNombre)oh+='<option>'+p[0]+'</option>';});
       var oh2="";rankingData.forEach(function(p){oh2+='<option>'+p[0]+'</option>';});
+      var dlOpts="";rankingData.forEach(function(p){dlOpts+='<option value="'+p[0]+'">';});
       var ctxOpts='<option value="Escalerilla ATMAS">Escalerilla ATMAS</option><option value="Ranking Zona Norte">Ranking Zona Norte</option><option value="Torneo Novicios">Torneo Novicios</option><option value="Partido amistoso">Partido amistoso</option><option value="Partido a puntos">Partido a puntos</option><option value="otro">Otro (especificar abajo)</option>';
       var canchaOpts='<option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option>';
       var hoy=new Date().toISOString().split("T")[0];
@@ -1295,10 +1296,11 @@ function openModal(tipo,idx){
             '<button id="modo-prog" class="btn" style="flex:1;font-size:13px;padding:10px" onclick="modoPartido(\'prog\')">📅 Programar</button>'+
             '<button id="modo-res" class="btn sec" style="flex:1;font-size:13px;padding:10px" onclick="modoPartido(\'res\')">✓ Resultado</button>'+
           '</div>'+
+          '<datalist id="dl-jugadores">'+dlOpts+'</datalist>'+
           '<div id="form-prog">'+
             '<div style="font-size:12px;color:var(--suave);margin-bottom:12px">Crea el partido antes de jugarlo. Completás el resultado después.</div>'+
-            '<div class="field"><label>Jugador 1</label><select id="prog-j1">'+oh2+'</select></div>'+
-            '<div class="field"><label>Jugador 2</label><select id="prog-j2">'+oh2+'</select></div>'+
+            '<div class="field"><label>Jugador 1</label><input id="prog-j1" list="dl-jugadores" placeholder="Nombre o escribe uno nuevo" autocomplete="off"></div>'+
+            '<div class="field"><label>Jugador 2</label><input id="prog-j2" list="dl-jugadores" placeholder="Nombre o escribe uno nuevo" autocomplete="off"></div>'+
             '<div class="field"><label>Fecha</label><input id="prog-fecha" type="date" value="'+hoy+'"></div>'+
             '<div class="field"><label>Hora</label><input id="prog-hora" type="time" value="10:00"></div>'+
             '<div class="field"><label>Cancha</label><select id="prog-cancha">'+canchaOpts+'</select></div>'+
@@ -1308,8 +1310,8 @@ function openModal(tipo,idx){
           '</div>'+
           '<div id="form-res" style="display:none">'+
             '<div style="font-size:12px;color:var(--suave);margin-bottom:12px">Registrá el resultado de un partido ya jugado.</div>'+
-            '<div class="field"><label>Jugador 1 (Ganador)</label><select id="pt-yo">'+oh2+'</select></div>'+
-            '<div class="field"><label>Jugador 2 (Perdedor)</label><select id="pt-rival">'+oh+'</select></div>'+
+            '<div class="field"><label>Jugador 1 (Ganador)</label><input id="pt-yo" list="dl-jugadores" placeholder="Nombre o escribe uno nuevo" autocomplete="off"></div>'+
+            '<div class="field"><label>Jugador 2 (Perdedor)</label><input id="pt-rival" list="dl-jugadores" placeholder="Nombre o escribe uno nuevo" autocomplete="off"></div>'+
             '<div class="field"><label>Resultado</label><select id="pt-resultado" style="display:none"><option value="gane">Gané</option></select></div>'+
             '<div class="field"><label>Sets</label><div class="sets"><input id="pt-s1" placeholder="6-3"><input id="pt-s2" placeholder="4-6"><input id="pt-s3" placeholder="--"></div></div>'+
             '<div class="field"><label>Contexto</label><select id="pt-contexto">'+ctxOpts+'</select></div>'+
@@ -1321,8 +1323,9 @@ function openModal(tipo,idx){
           '</div>';
       }else{
         html='<h3>Registrar partido</h3>'+
+          '<datalist id="dl-jugadores">'+dlOpts+'</datalist>'+
           '<div class="field"><label>Tu nombre</label><input id="pt-yo" value="'+miNombre+'" placeholder="Tu nombre"'+(miNombre?' readonly style="background:#f4f5f7"':'')+' ></div>'+
-          '<div class="field"><label>Oponente</label><select id="pt-rival">'+oh+'</select></div>'+
+          '<div class="field"><label>Oponente</label><input id="pt-rival" list="dl-jugadores" placeholder="Elige o escribe el nombre" autocomplete="off"></div>'+
           '<div class="field"><label>Resultado</label><select id="pt-resultado"><option value="gane">Gané</option><option value="perdi">Perdí</option></select></div>'+
           '<div class="field"><label>Sets</label><div class="sets"><input id="pt-s1" placeholder="6-3"><input id="pt-s2" placeholder="4-6"><input id="pt-s3" placeholder="--"></div></div>'+
           '<div class="field"><label>Contexto / Torneo</label><select id="pt-contexto">'+ctxOpts+'</select></div>'+
