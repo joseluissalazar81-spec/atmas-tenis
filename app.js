@@ -982,18 +982,39 @@ async function guardarPartido(){
   var ganador=resultado==="gane"?yo:rival;
   var perdedor=resultado==="gane"?rival:yo;
   var sets=[s1,s2,s3].filter(function(s){return s&&s!=="--";}).join(", ");
+  var p=getPerfil()||{};
+  var soyAdmin=esAdmin(p.nombre||"",p.email||"");
   _submitting.partido=true;btnLoad("btn-guardar-partido",true,"Enviando...");
   try{
-    await db.collection("partidos_atmas").add({
+    var docRef=await db.collection("partidos_atmas").add({
       jugador1:yo,jugador2:rival,ganador:ganador,perdedor:perdedor,
-      sets:sets,cancha:cancha,fecha:fecha,contexto:contexto,estado:"pendiente_rival",
+      sets:sets,cancha:cancha,fecha:fecha,contexto:contexto,
+      estado:soyAdmin?"pendiente_admin":"pendiente_rival",
+      rivalConfirmo:soyAdmin,
       ts:firebase.firestore.FieldValue.serverTimestamp()
     });
-    notificarMarcelo("🎾 Partido registrado\n"+ganador+" ganó a "+perdedor+"\nSets: "+sets+"\nCancha: "+cancha+" · "+fecha+"\n⏳ Pendiente confirmación de "+perdedor);
-    closeModal();
     var sc=el("sheet-content");var mo=el("modal");
-    if(sc)sc.innerHTML='<div style="text-align:center;padding:16px 0"><div style="font-size:48px">&#128203;</div><div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido enviado</div><div style="font-size:13px;color:var(--suave);line-height:1.6">Enviado al rival para confirmar.<br>Si disputa el resultado, Marcelo Escalona decide.<br>Los puntos se suman una vez confirmado.</div></div><button class="btn sec" style="margin-top:16px" onclick="closeModal()">Entendido</button>';
-    if(mo)mo.classList.add("show");
+    if(soyAdmin){
+      // Admin: ofrecer aprobar directo
+      if(sc)sc.innerHTML=
+        '<div style="text-align:center;padding:16px 0">'+
+          '<div style="font-size:48px">&#128203;</div>'+
+          '<div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido registrado</div>'+
+          '<div style="font-size:13px;color:var(--suave);margin-bottom:16px">'+ganador+' ganó a '+perdedor+'<br>'+sets+'</div>'+
+          '<button class="btn" onclick="aprobarPartido(\''+docRef.id+'\',\''+ganador.replace(/'/g,"\\'")+'\',\''+perdedor.replace(/'/g,"\\'")+'\');closeModal()">✓ Aprobar y sumar puntos ahora</button>'+
+          '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Dejar pendiente</button>'+
+        '</div>';
+      if(mo)mo.classList.add("show");
+    }else{
+      notificarMarcelo("🎾 Partido registrado\n"+ganador+" ganó a "+perdedor+"\nSets: "+sets+"\nCancha: "+cancha+" · "+fecha+"\n⏳ Pendiente confirmación de "+perdedor);
+      if(sc)sc.innerHTML=
+        '<div style="text-align:center;padding:16px 0">'+
+          '<div style="font-size:48px">&#128203;</div>'+
+          '<div style="font-weight:900;font-size:18px;color:var(--verde-osc);margin:10px 0">Partido enviado</div>'+
+          '<div style="font-size:13px;color:var(--suave);line-height:1.6">Enviado al rival para confirmar.<br>Si disputa el resultado, Marcelo Escalona decide.<br>Los puntos se suman una vez confirmado.</div>'+
+        '</div><button class="btn sec" style="margin-top:16px" onclick="closeModal()">Entendido</button>';
+      if(mo)mo.classList.add("show");
+    }
   }catch(e){console.warn("guardarPartido error:",e);toast("Error al guardar. Intenta de nuevo.");}
   finally{_submitting.partido=false;btnLoad("btn-guardar-partido",false);}
 }
