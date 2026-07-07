@@ -982,46 +982,62 @@ const torneos=[
   tl.innerHTML=th||'<p class="hint">Sin torneos disponibles</p>';
 })();
 
+// Jugadores fijos confirmados por torneo (hardcoded, pago ya recibido)
+var INSCRITOS_FIJOS={
+  "Torneo Novicios 5":["Máximo Escalona","Felipe Muñoz","Alex Berrocal","Fabián Araneda","Mauricio Melo","Marcos Hernández"],
+  "Ranking Zona Norte - Fecha 7":["Franco Gutiérrez","Marcelo Escalona","Ariel Araya","Fabián Cataldo"]
+};
+
 async function cargarInscritosAdmin(idx,t){
   var cont=el("adm-insc-list-"+idx);if(!cont)return;
   try{
     var snap=await db.collection("inscripciones_atmas").where("torneo","==",t.n).get();
-    var docs=[];snap.forEach(function(d){docs.push({id:d.id,...d.data()});});
-    docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return ta-tb;});
-    var cupoMax=parseInt(t.c)||16;var pagados=docs.filter(function(d){return d.estado==="pagado"||d.estado==="confirmado";}).length;
-    var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
-      '<div style="font-size:12px;font-weight:700;color:var(--verde-osc)">'+docs.length+' inscritos &middot; '+pagados+' pagados</div>'+
-      '<div style="font-size:12px;color:'+(docs.length>=cupoMax?"#dc2626":"var(--verde-mid)")+'">'+Math.max(0,cupoMax-docs.length)+' cupos libres</div>'+
+    var docsDB=[];snap.forEach(function(d){docsDB.push({id:d.id,...d.data()});});
+    docsDB.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return ta-tb;});
+    // Combinar fijos + Firestore (sin duplicar)
+    var fijos=(INSCRITOS_FIJOS[t.n]||[]).map(function(n){return{id:null,nombre:n,estado:"confirmado",fijo:true};});
+    var nombresDB=docsDB.map(function(d){return(d.nombre||"").toLowerCase();});
+    fijos=fijos.filter(function(f){return nombresDB.indexOf(f.nombre.toLowerCase())===-1;});
+    var todos=fijos.concat(docsDB);
+    var cupoMax=parseInt(t.c)||16;
+    var pagados=todos.filter(function(d){return d.estado==="confirmado"||d.estado==="pagado"||d.fijo;}).length;
+    var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:8px 12px;background:#f0fdf4;border-radius:10px">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--verde-osc)">'+todos.length+' inscritos</div>'+
+      '<div style="font-size:12px;font-weight:700;color:#16a34a">'+pagados+' ✓ pagados</div>'+
+      '<div style="font-size:12px;color:'+(todos.length>=cupoMax?"#dc2626":"var(--suave)")+'">'+Math.max(0,cupoMax-todos.length)+' cupos libres</div>'+
     '</div>';
-    if(docs.length===0){h+='<p class="hint">Sin inscritos aún</p>';}
-    docs.forEach(function(d,i){
-      var pagado=d.estado==="pagado"||d.estado==="confirmado";
+    todos.forEach(function(d,i){
+      var confirmado=d.fijo||d.estado==="confirmado"||d.estado==="pagado";
+      var pendiente=!confirmado&&d.id;
       var col=avatarColor(d.nombre||"");var ini=initials(d.nombre||"?");
       var fecha=d.ts&&d.ts.seconds?new Date(d.ts.seconds*1000).toLocaleDateString("es-CL",{day:"numeric",month:"short"}):"";
-      h+='<div class="lcard" style="align-items:center">'+
-        '<div style="width:20px;text-align:center;font-size:11px;font-weight:800;color:var(--suave)">'+(i+1)+'</div>'+
+      h+='<div class="lcard" style="align-items:center;gap:8px">'+
+        '<div style="width:18px;text-align:center;font-size:11px;font-weight:800;color:var(--suave);flex-shrink:0">'+(i+1)+'</div>'+
         '<div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div>'+
         '<div style="flex:1;min-width:0">'+
-          '<div class="nm">'+d.nombre+'</div>'+
-          (d.tel?'<div style="font-size:11px;color:var(--suave)">'+d.tel+'</div>':'')+
+          '<div class="nm" style="font-size:13px">'+d.nombre+'</div>'+
+          (d.tel?'<div style="font-size:11px;color:var(--suave)">📞 '+d.tel+'</div>':'')+
           (fecha?'<div style="font-size:10px;color:var(--suave)">'+fecha+'</div>':'')+
         '</div>'+
-        (pagado
+        (confirmado
           ?'<span style="font-size:11px;font-weight:700;color:#16a34a;flex-shrink:0">✓ Pagado</span>'
-          :'<button class="mini" style="font-size:10px;flex-shrink:0" onclick="confirmarInscripcion(\''+d.id+'\','+idx+',\''+t.n.replace(/'/g,"\\'")+'\')">Confirmar pago</button>'
+          :pendiente
+          ?'<button class="mini" style="font-size:10px;flex-shrink:0;background:#dcfce7;color:#166534" onclick="confirmarInscripcion(\''+d.id+'\','+idx+',\''+t.n.replace(/'/g,"\\'")+'\')">✓ Confirmar</button>'
+          :''
         )+
       '</div>';
     });
+    if(todos.length===0)h+='<p class="hint">Sin inscritos aún</p>';
     // Cupos vacíos
-    for(var i=docs.length;i<cupoMax;i++){
-      h+='<div class="lcard" style="opacity:.5">'+
-        '<div style="width:20px;text-align:center;font-size:11px;color:var(--suave)">'+(i+1)+'</div>'+
-        '<div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px">+</div>'+
+    for(var i=todos.length;i<cupoMax;i++){
+      h+='<div class="lcard" style="opacity:.4;gap:8px">'+
+        '<div style="width:18px;text-align:center;font-size:11px;color:var(--suave);flex-shrink:0">'+(i+1)+'</div>'+
+        '<div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--suave)">+</div>'+
         '<div style="flex:1"><div class="ds">Cupo disponible</div></div>'+
       '</div>';
     }
     cont.innerHTML=h;
-  }catch(e){cont.innerHTML='<p class="hint">Error al cargar</p>';console.warn(e);}
+  }catch(e){cont.innerHTML='<p class="hint">Error al cargar: '+e.message+'</p>';console.warn(e);}
 }
 
 async function confirmarInscripcion(docId,idx,torneoNombre){
@@ -1500,7 +1516,14 @@ async function inscribirTorneo(idx){
     if(totalSnap.size>=(t.cupos||16)){toast("Torneo completo. No hay mas cupos.");return;}
     var existe=false;totalSnap.forEach(function(d){if(d.data().nombre===nombre)existe=true;});
     if(existe){toast("Ya estás inscrito en este torneo ✓");return;}
-    await db.collection("inscripciones_atmas").add({nombre:nombre,tel:tel,torneo:t.n,turno:turno,monto:t.monto,estado:"pendiente_pago",ts:firebase.firestore.FieldValue.serverTimestamp()});
+    var docRef=await db.collection("inscripciones_atmas").add({nombre:nombre,tel:tel,torneo:t.n,turno:turno,monto:t.monto,estado:"pendiente_pago",ts:firebase.firestore.FieldValue.serverTimestamp()});
+    // Notificación in-app al admin
+    try{db.collection("notificaciones_admin").add({
+      tipo:"🏆 Inscripción torneo",nombre:nombre,tel:tel,
+      detalle:t.n+" · $"+Number(t.monto).toLocaleString("es-CL")+(turno?" · "+turno:""),
+      inscripcionId:docRef.id,torneoIdx:idx,leida:false,
+      ts:firebase.firestore.FieldValue.serverTimestamp()
+    });}catch(e){}
     toast("Inscripción registrada — completa el pago para confirmar tu cupo");
     notificarMarcelo("🏆 Nueva inscripción torneo\nJugador: "+nombre+"\nTorneo: "+t.n+"\nMonto: $"+Number(t.monto).toLocaleString("es-CL")+"\nTel: "+tel);
   }catch(e){toast("Error al inscribir. Verifica tu conexión e intenta de nuevo.");}
@@ -3160,13 +3183,16 @@ async function renderPanelNotifs(){
       icono=(n.tipo||"🔔").split(" ")[0];
       var bg=n.leida?"#fff":"#f0fdf4";
       var dot=n.leida?"":'<span style="width:8px;height:8px;background:#16a34a;border-radius:50%;flex-shrink:0;margin-top:4px"></span>';
-      h+='<div style="display:flex;gap:10px;padding:12px 8px;border-bottom:1px solid #f3f4f6;background:'+bg+';cursor:pointer" onclick="marcarNotifLeida(\''+n.id+'\')">'+
+      var btnNotifConf="";
+      if(n.inscripcionId&&!n.pagada)btnNotifConf='<button class="mini" style="font-size:10px;background:#dcfce7;color:#166534;margin-top:6px" onclick="confirmarInscripcionNotif(\''+n.id+'\',\''+n.inscripcionId+'\','+(n.torneoIdx||0)+')">✓ Confirmar pago</button>';
+      h+='<div style="display:flex;gap:10px;padding:12px 8px;border-bottom:1px solid #f3f4f6;background:'+bg+'">'+
         '<div style="font-size:22px;flex-shrink:0">'+icono+'</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-weight:700;font-size:13px;color:#111">'+n.nombre+'</div>'+
           (n.detalle?'<div style="font-size:11px;color:#6b7280;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+n.detalle+'</div>':'')+
           (n.tel?'<div style="font-size:11px;color:#6b7280">📞 '+n.tel+'</div>':'')+
           '<div style="font-size:10px;color:#9ca3af;margin-top:3px">'+fechaStr+'</div>'+
+          btnNotifConf+
         '</div>'+
         dot+
         '</div>';
@@ -3177,6 +3203,15 @@ async function renderPanelNotifs(){
 
 async function marcarNotifLeida(id){
   try{await db.collection("notificaciones_admin").doc(id).update({leida:true});renderPanelNotifs();}catch(e){}
+}
+
+async function confirmarInscripcionNotif(notifId,inscripcionId,torneoIdx){
+  try{
+    await db.collection("inscripciones_atmas").doc(inscripcionId).update({estado:"confirmado"});
+    await db.collection("notificaciones_admin").doc(notifId).update({leida:true,pagada:true});
+    toast("Inscripción confirmada ✓");
+    renderPanelNotifs();actualizarBadgesInicio();
+  }catch(e){toast("Error: "+e.message);}
 }
 
 async function confirmarPagoNotif(notifId,reservaId){
