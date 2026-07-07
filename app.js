@@ -1984,10 +1984,17 @@ function renderCalendario(){
   var p=getPerfil();
   var tipo=(p&&p.tipo)||null;
   var ts=el("res-tipo-selector"),rm=el("res-main");
-  if(!tipo||tipo==="admin"){
+  var esAdm=p&&esAdmin(p.nombre||"",p.email||"");
+  if(esAdm){
+    // Admin va directo al calendario con tipo socio_partido por defecto
+    resState.tipo=resState.tipo||"socio_partido";
+    if(ts)ts.style.display="none";if(rm)rm.style.display="";
+    var cbt0=el("res-cambiar-tipo");if(cbt0)cbt0.style.display="";
+    if(!resState.fecha){resState.fecha=new Date().toISOString().split("T")[0];}
+    actualizarLabelTipo();renderDayStrip();renderCourtTabs();renderSlots();verificarSancionBanner();
+  }else if(!tipo||tipo==="admin"){
     if(ts)ts.style.display="";if(rm)rm.style.display="none";
-    // Admin: show cambiar tipo button
-    var cbt=el("res-cambiar-tipo");if(cbt)cbt.style.display=tipo==="admin"?"":"none";
+    var cbt=el("res-cambiar-tipo");if(cbt)cbt.style.display="none";
   }else{
     resState.tipo=tipo;
     if(ts)ts.style.display="none";if(rm)rm.style.display="";
