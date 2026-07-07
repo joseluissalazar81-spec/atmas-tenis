@@ -946,9 +946,9 @@ var ZONA_NORTE_SEED={
 // Lista jugadores Zona Norte Fecha 7
 var ZONA_NORTE_JUGADORES=["Franco Gutiérrez","Marcelo Escalona","Ariel Araya","Fabián Cataldo","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible","Disponible"];
 const torneos=[
-  {n:"Torneo Novicios 5",f:"22 agosto 2026 &middot; 16:00 y 17:30",p:"$20.000",c:"10 cupos",monto:20000},
-  {n:"Ranking Zona Norte - Fecha 7",f:"18 julio 2026 &middot; 12:00 a 14:00 &middot; Full Tenis",p:"$20.000",c:"12 cupos",monto:20000},
-  {n:"Torneo Novicios 4",f:"18 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"Cerrado",monto:20000},
+  {n:"Torneo Novicios 5",f:"22 agosto 2026 &middot; 16:00 y 17:30",p:"$20.000",c:"10 cupos",monto:20000,img:"img/torneos/novicios5.png"},
+  {n:"Ranking Zona Norte - Fecha 7",f:"18 julio 2026 &middot; 12:00 a 14:00 &middot; Full Tenis",p:"$20.000",c:"12 cupos",monto:20000,img:"img/torneos/zonanorte7.png"},
+  {n:"Torneo Novicios 4",f:"18 julio 2026 &middot; 16:00 y 18:00",p:"$20.000",c:"Cerrado",monto:20000,img:"img/torneos/novicios4.png"},
   {n:"Torneo Novicios 3",f:"13 junio 2026",p:"$15.000",c:"Cerrado",monto:15000},
   {n:"Nueva Escalerilla Jun-Ago",f:"Series A y B &middot; $15.000 por partido",p:"$35.000",c:"4 cupos",monto:35000}
 ];
@@ -966,16 +966,19 @@ const torneos=[
     var bloqueado=!esAdmList&&(cerrado||sinCupos);
     var estadoLabel=cerrado?"Cerrado":sinCupos?"Cupo completo":t.c;
     th+=
-      '<div class="tcard" onclick="openModal(\'torneo\','+i+')" style="cursor:pointer'+(bloqueado?";opacity:.6":"")+'">'+
-        '<div class="tn">'+t.n+'</div>'+
-        '<div class="tm">&#128197; '+t.f+'</div>'+
-        '<div class="trow">'+
-          '<span class="price">'+t.p+'</span>'+
-          (cerrado||sinCupos
-            ?'<span class="cupos" style="background:#f1f5f9;color:#94a3b8">'+estadoLabel+'</span>'
-            :'<span class="cupos">'+estadoLabel+'</span>'
-          )+
-          '<button class="mini wa" style="margin-left:auto;pointer-events:none">'+(esAdmList?"Ver inscritos &rarr;":"Ver m&aacute;s &rarr;")+'</button>'+
+      '<div class="tcard" onclick="openModal(\'torneo\','+i+')" style="cursor:pointer;padding:0;overflow:hidden'+(bloqueado?";opacity:.7":"")+'">'+
+        (t.img?'<img src="'+t.img+'" style="width:100%;display:block;border-radius:16px 16px 0 0;max-height:180px;object-fit:cover;object-position:top">':'') +
+        '<div style="padding:12px 14px">'+
+          '<div class="tn">'+t.n+'</div>'+
+          '<div class="tm">&#128197; '+t.f+'</div>'+
+          '<div class="trow">'+
+            '<span class="price">'+t.p+'</span>'+
+            (cerrado||sinCupos
+              ?'<span class="cupos" style="background:#f1f5f9;color:#94a3b8">'+estadoLabel+'</span>'
+              :'<span class="cupos">'+estadoLabel+'</span>'
+            )+
+            '<button class="mini wa" style="margin-left:auto;pointer-events:none">'+(esAdmList?"Ver inscritos &rarr;":"Ver m&aacute;s &rarr;")+'</button>'+
+          '</div>'+
         '</div>'+
       '</div>';
   });
@@ -1361,15 +1364,20 @@ function openModal(tipo,idx){
       var esAdmTorneo=esAdmin(perfil.nombre||"",authEmail);
       var cuposNum=t.c==="Cerrado"?0:parseInt(t.c)||0;
       var cuposTag=t.c==="Cerrado"?'<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">Cerrado</span>':cuposNum===0?'<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">Sin cupos</span>':'<span style="background:var(--verde-claro);color:var(--verde-osc);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+t.c+'</span>';
-      var heroHTML='<div style="background:linear-gradient(135deg,var(--verde-osc),var(--verde-mid));border-radius:16px;padding:18px;margin-bottom:16px;color:#fff">'+
-        '<div style="font-size:10px;font-weight:700;color:var(--lima);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">&#127942; ATMAS Torneos</div>'+
-        '<div style="font-size:18px;font-weight:900;line-height:1.2;margin-bottom:10px">'+t.n+'</div>'+
-        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="font-size:14px">📅</span><span style="font-size:13px;opacity:.9">'+t.f+'</span></div>'+
-        '<div style="display:flex;align-items:center;justify-content:space-between">'+
-          '<div><div style="font-size:10px;opacity:.7;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Inscripción</div><div style="font-size:26px;font-weight:900;color:var(--lima)">'+t.p+'</div></div>'+
-          cuposTag+
-        '</div>'+
-      '</div>';
+      var heroHTML=t.img
+        ?'<div style="margin-bottom:14px;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.15)"><img src="'+t.img+'" style="width:100%;display:block"></div>'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 2px">'+
+            '<div style="font-size:14px;font-weight:800;color:var(--verde-osc)">'+t.p+'</div>'+cuposTag+
+          '</div>'
+        :'<div style="background:linear-gradient(135deg,var(--verde-osc),var(--verde-mid));border-radius:16px;padding:18px;margin-bottom:16px;color:#fff">'+
+          '<div style="font-size:10px;font-weight:700;color:var(--lima);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">&#127942; ATMAS Torneos</div>'+
+          '<div style="font-size:18px;font-weight:900;line-height:1.2;margin-bottom:10px">'+t.n+'</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="font-size:14px">📅</span><span style="font-size:13px;opacity:.9">'+t.f+'</span></div>'+
+          '<div style="display:flex;align-items:center;justify-content:space-between">'+
+            '<div><div style="font-size:10px;opacity:.7;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Inscripción</div><div style="font-size:26px;font-weight:900;color:var(--lima)">'+t.p+'</div></div>'+
+            cuposTag+
+          '</div>'+
+        '</div>';
       if(esAdmTorneo){
         // Admin: lista de inscritos con estado de pago
         html=heroHTML+'<div id="adm-insc-list-'+idx+'"><p class="hint">Cargando inscritos...</p></div>'+
