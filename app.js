@@ -554,7 +554,7 @@ async function onAuthStateChanged(user){
       var pv=await vincularRankingExistente(p);
       var enRanking=(pv.jugados>0||pv.pts>0);
       savePerfil(p);mostrarApp();renderPerfil();
-      try{var wp=(_configCache&&_configCache.wp)||"56956343558";window.open("https://wa.me/"+wp+"?text="+encodeURIComponent("🆕 ATMAS APP\nNuevo usuario (Google):\n👤 "+p.nombre+(p.email?"\n✉️ "+p.email:"")),"_blank");}catch(e){}
+      try{db.collection("notificaciones_admin").add({tipo:"Nuevo usuario (Google)",nombre:p.nombre,email:p.email||"",leida:false,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}
       if(enRanking){go("escalerilla");toast("¡Bienvenido, "+p.nombre+"! Tu historial fue vinculado ✓");}
       else{go("perfil");toast("Bienvenido! Completa tu RUT en Mi Perfil.");}
     }
@@ -619,7 +619,7 @@ async function completarPerfil(){
     enRanking=(pv.jugados>0||pv.pts>0);
   }catch(e){}
   savePerfil(p);mostrarApp();renderPerfil();
-  try{var wp=(_configCache&&_configCache.wp)||"56956343558";window.open("https://wa.me/"+wp+"?text="+encodeURIComponent("🆕 ATMAS APP\nNuevo usuario registrado:\n👤 "+nombre+(tel?"\n📞 "+tel:"")+(rut?"\n🪪 "+rut:"")),"_blank");}catch(e){}
+  try{db.collection("notificaciones_admin").add({tipo:"Nuevo usuario",nombre:nombre,tel:tel||"",rut:rut||"",leida:false,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}
   if(enRanking){go("escalerilla");toast("¡Bienvenido, "+nombre+"! Tu historial fue vinculado ✓");}
   else{go("inicio");toast("Bienvenido "+nombre+"!");}
 }
@@ -1412,6 +1412,7 @@ async function renderAdmin(){
     '<button onclick="adminTab(el(\'atab-ranking\'),\'ranking\')" style="background:#f59e0b;border:none;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer">Ver →</button>'+
   '</div>';
   h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">'+
+    '<button id="atab-notifs" onclick="adminTab(this,\'notifs\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid);position:relative">🔔 Avisos<span id="badge-notifs" style="display:none;position:absolute;top:4px;right:6px;background:#dc2626;color:#fff;font-size:10px;font-weight:900;border-radius:99px;padding:1px 5px;line-height:1.4"></span></button>'+
     '<button id="atab-reservas" class="on" onclick="adminTab(this,\'reservas\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:var(--verde);color:#fff">📋 Reservas</button>'+
     '<button id="atab-sanciones" onclick="adminTab(this,\'sanciones\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">🚫 Sanciones</button>'+
     '<button id="atab-torneos" onclick="adminTab(this,\'torneos\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">🏆 Torneos</button>'+
@@ -1421,6 +1422,7 @@ async function renderAdmin(){
     '<button id="atab-ingresos" onclick="adminTab(this,\'ingresos\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">💰 Ingresos</button>'+
     '<button id="atab-evaluar" onclick="adminTab(this,\'evaluar\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">&#128104;&#8205;&#127979; Evaluar</button>'+
     '</div>';
+  h+='<div id="admin-tab-notifs" style="display:none"><div class="admin-section"><div class="section-title">🔔 Avisos &amp; Nuevos usuarios</div><div id="admin-notifs-cont"><p class="hint">Cargando...</p></div></div></div>';
   h+='<div id="admin-tab-reservas"><div class="section-title">Reservas de canchas</div><div id="admin-reservas-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-sanciones" style="display:none"><div class="section-title">Sanciones activas</div><div id="admin-sanciones-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-torneos" style="display:none">';
@@ -1469,10 +1471,11 @@ async function renderAdmin(){
 }
 
 function adminTab(el_,tab){if(tab===undefined){tab=el_;}
-  ["reservas","sanciones","torneos","ranking","agenda","config","ingresos","evaluar"].forEach(function(t){
+  ["notifs","reservas","sanciones","torneos","ranking","agenda","config","ingresos","evaluar"].forEach(function(t){
     var div=el("admin-tab-"+t);if(div)div.style.display=t===tab?"":"none";
     var btn=el("atab-"+t);if(btn){btn.style.background=t===tab?"var(--verde)":"#fff";btn.style.color=t===tab?"#fff":"var(--verde-mid)";}
   });
+  if(tab==="notifs")renderNotificacionesAdmin();
   if(tab==="sanciones")renderAdminSanciones();
   if(tab==="ranking"){renderAdminTipos();cargarPlanillaResultados();}
   if(tab==="agenda")renderAdminSlots();
@@ -2777,6 +2780,60 @@ async function guardarAdminConfig(){
 }
 
 /* ─── BADGE PENDIENTES (notificación admin) ───────────────────── */
+/* ─── NOTIFICACIONES ADMIN ────────────────────────────────────── */
+var _notifsListener=null;var _notifsAnterior=0;
+function iniciarNotificacionesAdmin(){
+  if(_notifsListener)_notifsListener();
+  try{
+    _notifsListener=db.collection("notificaciones_admin")
+      .where("leida","==",false)
+      .onSnapshot(function(snap){
+        var p=getPerfil();if(!p||!esAdmin(p.nombre||"",p.email||""))return;
+        var n=snap.size;
+        var badge=el("badge-notifs");if(badge){badge.textContent=n>9?"9+":String(n);badge.style.display=n>0?"":"none";}
+        if(n>_notifsAnterior&&_notifsAnterior>=0&&n>0){
+          // Nueva notificación — tostar y vibrar
+          var docs=[];snap.forEach(function(d){docs.push(d.data());});
+          docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return tb-ta;});
+          var ultimo=docs[0];
+          if(ultimo)toast("🔔 Nuevo usuario: "+ultimo.nombre);
+          if(navigator.vibrate)navigator.vibrate([150,80,150,80,150]);
+        }
+        _notifsAnterior=n;
+      },function(e){console.warn("notifs listener:",e);});
+  }catch(e){console.warn("iniciarNotificacionesAdmin:",e);}
+}
+async function marcarNotifsLeidas(){
+  try{
+    var snap=await db.collection("notificaciones_admin").where("leida","==",false).get();
+    var b=db.batch();snap.forEach(function(d){b.update(d.ref,{leida:true});});
+    if(!snap.empty)await b.commit();
+    renderNotificacionesAdmin();
+  }catch(e){toast("Error al marcar leídas");}
+}
+async function renderNotificacionesAdmin(){
+  var cont=el("admin-notifs-cont");if(!cont)return;
+  try{
+    var snap=await db.collection("notificaciones_admin").orderBy&&false?null:
+      await db.collection("notificaciones_admin").limit(20).get();
+    if(snap.empty){cont.innerHTML='<p class="hint">Sin notificaciones</p>';return;}
+    var docs=[];snap.forEach(function(d){docs.push({id:d.id,...d.data()});});
+    docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return tb-ta;});
+    var h='<button class="btn sec" style="margin-bottom:10px;font-size:12px" onclick="marcarNotifsLeidas()">✓ Marcar todas leídas</button>';
+    docs.forEach(function(n){
+      var fecha=n.ts&&n.ts.seconds?new Date(n.ts.seconds*1000).toLocaleDateString("es-CL"):"";
+      h+='<div style="background:'+(n.leida?"#f9fafb":"#fefce8")+';border:1.5px solid '+(n.leida?"#e5e7eb":"#fbbf24")+';border-radius:12px;padding:10px 12px;margin-bottom:8px">'+
+        '<div style="font-weight:800;font-size:14px">'+(n.leida?"":"🆕 ")+n.nombre+'</div>'+
+        (n.tel?'<div style="font-size:12px;color:#6b7280">📞 '+n.tel+'</div>':'')+
+        (n.rut?'<div style="font-size:12px;color:#6b7280">🪪 '+n.rut+'</div>':'')+
+        (n.email?'<div style="font-size:12px;color:#6b7280">✉️ '+n.email+'</div>':'')+
+        '<div style="font-size:11px;color:#9ca3af;margin-top:4px">'+n.tipo+(fecha?" · "+fecha:"")+'</div>'+
+      '</div>';
+    });
+    cont.innerHTML=h;
+  }catch(e){cont.innerHTML='<p class="hint">Error al cargar notificaciones</p>';}
+}
+
 var _pendientesListener=null;
 var _pendientesAnterior=0;
 function iniciarBadgePendientes(){
@@ -2957,6 +3014,7 @@ function adminSalir(){adminUnlocked=false;go('inicio');}
   try{iniciarZonaNorteLive();}catch(e){}
   try{autoLimpiarPruebas();}catch(e){}
   try{iniciarBadgePendientes();}catch(e){}
+  try{iniciarNotificacionesAdmin();}catch(e){}
   if(auth){
     // Manejar resultado del redirect de Google antes de signInAnonymously
     auth.getRedirectResult().then(function(result){
