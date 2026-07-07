@@ -1,5 +1,5 @@
 /* ATMAS Service Worker — cache-first para assets, network-first para Firestore */
-var CACHE = "atmas-v3";
+var CACHE = "atmas-v10";
 var STATIC = ["/", "/index.html", "/app.js", "/style.css", "/icon.png", "/manifest.json"];
 
 self.addEventListener("install", function(e){
