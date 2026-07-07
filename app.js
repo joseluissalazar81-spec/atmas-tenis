@@ -1152,11 +1152,15 @@ async function cargarPartidosProgramados(){
 function completarResultado(docId,j1,j2){
   var sc=el("sheet-content");var mo=el("modal");if(!sc||!mo)return;
   var oh='<option value="'+j1+'">'+j1+'</option><option value="'+j2+'">'+j2+'</option>';
+  var hoy=new Date().toISOString().split("T")[0];
+  var canchaOpts='<option>Cancha 1</option><option>Cancha 2</option><option>Cancha 3</option><option>Cancha 4</option>';
   sc.innerHTML=
     '<h3 style="margin-bottom:14px">Completar resultado</h3>'+
     '<div style="font-size:13px;font-weight:700;margin-bottom:12px">'+j1+' vs '+j2+'</div>'+
     '<div class="field"><label>Ganador</label><select id="cr-ganador">'+oh+'</select></div>'+
     '<div class="field"><label>Sets</label><div class="sets"><input id="cr-s1" placeholder="6-3"><input id="cr-s2" placeholder="4-6"><input id="cr-s3" placeholder="--"></div></div>'+
+    '<div class="field"><label>Cancha</label><select id="cr-cancha">'+canchaOpts+'</select></div>'+
+    '<div class="field"><label>Fecha jugado</label><input id="cr-fecha" type="date" value="'+hoy+'"></div>'+
     '<button class="btn" onclick="guardarResultadoPartido(\''+docId+'\',\''+j1.replace(/'/g,"\\'")+'\',\''+j2.replace(/'/g,"\\'")+'\')" >✓ Guardar y sumar puntos</button>'+
     '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cancelar</button>';
   mo.classList.add("show");
@@ -1172,10 +1176,12 @@ async function guardarResultadoPartido(docId,j1,j2){
   var sets=[s1,s2,s3].filter(function(s){return s&&s!=="--";}).join(", ");
   _submitting["cr_"+docId]=true;
   try{
-    await db.collection("partidos_atmas").doc(docId).update({
-      ganador:ganador,perdedor:perdedor,sets:sets,
-      jugador1:j1,jugador2:j2,estado:"pendiente_admin",rivalConfirmo:true
-    });
+    var cancha=(el("cr-cancha")||{}).value||"";
+    var fecha=(el("cr-fecha")||{}).value||"";
+    var upd={ganador:ganador,perdedor:perdedor,sets:sets,jugador1:j1,jugador2:j2,estado:"pendiente_admin",rivalConfirmo:true};
+    if(cancha)upd.cancha=cancha;
+    if(fecha)upd.fecha=fecha;
+    await db.collection("partidos_atmas").doc(docId).update(upd);
     await aprobarPartido(docId,ganador,perdedor);
     closeModal();
     cargarPartidosProgramados();
