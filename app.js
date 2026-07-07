@@ -849,10 +849,10 @@ async function renderPerfilAdmin(p,pBody){
       '<div style="'+statStyle+'" onclick="go(\'admin\')" title="Ver inscripciones">'+
         '<div style="font-size:22px;font-weight:800" id="pa-insc">...</div>'+
         '<div style="font-size:10px;opacity:.85">Inscripciones</div></div>'+
-      '<div style="'+statStyle+'" onclick="go(\'admin\')" title="Ver recaudado">'+
-        '<div style="font-size:18px;font-weight:800" id="pa-total">...</div>'+
-        '<div style="font-size:10px;opacity:.85">Recaudado mes</div>'+
-        '<div style="font-size:9px;opacity:.65">confirmadas</div></div>'+
+      '<div style="'+statStyle+'" onclick="abrirInformeMes()" title="Ver recaudado">'+
+        '<div style="font-size:18px;font-weight:800" id="pa-total">💰</div>'+
+        '<div style="font-size:10px;opacity:.85">Ver informe</div>'+
+        '<div style="font-size:9px;opacity:.65">del mes</div></div>'+
       '</div></div>'+
       '<div class="section-title">MIS OPCIONES</div>'+
       '<div style="display:flex;flex-direction:column;gap:8px">'+
@@ -867,33 +867,11 @@ async function renderPerfilAdmin(p,pBody){
       '<div id="admin-historial-cont"><p class="hint">Cargando...</p></div>'+
       '<p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
     cargarHistorialAdmin();
-    // Todas las reservas (filtro cliente) + inscripciones
-    var primerDia=hoy.slice(0,7)+"-01";
-    var [snapTodasRes,snapTodasInsc]=await Promise.all([
-      db.collection("reservas").get(),
-      db.collection("inscripciones_atmas").get()
-    ]);
-    var resHoy=[];var recaudado=0;var debugRes=[];
-    snapTodasRes.forEach(function(d){
-      var r=d.data();
-      if(r.fecha===hoy&&r.estado!=="cancelada")resHoy.push(r);
-      if(r.fecha&&r.fecha>=primerDia&&r.fecha<=hoy){
-        debugRes.push(r.fecha+"|"+r.estado+"|"+r.monto);
-        if(r.estado==="confirmada"||r.estado==="confirmada_pagada")recaudado+=(r.monto||0);
-      }
-    });
-    var erh=el("pa-res-hoy");var etotal=el("pa-total");
-    if(erh)erh.textContent=resHoy.length;
-    var einsc=el("pa-insc");if(einsc)einsc.textContent=snapTodasInsc.size;
-    snapTodasInsc.forEach(function(doc){
-      var d=doc.data();
-      if(d.estado!=="confirmado"&&d.estado!=="pagado")return;
-      var fecha=d.fechaPago||"";
-      if(!fecha&&d.ts&&d.ts.seconds){fecha=new Date(d.ts.seconds*1000).toISOString().split("T")[0];}
-      if(fecha&&fecha>=primerDia&&fecha<=hoy)recaudado+=(d.monto||0);
-    });
-    console.log("DEBUG recaudado="+recaudado+" primerDia="+primerDia+" hoy="+hoy+" reservasMes="+JSON.stringify(debugRes));
-    if(etotal)etotal.textContent="$"+recaudado.toLocaleString("es-CL");
+    var hoySnap=await db.collection("reservas").where("fecha","==",hoy).get();
+    var resHoy=[];hoySnap.forEach(function(d){var r=d.data();if(r.estado!=="cancelada")resHoy.push(r);});
+    var erh=el("pa-res-hoy");if(erh)erh.textContent=resHoy.length;
+    var snapInsc=await db.collection("inscripciones_atmas").get();
+    var einsc=el("pa-insc");if(einsc)einsc.textContent=snapInsc.size;
   }catch(e){console.warn("renderPerfilAdmin error:",e);}
 }
 
@@ -1761,6 +1739,19 @@ async function generarInformeIngresos(){
     }
     if(cont)cont.innerHTML=h2;
   }catch(e){console.warn("informe error:",e);if(cont)cont.innerHTML='<p class="hint">Error al cargar. Revisa la conexión.</p>';}
+}
+
+function abrirInformeMes(){
+  var hoy=new Date().toISOString().split("T")[0];
+  var primerDia=hoy.slice(0,7)+"-01";
+  go("admin");
+  setTimeout(function(){
+    var d=el("ing-desde");var h=el("ing-hasta");
+    if(d)d.value=primerDia;if(h)h.value=hoy;
+    generarInformeIngresos();
+    var cont=el("admin-ingresos-cont");
+    if(cont)cont.scrollIntoView({behavior:"smooth"});
+  },300);
 }
 
 function abrirFormCrearTorneo(){
