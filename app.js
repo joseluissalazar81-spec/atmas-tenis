@@ -851,7 +851,7 @@ async function renderPerfilAdmin(p,pBody){
         '<div style="font-size:10px;opacity:.85">Inscripciones</div></div>'+
       '<div style="'+statStyle+'" onclick="go(\'admin\')" title="Ver recaudado">'+
         '<div style="font-size:18px;font-weight:800" id="pa-total">...</div>'+
-        '<div style="font-size:10px;opacity:.85">Recaudado hoy</div>'+
+        '<div style="font-size:10px;opacity:.85">Recaudado mes</div>'+
         '<div style="font-size:9px;opacity:.65">confirmadas</div></div>'+
       '</div></div>'+
       '<div class="section-title">MIS OPCIONES</div>'+
@@ -867,12 +867,17 @@ async function renderPerfilAdmin(p,pBody){
       '<div id="admin-historial-cont"><p class="hint">Cargando...</p></div>'+
       '<p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
     cargarHistorialAdmin();
+    // Reservas de hoy
     var snapHoy=await db.collection("reservas").where("fecha","==",hoy).get();
     var resHoy=[];snapHoy.forEach(function(d){var r=d.data();if(r.estado!=="cancelada")resHoy.push(r);});
     var erh=el("pa-res-hoy");var etotal=el("pa-total");
     if(erh)erh.textContent=resHoy.length;
-    var recaudado=resHoy.filter(function(r){return r.estado==="confirmada_pagada"||r.estado==="confirmada";}).reduce(function(s,r){return s+(r.monto||0);},0);
-    // Sumar inscripciones de torneos confirmadas hoy
+    // Recaudación del mes actual (reservas confirmadas)
+    var primerDia=hoy.slice(0,7)+"-01";
+    var snapMes=await db.collection("reservas").where("fecha",">=",primerDia).where("fecha","<=",hoy).get();
+    var recaudado=0;
+    snapMes.forEach(function(d){var r=d.data();if(r.estado==="confirmada_pagada"||r.estado==="confirmada")recaudado+=(r.monto||0);});
+    // Sumar inscripciones de torneos confirmadas este mes
     var snapInscHoy=await db.collection("inscripciones_atmas").get();
     var einsc=el("pa-insc");if(einsc)einsc.textContent=snapInscHoy.size;
     snapInscHoy.forEach(function(doc){
@@ -880,7 +885,7 @@ async function renderPerfilAdmin(p,pBody){
       if(d.estado!=="confirmado"&&d.estado!=="pagado")return;
       var fecha="";
       if(d.ts&&d.ts.seconds){fecha=new Date(d.ts.seconds*1000).toISOString().split("T")[0];}
-      if(fecha===hoy)recaudado+=(d.monto||0);
+      if(fecha>=primerDia&&fecha<=hoy)recaudado+=(d.monto||0);
     });
     if(etotal)etotal.textContent=recaudado>0?"$"+recaudado.toLocaleString("es-CL"):"$0";
   }catch(e){console.warn("renderPerfilAdmin error:",e);}
