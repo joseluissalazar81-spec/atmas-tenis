@@ -432,7 +432,6 @@ function showEntrarEmail(){
   var e=el("auth-entrar");if(e)e.style.display="";
 }
 function showAuthEmail(){showEntrarEmail();}
-function showAuthRut(){showAuthStep1();}
 function showAuthRut(){
   var s1=el("auth-step1");var s2=el("auth-step2");var rutBox=el("auth-rut");
   if(s1)s1.style.display="none";if(s2)s2.style.display="none";
@@ -719,11 +718,11 @@ function renderPerfil(){
 async function cargarHistorial(nombre){
   var ehl=el("historial-list");if(!ehl)return;
   try{
-    var snap1=await db.collection("partidos_atmas").where("ganador","==",nombre).where("estado","==","aprobado").limit(10).get();
-    var snap2=await db.collection("partidos_atmas").where("perdedor","==",nombre).where("estado","==","aprobado").limit(10).get();
+    var snap1=await db.collection("partidos_atmas").where("ganador","==",nombre).limit(20).get();
+    var snap2=await db.collection("partidos_atmas").where("perdedor","==",nombre).limit(20).get();
     var docs=[];
-    snap1.forEach(function(d){docs.push(Object.assign({},d.data(),{_gane:true,_fecha:d.data().fecha||""}));});
-    snap2.forEach(function(d){docs.push(Object.assign({},d.data(),{_gane:false,_fecha:d.data().fecha||""}));});
+    snap1.forEach(function(d){var r=d.data();if(r.estado==="aprobado")docs.push(Object.assign({},r,{_gane:true,_fecha:r.fecha||""}));});
+    snap2.forEach(function(d){var r=d.data();if(r.estado==="aprobado")docs.push(Object.assign({},r,{_gane:false,_fecha:r.fecha||""}));});
     docs.sort(function(a,b){return a._fecha<b._fecha?1:-1;});
     docs=docs.slice(0,6);
     if(docs.length===0){ehl.innerHTML='<p style="color:var(--suave);font-size:13px">Aun no tienes partidos registrados.</p>';return;}
@@ -1117,7 +1116,7 @@ async function programarPartido(){
     });
     // Bloquear el slot en reservas para que no se arriende
     if(hora){
-      var canchaId=cancha.toLowerCase().replace(" ","");
+      var canchaNum=parseInt(cancha.replace(/[^0-9]/g,""))||1;var canchaId=canchaNum;
       try{
         await db.collection("reservas").add({
           nombre:j1+" vs "+j2,canchaId:canchaId,cancha:cancha,
@@ -1728,7 +1727,7 @@ async function editarCuposTorneo(id,actual){
 
 async function loadAdminTorneos(){
   try{
-    var snapPend=await db.collection("partidos_atmas").where("estado","==","pendiente_admin").orderBy("ts","desc").limit(20).get();
+    var snapPend=await db.collection("partidos_atmas").where("estado","==","pendiente_admin").limit(20).get();
     var ap=el("a-pendientes");
     if(!ap){}else if(snapPend.empty){ap.innerHTML='<p class="hint">Sin partidos pendientes</p>';}
     else{
@@ -1740,7 +1739,7 @@ async function loadAdminTorneos(){
     }
   }catch(e){var ap2=el("a-pendientes");if(ap2)ap2.innerHTML='<p class="hint">Error</p>';}
   try{
-    var snap2=await db.collection("inscripciones_atmas").orderBy("ts","desc").limit(40).get();
+    var snap2=await db.collection("inscripciones_atmas").limit(40).get();
     var ai=el("a-inscripciones");
     if(!ai){}else if(snap2.empty){ai.innerHTML='<p class="hint">Sin inscripciones</p>';}
     else{var h2="";snap2.forEach(function(doc){var r=doc.data();h2+='<div class="res-card" style="border-color:#6366f1"><div class="rc-top"><span class="rc-name">'+(r.nombre||"?")+'</span><span style="font-size:11px;color:var(--suave)">'+(r.torneo||r.categoria||"")+'</span></div><div class="rc-sub">'+(r.tel||"")+' &middot; '+(r.estado||"pendiente")+'</div><button class="mini" style="color:#dc2626;margin-top:6px" onclick="eliminarInscripcion(\''+doc.id+'\',\''+((r.nombre||"").replace(/'/g,"\\'"))+'\')">&times; Eliminar</button></div>';});ai.innerHTML=h2;}
@@ -2404,7 +2403,7 @@ async function renderMisReservas(){
   cont.innerHTML='<p class="hint">Cargando...</p>';
   try{
     var hoy=new Date().toISOString().split("T")[0];
-    var snap=await db.collection("reservas").where("userId","==",uid).orderBy("fecha","desc").limit(30).get();
+    var snap=await db.collection("reservas").where("userId","==",uid).limit(30).get();
     if(snap.empty){cont.innerHTML='<p class="hint">No tienes reservas aún</p>';return;}
     var html="";
     snap.forEach(function(doc){
@@ -2631,7 +2630,7 @@ async function renderAdminSlots(){
   var cont=el("admin-slots-cont");if(!cont)return;
   cont.innerHTML='<p class="hint">Cargando...</p>';
   try{
-    var snap=await db.collection("slots_individuales").orderBy("fecha").orderBy("hora").limit(50).get();
+    var snap=await db.collection("slots_individuales").limit(50).get();
     var h='<div style="background:#f0fdf4;border-radius:12px;padding:12px;margin-bottom:14px;font-size:12px">'+
       '<div style="font-weight:800;color:var(--verde-osc);margin-bottom:6px">⏰ Horarios permitidos clases individuales</div>'+
       '<div style="color:#444;line-height:1.8">'+
@@ -2769,7 +2768,7 @@ function renderSociosBloques(){
 async function cargarCodigosLista(){
   var cont=el("codigos-lista");if(!cont)return;
   try{
-    var snap=await db.collection("codigos_socio").orderBy("ts","desc").get();
+    var snap=await db.collection("codigos_socio").get();
     if(snap.empty){cont.innerHTML='<p class="hint">Sin códigos creados</p>';return;}
     var h="";
     snap.forEach(function(doc){
@@ -2938,8 +2937,7 @@ async function marcarNotifsLeidas(){
 async function renderNotificacionesAdmin(){
   var cont=el("admin-notifs-cont");if(!cont)return;
   try{
-    var snap=await db.collection("notificaciones_admin").orderBy&&false?null:
-      await db.collection("notificaciones_admin").limit(20).get();
+    var snap=await db.collection("notificaciones_admin").limit(20).get();
     if(snap.empty){cont.innerHTML='<p class="hint">Sin notificaciones</p>';return;}
     var docs=[];snap.forEach(function(d){docs.push({id:d.id,...d.data()});});
     docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return tb-ta;});
@@ -3039,11 +3037,22 @@ async function buscarH2H(){
   var cont=el("h2h-result");if(!cont)return;
   cont.innerHTML='<p class="hint">Buscando...</p>';
   try{
-    var [s1,s2]=await Promise.all([
-      db.collection("partidos_atmas").where("ganador","==",j1).where("perdedor","==",j2).get(),
-      db.collection("partidos_atmas").where("ganador","==",j2).where("perdedor","==",j1).get()
+    var [s1,s2,s3,s4]=await Promise.all([
+      db.collection("partidos_atmas").where("ganador","==",j1).limit(50).get(),
+      db.collection("partidos_atmas").where("ganador","==",j2).limit(50).get(),
+      db.collection("partidos_atmas").where("perdedor","==",j1).limit(50).get(),
+      db.collection("partidos_atmas").where("perdedor","==",j2).limit(50).get()
     ]);
-    var gJ1=s1.size,gJ2=s2.size,total=gJ1+gJ2;
+    var allDocs={};
+    [s1,s2,s3,s4].forEach(function(snap){snap.forEach(function(d){allDocs[d.id]=d.data();});});
+    var gJ1=0,gJ2=0;
+    Object.values(allDocs).forEach(function(r){
+      if(r.estado!=="aprobado")return;
+      if(r.ganador===j1&&r.perdedor===j2)gJ1++;
+      if(r.ganador===j2&&r.perdedor===j1)gJ2++;
+    });
+    var s1={size:gJ1},s2={size:gJ2};
+    var total=gJ1+gJ2;
     var ini1=initials(j1),ini2=initials(j2),col1=avatarColor(j1),col2=avatarColor(j2);
     var pct1=total?Math.round(gJ1/total*100):50;
     var h='<div class="match-card">'+
@@ -3115,7 +3124,7 @@ function mostrarTarjetaPartido(ganador,perdedor,sets,contexto){
       '</div>'+
       '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:8px">@ATMAS_TENIS · Club Las Avestruces</div>'+
     '</div>'+
-    '<button class="btn wa" onclick="compartirResultadoWA(\''+ganador+'\',\''+perdedor+'\',\''+sets+'\')">📲 Compartir por WhatsApp</button>'+
+    '<button class="btn wa" onclick="compartirResultadoWA(\''+ganador.replace(/'/g,"\\'")+'\',\''+perdedor.replace(/'/g,"\\'")+'\',\''+sets.replace(/'/g,"\\'")+'\')">📲 Compartir por WhatsApp</button>'+
     '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';
   mo.classList.add("show");
 }
