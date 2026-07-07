@@ -1588,7 +1588,7 @@ async function generarInformeIngresos(){
   try{
     var snap=await db.collection("reservas").where("fecha",">=",desde).where("fecha","<=",hasta).get();
     var todas=[];snap.forEach(function(doc){todas.push(doc.data());});
-    var pagadas=todas.filter(function(r){return r.estado==="confirmada_pagada";});
+    var pagadas=todas.filter(function(r){return r.estado==="confirmada_pagada"||r.estado==="confirmada";});
     var canceladas=todas.filter(function(r){return r.estado==="cancelada";});
     // Agrupar por tipo de usuario
     var porTipo={};
@@ -1610,7 +1610,7 @@ async function generarInformeIngresos(){
     var h2='<div style="background:linear-gradient(135deg,#0f3d08,#2f6b1a);border-radius:16px;padding:16px;color:#fff;margin-bottom:12px">'+
       '<div style="font-size:11px;opacity:.75;margin-bottom:4px">TOTAL CONFIRMADO '+desde.split("-").reverse().join("/")+" → "+hasta.split("-").reverse().join("/")+'</div>'+
       '<div style="font-size:28px;font-weight:900">$'+totalGeneral.toLocaleString("es-CL")+'</div>'+
-      '<div style="font-size:12px;opacity:.8;margin-top:4px">'+pagadas.length+' reservas pagadas &middot; '+canceladas.length+' canceladas</div>'+
+      '<div style="font-size:12px;opacity:.8;margin-top:4px">'+pagadas.length+' reservas confirmadas &middot; '+canceladas.length+' canceladas</div>'+
     '</div>';
     // Desglose por tipo
     h2+='<div class="section-title" style="margin-top:0">Desglose por tipo</div>';
@@ -2008,26 +2008,22 @@ function renderCalendario(){
   var p=getPerfil();
   var authEmail=(auth&&auth.currentUser&&auth.currentUser.email)||p&&p.email||"";
   var esAdm=p&&esAdmin(p.nombre||"",authEmail);
-  if(esAdm){
-    // Admin va al panel de reservas en lugar del flujo de arriendo
-    go("admin");
-    setTimeout(function(){
-      var cont=el("admin-tab-reservas");
-      if(cont)cont.scrollIntoView({behavior:"smooth"});
-      renderAdminReservas();
-    },150);
-    return;
-  }
   var tipo=(p&&p.tipo)||null;
   var ts=el("res-tipo-selector"),rm=el("res-main");
-  if(false){
+  if(esAdm){
+    // Admin ve el calendario en modo agenda: todos los arriendos visibles
+    resState.tipo=resState.tipo||"socio_partido";
+    if(ts)ts.style.display="none";if(rm)rm.style.display="";
+    var cbt0=el("res-cambiar-tipo");if(cbt0)cbt0.style.display="none";
+    if(!resState.fecha){resState.fecha=new Date().toISOString().split("T")[0];}
+    actualizarLabelTipo();renderDayStrip();renderCourtTabs();renderSlots();verificarSancionBanner();
+  }else if(!tipo){
     if(ts)ts.style.display="";if(rm)rm.style.display="none";
     var cbt=el("res-cambiar-tipo");if(cbt)cbt.style.display="none";
   }else{
     resState.tipo=tipo;
     if(ts)ts.style.display="none";if(rm)rm.style.display="";
     var cbt2=el("res-cambiar-tipo");if(cbt2)cbt2.style.display="none";
-    // Pre-seleccionar hoy
     if(!resState.fecha){resState.fecha=new Date().toISOString().split("T")[0];}
     actualizarLabelTipo();renderDayStrip();renderCourtTabs();renderSlots();verificarSancionBanner();
   }
@@ -2149,6 +2145,9 @@ async function renderSlots(){
     cont.innerHTML='<p class="hint">Selecciona día y cancha</p>';return;
   }
   cont.innerHTML='<p class="hint">Cargando horarios...</p>';
+  var p=getPerfil();
+  var authEmail=(auth&&auth.currentUser&&auth.currentUser.email)||p&&p.email||"";
+  var esAdm=p&&esAdmin(p.nombre||"",authEmail);
   try{
     var snap=await db.collection("reservas")
       .where("canchaId","==",resState.canchaId)
@@ -2157,38 +2156,51 @@ async function renderSlots(){
       .get();
     var ocupadas={};
     snap.forEach(function(doc){
-      var r=doc.data();
-      ocupadas[r.horaInicio]=true;
-      // marcar también la segunda hora si fue reserva de 2h
+      var r=doc.data();var rid=doc.id;
+      var info={nombre:r.nombre||"",estado:r.estado||"",monto:r.monto||0,id:rid,tipo:r.tipo||""};
+      ocupadas[r.horaInicio]=info;
       if(r.duracion===2||r.horaFin){
         var h2=parseInt(r.horaInicio)+1;
-        if(h2<10)ocupadas["0"+h2+":00"]=true;
-        else ocupadas[h2+":00"]=true;
+        var hk2=(h2<10?"0"+h2:h2)+":00";
+        ocupadas[hk2]=info;
       }
     });
     var ahora=new Date();
     var slots=getSlotsParaDia(resState.fecha);
     if(!slots.length){cont.innerHTML='<p class="hint">Sin horarios configurados</p>';return;}
+    var estadoLabel={"confirmada":"✓ Confirmada","confirmada_pagada":"✓ Pagada","pendiente_pago":"⏳ Pend. pago","programado_partido":"🎾 Partido"};
     var htmlS='<div class="slot-grid">';
     slots.forEach(function(s){
       var slotDt=new Date(resState.fecha+"T"+s.hi);
       var pasado=slotDt<ahora;
-      // Para slot fijo 2h: verificar que ambas horas estén libres
-      var ocup=!!ocupadas[s.hi];
-      if(s.fijo2h){
-        var h2=parseInt(s.hi)+1;
-        var hi2=(h2<10?"0"+h2:h2)+":00";
-        ocup=ocup||!!ocupadas[hi2];
+      var info=ocupadas[s.hi]||null;
+      if(s.fijo2h&&!info){
+        var h2b=parseInt(s.hi)+1;
+        info=ocupadas[(h2b<10?"0"+h2b:h2b)+":00"]||null;
       }
+      var ocup=!!info;
       var sel=resState.horaInicio===s.hi;
-      var cls="slot-block"+(pasado||ocup?" ocupado":sel?" seleccionado":" libre");
       var durLabel=s.fijo2h?"2 hrs":"1 hr";
       var click=(!pasado&&!ocup)?'onclick="selectSlotRes(\''+s.hi+'\',\''+s.hf+'\','+(s.fijo2h?2:1)+')"':'';
-      htmlS+='<div class="'+cls+'" '+click+'>'+
-        '<div class="sl-h">'+s.hi+'</div>'+
-        '<div class="sl-f">'+s.hf+'</div>'+
-        '<div class="sl-e">'+(pasado?"Pasado":ocup?"Ocupado":durLabel)+'</div>'+
-        '</div>';
+      if(esAdm&&ocup&&info){
+        // Admin: slot ocupado muestra nombre + estado + botón confirmar si pendiente
+        var estL=estadoLabel[info.estado]||info.estado;
+        var badgeColor=info.estado==="confirmada_pagada"?"#1a5c0a":info.estado==="confirmada"?"#2f6b1a":info.estado==="programado_partido"?"#1a3a5c":"#7a5c00";
+        var admBtn=info.estado==="pendiente_pago"?'<button class="mini" style="margin-top:4px;font-size:10px" onclick="confirmarPago(\''+info.id+'\')">Confirmar pago</button>':'';
+        htmlS+='<div class="slot-block ocupado" style="cursor:default;min-height:70px">'+
+          '<div class="sl-h">'+s.hi+'</div>'+
+          '<div style="font-size:10px;font-weight:700;color:'+badgeColor+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">'+info.nombre+'</div>'+
+          '<div style="font-size:9px;color:'+badgeColor+'">'+estL+'</div>'+
+          admBtn+
+          '</div>';
+      }else{
+        var cls="slot-block"+(pasado||ocup?" ocupado":sel?" seleccionado":" libre");
+        htmlS+='<div class="'+cls+'" '+click+'>'+
+          '<div class="sl-h">'+s.hi+'</div>'+
+          '<div class="sl-f">'+s.hf+'</div>'+
+          '<div class="sl-e">'+(pasado?"Pasado":ocup?"Ocupado":durLabel)+'</div>'+
+          '</div>';
+      }
     });
     htmlS+='</div>';
     cont.innerHTML=htmlS;
