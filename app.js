@@ -554,6 +554,7 @@ async function onAuthStateChanged(user){
       var pv=await vincularRankingExistente(p);
       var enRanking=(pv.jugados>0||pv.pts>0);
       savePerfil(p);mostrarApp();renderPerfil();
+      try{var wp=(_configCache&&_configCache.wp)||"56956343558";window.open("https://wa.me/"+wp+"?text="+encodeURIComponent("🆕 ATMAS APP\nNuevo usuario (Google):\n👤 "+p.nombre+(p.email?"\n✉️ "+p.email:"")),"_blank");}catch(e){}
       if(enRanking){go("escalerilla");toast("¡Bienvenido, "+p.nombre+"! Tu historial fue vinculado ✓");}
       else{go("perfil");toast("Bienvenido! Completa tu RUT en Mi Perfil.");}
     }
@@ -618,6 +619,7 @@ async function completarPerfil(){
     enRanking=(pv.jugados>0||pv.pts>0);
   }catch(e){}
   savePerfil(p);mostrarApp();renderPerfil();
+  try{var wp=(_configCache&&_configCache.wp)||"56956343558";window.open("https://wa.me/"+wp+"?text="+encodeURIComponent("🆕 ATMAS APP\nNuevo usuario registrado:\n👤 "+nombre+(tel?"\n📞 "+tel:"")+(rut?"\n🪪 "+rut:"")),"_blank");}catch(e){}
   if(enRanking){go("escalerilla");toast("¡Bienvenido, "+nombre+"! Tu historial fue vinculado ✓");}
   else{go("inicio");toast("Bienvenido "+nombre+"!");}
 }
