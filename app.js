@@ -549,7 +549,10 @@ async function onAuthStateChanged(user){
       localStorage.setItem("atmas_perfil",JSON.stringify(p));
       mostrarApp();renderPerfil();go("inicio");
       toast("Bienvenido, "+p.nombre+"!");
-      if(esAdmin(p.nombre||"",user.email||p.email||"")){iniciarNotificacionesAdmin();iniciarBadgePendientes();}
+      if(esAdmin(p.nombre||"",user.email||p.email||"")){
+        var campanaBtn=el("btn-campana");if(campanaBtn)campanaBtn.style.display="";
+        iniciarNotificacionesAdmin();iniciarBadgePendientes();
+      }
     }else{
       // Usuario Google sin perfil: crear uno con sus datos de Google
       var p={nombre:user.displayName||user.email||"Usuario",rut:"",tel:"",fnac:"",socio:false,email:user.email||""};
@@ -676,7 +679,11 @@ function renderPerfil(){
       return;
     }
     var authEmail=(auth&&auth.currentUser&&auth.currentUser.email)||p.email||"";
-    if(esAdmin(p.nombre,authEmail)){adminUnlocked=true;renderPerfilAdmin(p,pBody);return;}
+    if(esAdmin(p.nombre,authEmail)){
+      adminUnlocked=true;
+      var campanaBtn=el("btn-campana");if(campanaBtn)campanaBtn.style.display="";
+      renderPerfilAdmin(p,pBody);return;
+    }
     var jugador=rankingData.find(function(j){return j[0].toLowerCase()===p.nombre.toLowerCase();});
     var pos=jugador?rankingData.indexOf(jugador)+1:null;
     var ini=initials(p.nombre);var col=avatarColor(p.nombre);
@@ -3025,9 +3032,11 @@ function iniciarNotificacionesAdmin(){
         var p=getPerfil();if(!p||!esAdmin(p.nombre||"",p.email||""))return;
         var n=snap.size;
         var badge=el("badge-notifs");if(badge){badge.textContent=n>9?"9+":String(n);badge.style.display=n>0?"":"none";}
-        // Campana en header
+        // Campana en header — siempre visible para admin
         var campana=el("btn-campana");if(campana)campana.style.display="";
         var badgeCamp=el("badge-campana");if(badgeCamp){badgeCamp.textContent=n>9?"9+":String(n);badgeCamp.style.display=n>0?"":"none";}
+        // También actualizar badge del panel de admin si está abierto
+        var badge2=el("badge-notifs");if(badge2){badge2.textContent=n>9?"9+":String(n);badge2.style.display=n>0?"":"none";}
         if(n>_notifsAnterior&&_notifsAnterior>=0&&n>0){
           // Nueva notificación — tostar y vibrar
           var docs=[];snap.forEach(function(d){docs.push(d.data());});
