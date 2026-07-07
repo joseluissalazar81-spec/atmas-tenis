@@ -883,6 +883,15 @@ async function cargarHistorialAdmin(){
       var col=avatarColor(r.ganador||r.jugador1||"?");var ini=initials(r.ganador||r.jugador1||"?");
       var fecha=r.ts&&r.ts.seconds?new Date(r.ts.seconds*1000).toLocaleDateString("es-CL"):(r.fecha||"");
       var est=r.estado||"";var estC=estadoColor[est]||"#9ca3af";var estL=estadoLabel[est]||est;
+      var esProg=est==="programado";
+      var esPend=est==="pendiente_admin";
+      var j1e=r.jugador1?r.jugador1.replace(/'/g,"\\'"):"";
+      var j2e=r.jugador2?r.jugador2.replace(/'/g,"\\'"):"";
+      var accion=esProg
+        ?'<button class="mini" style="background:#dcfce7;color:#15803d;padding:6px 10px;font-size:12px" onclick="completarResultado(\''+r.id+'\',\''+j1e+'\',\''+j2e+'\')">✏️ Resultado</button>'
+        :esPend
+        ?'<button class="mini" style="background:#fef9c3;color:#92400e;padding:6px 10px;font-size:12px" onclick="aprobarPartido(\''+r.id+'\',\''+r.ganador.replace(/'/g,"\\'")+'\',\''+r.perdedor.replace(/'/g,"\\'")+'\')">✓ Aprobar</button>'
+        :'<span style="background:'+estC+';color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800;white-space:nowrap">'+estL+'</span>';
       h+='<div class="lcard" style="padding:10px 12px;margin-bottom:6px">'+
         '<div class="avatar" style="background:'+col+';width:34px;height:34px;font-size:12px;flex-shrink:0">'+ini+'</div>'+
         '<div style="flex:1;min-width:0">'+
@@ -891,7 +900,7 @@ async function cargarHistorialAdmin(){
           '</div>'+
           '<div style="font-size:11px;color:var(--suave)">'+(r.sets||"")+(r.contexto?" · "+r.contexto:"")+(fecha?" · "+fecha:"")+'</div>'+
         '</div>'+
-        '<span style="background:'+estC+';color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800;white-space:nowrap">'+estL+'</span>'+
+        accion+
       '</div>';
     });
     cont.innerHTML=h;
