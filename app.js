@@ -2011,14 +2011,15 @@ function renderCalendario(){
   var tipo=(p&&p.tipo)||null;
   var ts=el("res-tipo-selector"),rm=el("res-main");
   if(esAdm){
-    // Admin ve el calendario en modo agenda: todos los arriendos visibles, sin formulario
+    // Admin: modo agenda — 4 canchas en paralelo, sin formulario de reserva
     resState.tipo="socio_partido";
     if(ts)ts.style.display="none";if(rm)rm.style.display="";
     var cbt0=el("res-cambiar-tipo");if(cbt0)cbt0.style.display="none";
     var resF=el("res-form");if(resF)resF.style.display="none";
-    var lblDiv=el("res-tipo-label");if(lblDiv)lblDiv.closest&&lblDiv.closest("div[style]");
+    var courtTabs=el("court-tabs");if(courtTabs)courtTabs.style.display="none";
+    var tipoLblRow=el("res-tipo-label");if(tipoLblRow&&tipoLblRow.parentNode)tipoLblRow.parentNode.style.display="none";
     if(!resState.fecha){resState.fecha=new Date().toISOString().split("T")[0];}
-    renderDayStrip();renderCourtTabs();renderSlots();
+    renderDayStrip();renderSlotsAdmin();
   }else if(!tipo){
     if(ts)ts.style.display="";if(rm)rm.style.display="none";
     var cbt=el("res-cambiar-tipo");if(cbt)cbt.style.display="none";
@@ -2132,13 +2133,74 @@ function renderCourtTabs(){
 
 function selectFechaRes(fecha){
   resState.fecha=fecha;resState.horaInicio=null;resState.duracion=1;
-  renderDayStrip();ocultarFormRes();renderSlots();
+  var p=getPerfil();var authEmail=(auth&&auth.currentUser&&auth.currentUser.email)||p&&p.email||"";
+  var esAdm=p&&esAdmin(p.nombre||"",authEmail);
+  renderDayStrip();ocultarFormRes();
+  if(esAdm)renderSlotsAdmin();else renderSlots();
 }
 
 function selectCanchaRes(cid){
   resState.canchaId=cid;resState.horaInicio=null;resState.duracion=1;
   renderCourtTabs();ocultarFormRes();
   if(resState.fecha)renderSlots();
+}
+
+async function renderSlotsAdmin(){
+  var cont=el("slots-res");if(!cont)return;
+  if(!resState.fecha){cont.innerHTML='<p class="hint">Selecciona un día</p>';return;}
+  cont.innerHTML='<p class="hint">Cargando...</p>';
+  try{
+    // Traer todas las reservas del día para todas las canchas
+    var snap=await db.collection("reservas")
+      .where("fecha","==",resState.fecha)
+      .where("estado","in",["confirmada","confirmada_pagada","pendiente_pago","programado_partido"])
+      .get();
+    // Indexar por canchaId → horaInicio → info
+    var porCancha={};
+    CONFIG_RES.canchas.forEach(function(c){porCancha[c.id]={};});
+    snap.forEach(function(doc){
+      var r=doc.data();var cid=r.canchaId;
+      if(!porCancha[cid])porCancha[cid]={};
+      var info={nombre:r.nombre||"",estado:r.estado||"",monto:r.monto||0,id:doc.id};
+      porCancha[cid][r.horaInicio]=info;
+      if(r.duracion===2||r.horaFin){
+        var h2=parseInt(r.horaInicio)+1;
+        porCancha[cid][(h2<10?"0"+h2:h2)+":00"]=info;
+      }
+    });
+    var slots=getSlotsParaDia(resState.fecha);
+    var ahora=new Date();
+    var ec={confirmada:"#dcfce7",confirmada_pagada:"#bbf7d0",pendiente_pago:"#fef9c3",programado_partido:"#dbeafe"};
+    var etc={confirmada:"#166534",confirmada_pagada:"#14532d",pendiente_pago:"#854d0e",programado_partido:"#1e3a5f"};
+    // Encabezado de canchas
+    var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
+    h+='<thead><tr><th style="padding:4px 6px;text-align:left;color:var(--suave);font-weight:600;width:52px">Hora</th>';
+    CONFIG_RES.canchas.forEach(function(c){
+      h+='<th style="padding:4px 4px;text-align:center;color:var(--verde-osc);font-weight:700">'+c.nombre+'</th>';
+    });
+    h+='</tr></thead><tbody>';
+    slots.forEach(function(s){
+      var slotDt=new Date(resState.fecha+"T"+s.hi);
+      var pasado=slotDt<ahora;
+      h+='<tr style="border-top:1px solid var(--gris)">';
+      h+='<td style="padding:5px 6px;color:var(--suave);font-weight:700;white-space:nowrap">'+s.hi+'</td>';
+      CONFIG_RES.canchas.forEach(function(c){
+        var info=porCancha[c.id]&&porCancha[c.id][s.hi];
+        var bg,txt,label,onclick3="";
+        if(pasado){bg="#f9fafb";txt="#d1d5db";label="—";}
+        else if(info){bg=ec[info.estado]||"#f3f4f6";txt=etc[info.estado]||"#374151";
+          label=info.nombre.split(" ")[0];// solo primer nombre para que quepa
+          onclick3=' onclick="verInfoSlot(\''+info.id.replace(/'/g,"\\'")+'\')\" style="cursor:pointer"';
+        }else{bg="#fff";txt="#16a34a";label="Libre";}
+        h+='<td'+onclick3+' style="padding:4px 3px;background:'+bg+';text-align:center;border-radius:6px;border:1.5px solid '+txt+'22">'+
+          '<div style="font-size:10px;font-weight:700;color:'+txt+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72px;margin:0 auto">'+label+'</div>'+
+          '</td>';
+      });
+      h+='</tr>';
+    });
+    h+='</tbody></table></div>';
+    cont.innerHTML=h;
+  }catch(e){cont.innerHTML='<p class="hint">Error al cargar</p>';console.warn(e);}
 }
 
 async function renderSlots(){
