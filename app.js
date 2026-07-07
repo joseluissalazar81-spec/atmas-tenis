@@ -3030,7 +3030,7 @@ function iniciarNotificacionesAdmin(){
           var docs=[];snap.forEach(function(d){docs.push(d.data());});
           docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return tb-ta;});
           var ultimo=docs[0];
-          if(ultimo)toast("🔔 Nuevo usuario: "+ultimo.nombre);
+          if(ultimo)toast("🔔 "+(ultimo.tipo||"Notificación")+": "+ultimo.nombre);
           if(navigator.vibrate)navigator.vibrate([150,80,150,80,150]);
         }
         _notifsAnterior=n;
@@ -3041,6 +3041,15 @@ function iniciarNotificacionesAdmin(){
       });
   }catch(e){console.warn("iniciarNotificacionesAdmin:",e);}
 }
+async function confirmarPagoNotif(notifId,reservaId){
+  try{
+    await db.collection("reservas").doc(reservaId).update({estado:"confirmada"});
+    await db.collection("notificaciones_admin").doc(notifId).update({leida:true,pagada:true});
+    toast("Pago confirmado ✓ — suma a la recaudación del día");
+    renderNotificacionesAdmin();
+  }catch(e){toast("Error: "+e.message);}
+}
+
 async function marcarNotifsLeidas(){
   try{
     var snap=await db.collection("notificaciones_admin").where("leida","==",false).get();
@@ -3059,13 +3068,20 @@ async function renderNotificacionesAdmin(){
     var h='<button class="btn sec" style="margin-bottom:10px;font-size:12px" onclick="marcarNotifsLeidas()">✓ Marcar todas leídas</button>';
     docs.forEach(function(n){
       var fecha=n.ts&&n.ts.seconds?new Date(n.ts.seconds*1000).toLocaleDateString("es-CL"):"";
-      h+='<div style="background:'+(n.leida?"#f9fafb":"#fefce8")+';border:1.5px solid '+(n.leida?"#e5e7eb":"#fbbf24")+';border-radius:12px;padding:10px 12px;margin-bottom:8px">'+
-        '<div style="font-weight:800;font-size:14px">'+(n.leida?"":"🆕 ")+n.nombre+'</div>'+
+      var esReserva=!!n.reservaId;
+      var bgCard=n.leida?"#f9fafb":(esReserva?"#f0fdf4":"#fefce8");
+      var bdCard=n.leida?"#e5e7eb":(esReserva?"#86efac":"#fbbf24");
+      var btnConf=esReserva&&!n.pagada
+        ?'<button class="btn" style="margin-top:8px;padding:7px 14px;font-size:12px" onclick="confirmarPagoNotif(\''+n.id+'\',\''+n.reservaId+'\')">✓ Confirmar pago</button>'
+        :(esReserva&&n.pagada?'<div style="font-size:11px;color:#16a34a;margin-top:6px;font-weight:700">✓ Pago confirmado</div>':'');
+      h+='<div style="background:'+bgCard+';border:1.5px solid '+bdCard+';border-radius:12px;padding:10px 12px;margin-bottom:8px">'+
+        '<div style="font-weight:800;font-size:14px">'+(n.leida?"":"🆕 ")+(n.tipo?n.tipo+' · ':'')+n.nombre+'</div>'+
         (n.detalle?'<div style="font-size:12px;color:#374151;margin-top:2px">'+n.detalle+'</div>':'')+
         (n.tel?'<div style="font-size:12px;color:#6b7280">📞 '+n.tel+'</div>':'')+
         (n.rut?'<div style="font-size:12px;color:#6b7280">🪪 '+n.rut+'</div>':'')+
         (n.email?'<div style="font-size:12px;color:#6b7280">✉️ '+n.email+'</div>':'')+
-        '<div style="font-size:11px;color:#9ca3af;margin-top:4px">'+n.tipo+(fecha?" · "+fecha:"")+'</div>'+
+        '<div style="font-size:11px;color:#9ca3af;margin-top:4px">'+(fecha?fecha:"")+'</div>'+
+        btnConf+
       '</div>';
     });
     cont.innerHTML=h;
