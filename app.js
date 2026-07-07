@@ -1156,6 +1156,7 @@ async function aprobarPartido(docId,ganador,perdedor){
     var pSnap=await db.collection("partidos_atmas").doc(docId).get();
     var pData=pSnap.exists?pSnap.data():{};
     mostrarTarjetaPartido(ganador,perdedor,pData.sets||"",pData.contexto||"");
+    cargarFeedActividad();
     renderAdmin();
   }catch(e){console.warn("aprobarPartido error:",e);toast("Error al aprobar partido. Verifica tu conexión.");}
   finally{delete _submitting["apr_"+docId];}
