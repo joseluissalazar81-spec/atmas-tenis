@@ -2242,8 +2242,7 @@ function actualizarResumenForm(){
       var textoCopia="Datos de transferencia ATMAS\nNombre: "+t.nombre+"\nRUT: "+t.rut+"\nBanco: "+t.banco+"\nTipo: "+t.tipo+"\nN° Cuenta: "+t.cuenta+"\nEmail: "+t.email+"\nMonto: $"+tarifa.toLocaleString("es-CL");
       function fila(k,v,big){return '<div class="pagobox row"><span class="k">'+k+':</span><span class="v'+(big?' big':'')+'">'+v+'</span></div>';}
       md.innerHTML=
-        '<a href="'+linkMP+'" target="_blank" style="display:block;background:#009ee3;color:#fff;text-align:center;padding:14px;border-radius:14px;font-size:15px;font-weight:800;text-decoration:none;margin-bottom:12px">&#128179;&nbsp; Pagar con MercadoPago &rarr; $'+tarifa.toLocaleString("es-CL")+'</a>'+
-        '<div style="text-align:center;font-size:12px;color:#9ca3af;margin:-4px 0 12px">&mdash; o transferencia bancaria &mdash;</div>'+
+        '<div style="background:#fef9c3;border:1.5px solid #fbbf24;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e">⚠️ <b>Mercado Pago cobra comisión.</b> Te recomendamos pagar por transferencia bancaria sin costo adicional.</div>'+
         '<div class="pagobox">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
         '<h4 style="margin:0">&#128180; Datos de transferencia</h4>'+
