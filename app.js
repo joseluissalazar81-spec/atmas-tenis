@@ -955,31 +955,83 @@ const torneos=[
 
 (function renderTorneosList(){
   var tl=el("torneos-list");if(!tl)return;
+  var p=getPerfil()||{};
+  var authEmail=(auth&&auth.currentUser&&auth.currentUser.email)||p.email||"";
+  var esAdmList=esAdmin(p.nombre||"",authEmail);
   var th="";
+  // Más recientes primero (el array está ordenado del más reciente al más antiguo)
   torneos.forEach(function(t,i){
     var cerrado=t.c==="Cerrado";
     var sinCupos=!cerrado&&t.c&&parseInt(t.c)===0;
-    var bloqueado=cerrado||sinCupos;
+    var bloqueado=!esAdmList&&(cerrado||sinCupos);
     var estadoLabel=cerrado?"Cerrado":sinCupos?"Cupo completo":t.c;
     th+=
-      '<div class="tcard" '+(bloqueado
-        ?'style="opacity:.6;border-left-color:#cbd5e1;pointer-events:none"'
-        :'onclick="openModal(\'torneo\','+i+')" style="cursor:pointer" ontouchstart="this.style.opacity=\'.8\'" ontouchend="this.style.opacity=\'1\'"'
-      )+'>'+
+      '<div class="tcard" onclick="openModal(\'torneo\','+i+')" style="cursor:pointer'+(bloqueado?";opacity:.6":"")+'">'+
         '<div class="tn">'+t.n+'</div>'+
         '<div class="tm">&#128197; '+t.f+'</div>'+
         '<div class="trow">'+
           '<span class="price">'+t.p+'</span>'+
-          (bloqueado
+          (cerrado||sinCupos
             ?'<span class="cupos" style="background:#f1f5f9;color:#94a3b8">'+estadoLabel+'</span>'
             :'<span class="cupos">'+estadoLabel+'</span>'
           )+
-          (bloqueado?'':'<button class="mini wa" style="margin-left:auto;pointer-events:none">Ver m&aacute;s &rarr;</button>')+
+          '<button class="mini wa" style="margin-left:auto;pointer-events:none">'+(esAdmList?"Ver inscritos &rarr;":"Ver m&aacute;s &rarr;")+'</button>'+
         '</div>'+
       '</div>';
   });
   tl.innerHTML=th||'<p class="hint">Sin torneos disponibles</p>';
 })();
+
+async function cargarInscritosAdmin(idx,t){
+  var cont=el("adm-insc-list-"+idx);if(!cont)return;
+  try{
+    var snap=await db.collection("inscripciones_atmas").where("torneo","==",t.n).get();
+    var docs=[];snap.forEach(function(d){docs.push({id:d.id,...d.data()});});
+    docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return ta-tb;});
+    var cupoMax=parseInt(t.c)||16;var pagados=docs.filter(function(d){return d.estado==="pagado"||d.estado==="confirmado";}).length;
+    var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<div style="font-size:12px;font-weight:700;color:var(--verde-osc)">'+docs.length+' inscritos &middot; '+pagados+' pagados</div>'+
+      '<div style="font-size:12px;color:'+(docs.length>=cupoMax?"#dc2626":"var(--verde-mid)")+'">'+Math.max(0,cupoMax-docs.length)+' cupos libres</div>'+
+    '</div>';
+    if(docs.length===0){h+='<p class="hint">Sin inscritos aún</p>';}
+    docs.forEach(function(d,i){
+      var pagado=d.estado==="pagado"||d.estado==="confirmado";
+      var col=avatarColor(d.nombre||"");var ini=initials(d.nombre||"?");
+      var fecha=d.ts&&d.ts.seconds?new Date(d.ts.seconds*1000).toLocaleDateString("es-CL",{day:"numeric",month:"short"}):"";
+      h+='<div class="lcard" style="align-items:center">'+
+        '<div style="width:20px;text-align:center;font-size:11px;font-weight:800;color:var(--suave)">'+(i+1)+'</div>'+
+        '<div class="avatar" style="background:'+col+';width:32px;height:32px;font-size:12px;flex-shrink:0">'+ini+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div class="nm">'+d.nombre+'</div>'+
+          (d.tel?'<div style="font-size:11px;color:var(--suave)">'+d.tel+'</div>':'')+
+          (fecha?'<div style="font-size:10px;color:var(--suave)">'+fecha+'</div>':'')+
+        '</div>'+
+        (pagado
+          ?'<span style="font-size:11px;font-weight:700;color:#16a34a;flex-shrink:0">✓ Pagado</span>'
+          :'<button class="mini" style="font-size:10px;flex-shrink:0" onclick="confirmarInscripcion(\''+d.id+'\','+idx+',\''+t.n.replace(/'/g,"\\'")+'\')">Confirmar pago</button>'
+        )+
+      '</div>';
+    });
+    // Cupos vacíos
+    for(var i=docs.length;i<cupoMax;i++){
+      h+='<div class="lcard" style="opacity:.5">'+
+        '<div style="width:20px;text-align:center;font-size:11px;color:var(--suave)">'+(i+1)+'</div>'+
+        '<div style="width:32px;height:32px;border-radius:50%;background:var(--gris);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px">+</div>'+
+        '<div style="flex:1"><div class="ds">Cupo disponible</div></div>'+
+      '</div>';
+    }
+    cont.innerHTML=h;
+  }catch(e){cont.innerHTML='<p class="hint">Error al cargar</p>';console.warn(e);}
+}
+
+async function confirmarInscripcion(docId,idx,torneoNombre){
+  try{
+    await db.collection("inscripciones_atmas").doc(docId).update({estado:"confirmado"});
+    toast("Inscripción confirmada ✓");
+    cargarInscritosAdmin(idx,torneos[idx]);
+    actualizarBadgesInicio();
+  }catch(e){toast("Error: "+e.message);}
+}
 
 async function cargarInscripciones(){
   var enl=el("novicios-list");if(!enl)return;
@@ -1288,28 +1340,35 @@ function openModal(tipo,idx){
   try{
     if(tipo==="torneo"){
       var t=torneos[idx];if(!t)return;var perfil=getPerfil()||{};
-      var turnoField=t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select id="ti-turno"><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':"";
-      var mpLink=t.monto===20000?MP.torneo20:t.monto===15000?MP.torneo15:MP.escalerilla;
+      var authEmail=(auth&&auth.currentUser&&auth.currentUser.email)||perfil.email||"";
+      var esAdmTorneo=esAdmin(perfil.nombre||"",authEmail);
       var cuposNum=t.c==="Cerrado"?0:parseInt(t.c)||0;
       var cuposTag=t.c==="Cerrado"?'<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">Cerrado</span>':cuposNum===0?'<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">Sin cupos</span>':'<span style="background:var(--verde-claro);color:var(--verde-osc);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+t.c+'</span>';
-      html=
-        // Hero del torneo
-        '<div style="background:linear-gradient(135deg,var(--verde-osc),var(--verde-mid));border-radius:16px;padding:18px;margin-bottom:16px;color:#fff">'+
-          '<div style="font-size:10px;font-weight:700;color:var(--lima);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">&#127942; ATMAS Torneos</div>'+
-          '<div style="font-size:18px;font-weight:900;line-height:1.2;margin-bottom:10px">'+t.n+'</div>'+
-          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="font-size:14px">📅</span><span style="font-size:13px;opacity:.9">'+t.f+'</span></div>'+
-          '<div style="display:flex;align-items:center;justify-content:space-between">'+
-            '<div><div style="font-size:10px;opacity:.7;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Inscripción</div><div style="font-size:26px;font-weight:900;color:var(--lima)">'+t.p+'</div></div>'+
-            cuposTag+
-          '</div>'+
+      var heroHTML='<div style="background:linear-gradient(135deg,var(--verde-osc),var(--verde-mid));border-radius:16px;padding:18px;margin-bottom:16px;color:#fff">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--lima);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">&#127942; ATMAS Torneos</div>'+
+        '<div style="font-size:18px;font-weight:900;line-height:1.2;margin-bottom:10px">'+t.n+'</div>'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="font-size:14px">📅</span><span style="font-size:13px;opacity:.9">'+t.f+'</span></div>'+
+        '<div style="display:flex;align-items:center;justify-content:space-between">'+
+          '<div><div style="font-size:10px;opacity:.7;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Inscripción</div><div style="font-size:26px;font-weight:900;color:var(--lima)">'+t.p+'</div></div>'+
+          cuposTag+
         '</div>'+
-        // Formulario
-        '<div class="field"><label>Tu nombre</label><input id="ti-nombre" placeholder="Ej: Juan Pérez" value="'+(perfil.nombre||'')+'"></div>'+
-        '<div class="field"><label>Teléfono</label><input id="ti-tel" type="tel" placeholder="+569 XXXX XXXX" value="'+(perfil.tel||'')+'"></div>'+
-        turnoField+
-        '<button id="btn-inscribir-torneo" class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:12px">✓ Confirmar inscripción</button>'+
-        pagoHTML(t.monto,t.n,mpLink)+
-        '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';
+      '</div>';
+      if(esAdmTorneo){
+        // Admin: lista de inscritos con estado de pago
+        html=heroHTML+'<div id="adm-insc-list-'+idx+'"><p class="hint">Cargando inscritos...</p></div>'+
+          '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';
+        setTimeout(function(){cargarInscritosAdmin(idx,t);},50);
+      }else{
+        var turnoField=t.n.includes("Novicios 4")?'<div class="field"><label>Turno preferido</label><select id="ti-turno"><option>16:00 hrs</option><option>18:00 hrs</option></select></div>':"";
+        var mpLink=t.monto===20000?MP.torneo20:t.monto===15000?MP.torneo15:MP.escalerilla;
+        html=heroHTML+
+          '<div class="field"><label>Tu nombre</label><input id="ti-nombre" placeholder="Ej: Juan Pérez" value="'+(perfil.nombre||'')+'"></div>'+
+          '<div class="field"><label>Teléfono</label><input id="ti-tel" type="tel" placeholder="+569 XXXX XXXX" value="'+(perfil.tel||'')+'"></div>'+
+          turnoField+
+          '<button id="btn-inscribir-torneo" class="btn" onclick="inscribirTorneo('+idx+')" style="margin-bottom:12px">✓ Confirmar inscripción</button>'+
+          pagoHTML(t.monto,t.n,mpLink)+
+          '<button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';
+      }
     }else if(tipo==="clase"&&idx==="individual"){
       html='<h3>📅 Clases Individuales</h3><div id="slots-list"><p style="text-align:center;padding:20px;color:var(--suave)">Cargando horarios...</p></div><button class="btn sec" style="margin-top:8px" onclick="closeModal()">Cerrar</button>';
       setTimeout(cargarSlotsIndividuales,50);
