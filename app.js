@@ -871,11 +871,18 @@ async function renderPerfilAdmin(p,pBody){
     var resHoy=[];snapHoy.forEach(function(d){var r=d.data();if(r.estado!=="cancelada")resHoy.push(r);});
     var erh=el("pa-res-hoy");var etotal=el("pa-total");
     if(erh)erh.textContent=resHoy.length;
-    // Solo contar como recaudado las que están confirmadas_pagadas (transferencia verificada por admin)
-    var recaudado=resHoy.filter(function(r){return r.estado==="confirmada_pagada";}).reduce(function(s,r){return s+(r.monto||0);},0);
+    var recaudado=resHoy.filter(function(r){return r.estado==="confirmada_pagada"||r.estado==="confirmada";}).reduce(function(s,r){return s+(r.monto||0);},0);
+    // Sumar inscripciones de torneos confirmadas hoy
+    var snapInscHoy=await db.collection("inscripciones_atmas").get();
+    var einsc=el("pa-insc");if(einsc)einsc.textContent=snapInscHoy.size;
+    snapInscHoy.forEach(function(doc){
+      var d=doc.data();
+      if(d.estado!=="confirmado"&&d.estado!=="pagado")return;
+      var fecha="";
+      if(d.ts&&d.ts.seconds){fecha=new Date(d.ts.seconds*1000).toISOString().split("T")[0];}
+      if(fecha===hoy)recaudado+=(d.monto||0);
+    });
     if(etotal)etotal.textContent=recaudado>0?"$"+recaudado.toLocaleString("es-CL"):"$0";
-    var snap3=await db.collection("inscripciones_atmas").get();
-    var einsc=el("pa-insc");if(einsc)einsc.textContent=snap3.size;
   }catch(e){console.warn("renderPerfilAdmin error:",e);}
 }
 
