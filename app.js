@@ -395,12 +395,12 @@ function savePerfil(p){
   }catch(e){console.warn("savePerfil error:",e);}
 }
 
-var ADMIN_EMAILS=["joseluissalazar81@gmail.com","locampinotenisclub@hotmail.com"];
+var ADMIN_EMAILS=["joseluissalazar81@gmail.com","locampinotenisclub@hotmail.com","marceloescalona@gmail.com","marcelo.escalona@gmail.com"];
 function esAdmin(nombre,email){
   if(email&&ADMIN_EMAILS.indexOf((email||"").toLowerCase().trim())!==-1)return true;
   if(!nombre)return false;
   var n=nombre.toLowerCase().trim();
-  return(n.includes("marcelo")&&n.includes("escalona"))||(n.includes("jorge")&&n.includes("borges"));
+  return(n.includes("marcelo")&&n.includes("escalona"));
 }
 function formatRut(inp){if(!inp)return;var v=inp.value.replace(/[^0-9kK]/g,"");if(v.length>1){var d=v.slice(0,-1);var dv=v.slice(-1);var fmt="";for(var i=d.length-1,j=0;i>=0;i--,j++){if(j>0&&j%3===0)fmt="."+fmt;fmt=d[i]+fmt;}inp.value=fmt+"-"+dv;}else{inp.value=v;}}
 
