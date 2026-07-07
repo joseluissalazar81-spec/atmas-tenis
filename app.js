@@ -1689,27 +1689,40 @@ async function generarInformeIngresos(){
     var todas=[];snap.forEach(function(doc){todas.push(doc.data());});
     var pagadas=todas.filter(function(r){return r.estado==="confirmada_pagada"||r.estado==="confirmada";});
     var canceladas=todas.filter(function(r){return r.estado==="cancelada";});
+    // Inscripciones de torneos confirmadas en el rango de fechas
+    var snapInsc=await db.collection("inscripciones_atmas").get();
+    var inscConfirmadas=[];
+    snapInsc.forEach(function(doc){
+      var d=doc.data();
+      if(d.estado!=="confirmado"&&d.estado!=="pagado")return;
+      var fecha="";
+      if(d.ts&&d.ts.seconds){fecha=new Date(d.ts.seconds*1000).toISOString().split("T")[0];}
+      else if(d.ts&&d.ts instanceof Date){fecha=d.ts.toISOString().split("T")[0];}
+      if(!fecha||fecha<desde||fecha>hasta)return;
+      inscConfirmadas.push({tipo:"torneo",monto:d.monto||0,fecha:fecha,nombre:d.nombre,torneo:d.torneo});
+    });
+    var todasConfirmadas=pagadas.concat(inscConfirmadas);
     // Agrupar por tipo de usuario
     var porTipo={};
-    pagadas.forEach(function(r){
+    todasConfirmadas.forEach(function(r){
       var t=r.tipo||"otro";
       if(!porTipo[t])porTipo[t]={count:0,total:0};
       porTipo[t].count++;porTipo[t].total+=(r.monto||0);
     });
-    var totalGeneral=pagadas.reduce(function(s,r){return s+(r.monto||0);},0);
+    var totalGeneral=todasConfirmadas.reduce(function(s,r){return s+(r.monto||0);},0);
     // Agrupar por día
     var porDia={};
-    pagadas.forEach(function(r){
+    todasConfirmadas.forEach(function(r){
       if(!r.fecha)return;
       if(!porDia[r.fecha])porDia[r.fecha]=0;
       porDia[r.fecha]+=(r.monto||0);
     });
     var diasOrden=Object.keys(porDia).sort();
-    var labelTipo={"socio_mensual":"Socio Mensual","socio_partido":"Pago por partido","invitado":"Invitado","academia":"Academia","arriendo":"Arriendo"};
+    var labelTipo={"socio_mensual":"Socio Mensual","socio_partido":"Pago por partido","invitado":"Invitado","academia":"Academia","arriendo":"Arriendo","torneo":"Inscripción Torneo"};
     var h2='<div style="background:linear-gradient(135deg,#0f3d08,#2f6b1a);border-radius:16px;padding:16px;color:#fff;margin-bottom:12px">'+
       '<div style="font-size:11px;opacity:.75;margin-bottom:4px">TOTAL CONFIRMADO '+desde.split("-").reverse().join("/")+" → "+hasta.split("-").reverse().join("/")+'</div>'+
       '<div style="font-size:28px;font-weight:900">$'+totalGeneral.toLocaleString("es-CL")+'</div>'+
-      '<div style="font-size:12px;opacity:.8;margin-top:4px">'+pagadas.length+' reservas confirmadas &middot; '+canceladas.length+' canceladas</div>'+
+      '<div style="font-size:12px;opacity:.8;margin-top:4px">'+pagadas.length+' reservas · '+inscConfirmadas.length+' inscripciones torneo · '+canceladas.length+' canceladas</div>'+
     '</div>';
     // Desglose por tipo
     h2+='<div class="section-title" style="margin-top:0">Desglose por tipo</div>';
