@@ -548,6 +548,7 @@ async function onAuthStateChanged(user){
       localStorage.setItem("atmas_perfil",JSON.stringify(p));
       mostrarApp();renderPerfil();go("inicio");
       toast("Bienvenido, "+p.nombre+"!");
+      if(esAdmin(p.nombre||"",p.email||"")){iniciarNotificacionesAdmin();iniciarBadgePendientes();}
     }else{
       // Usuario Google sin perfil: crear uno con sus datos de Google
       var p={nombre:user.displayName||user.email||"Usuario",rut:"",tel:"",fnac:"",socio:false,email:user.email||""};
@@ -2807,6 +2808,7 @@ function iniciarNotificacionesAdmin(){
     _notifsListener=db.collection("notificaciones_admin")
       .where("leida","==",false)
       .onSnapshot(function(snap){
+        // éxito — limpiar cualquier reintento pendiente
         var p=getPerfil();if(!p||!esAdmin(p.nombre||"",p.email||""))return;
         var n=snap.size;
         var badge=el("badge-notifs");if(badge){badge.textContent=n>9?"9+":String(n);badge.style.display=n>0?"":"none";}
@@ -2819,7 +2821,11 @@ function iniciarNotificacionesAdmin(){
           if(navigator.vibrate)navigator.vibrate([150,80,150,80,150]);
         }
         _notifsAnterior=n;
-      },function(e){console.warn("notifs listener:",e);});
+      },function(e){
+        console.warn("notifs listener error:",e.code,e.message);
+        // Si es permission-denied, reintentar en 4s (el token de auth puede tardar en propagarse)
+        if(e.code==="permission-denied")setTimeout(iniciarNotificacionesAdmin,4000);
+      });
   }catch(e){console.warn("iniciarNotificacionesAdmin:",e);}
 }
 async function marcarNotifsLeidas(){
@@ -3032,8 +3038,7 @@ function adminSalir(){adminUnlocked=false;go('inicio');}
   try{seedCuadroNovicios3().then(function(){iniciarCuadroLive();});}catch(e){}
   try{iniciarZonaNorteLive();}catch(e){}
   try{autoLimpiarPruebas();}catch(e){}
-  try{iniciarBadgePendientes();}catch(e){}
-  try{iniciarNotificacionesAdmin();}catch(e){}
+  // Badge e notificaciones se inician en onAuthStateChanged solo para admins
   if(auth){
     // Manejar resultado del redirect de Google antes de signInAnonymously
     auth.getRedirectResult().then(function(result){
