@@ -873,11 +873,14 @@ async function renderPerfilAdmin(p,pBody){
       db.collection("reservas").get(),
       db.collection("inscripciones_atmas").get()
     ]);
-    var resHoy=[];var recaudado=0;
+    var resHoy=[];var recaudado=0;var debugRes=[];
     snapTodasRes.forEach(function(d){
       var r=d.data();
       if(r.fecha===hoy&&r.estado!=="cancelada")resHoy.push(r);
-      if(r.fecha&&r.fecha>=primerDia&&r.fecha<=hoy&&(r.estado==="confirmada"||r.estado==="confirmada_pagada"))recaudado+=(r.monto||0);
+      if(r.fecha&&r.fecha>=primerDia&&r.fecha<=hoy){
+        debugRes.push(r.fecha+"|"+r.estado+"|"+r.monto);
+        if(r.estado==="confirmada"||r.estado==="confirmada_pagada")recaudado+=(r.monto||0);
+      }
     });
     var erh=el("pa-res-hoy");var etotal=el("pa-total");
     if(erh)erh.textContent=resHoy.length;
@@ -889,6 +892,7 @@ async function renderPerfilAdmin(p,pBody){
       if(!fecha&&d.ts&&d.ts.seconds){fecha=new Date(d.ts.seconds*1000).toISOString().split("T")[0];}
       if(fecha&&fecha>=primerDia&&fecha<=hoy)recaudado+=(d.monto||0);
     });
+    console.log("DEBUG recaudado="+recaudado+" primerDia="+primerDia+" hoy="+hoy+" reservasMes="+JSON.stringify(debugRes));
     if(etotal)etotal.textContent="$"+recaudado.toLocaleString("es-CL");
   }catch(e){console.warn("renderPerfilAdmin error:",e);}
 }
