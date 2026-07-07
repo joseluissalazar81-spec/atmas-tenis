@@ -545,10 +545,12 @@ async function onAuthStateChanged(user){
     var snap=await db.collection("jugadores").doc(user.uid).get();
     if(snap.exists&&snap.data().nombre){
       var p=snap.data();
+      // Siempre sincronizar el email desde Firebase Auth (fuente de verdad)
+      if(user.email&&p.email!==user.email){p.email=user.email;db.collection("jugadores").doc(user.uid).set({email:user.email},{merge:true}).catch(function(){});}
       localStorage.setItem("atmas_perfil",JSON.stringify(p));
       mostrarApp();renderPerfil();go("inicio");
       toast("Bienvenido, "+p.nombre+"!");
-      if(esAdmin(p.nombre||"",p.email||"")){iniciarNotificacionesAdmin();iniciarBadgePendientes();}
+      if(esAdmin(p.nombre||"",user.email||p.email||"")){iniciarNotificacionesAdmin();iniciarBadgePendientes();}
     }else{
       // Usuario Google sin perfil: crear uno con sus datos de Google
       var p={nombre:user.displayName||user.email||"Usuario",rut:"",tel:"",fnac:"",socio:false,email:user.email||""};
@@ -674,7 +676,8 @@ function renderPerfil(){
       pBody.innerHTML='<div class="hero" style="margin-bottom:14px"><div class="ball"></div><h2>Bienvenido a ATMAS</h2><p>Tu academia de tenis en un solo lugar.</p></div><div class="infobox" style="margin-bottom:12px"><div style="font-weight:800;font-size:14px;margin-bottom:10px">Ya soy miembro &middot; Ingresar con RUT</div><div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)"></div><button class="btn" onclick="recuperarPerfil()">Ingresar</button></div><div style="text-align:center;color:var(--suave);font-size:12px;margin:8px 0">o</div><div class="infobox"><div style="font-weight:800;font-size:14px;margin-bottom:10px">Soy nuevo &middot; Crear perfil</div><div class="field"><label>Nombre completo</label><input id="reg-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>RUT</label><input id="reg-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)"></div><div class="field"><label>Fecha de nacimiento</label><input id="reg-fnac" type="date"></div><div class="field"><label>Telefono</label><input id="reg-tel" type="tel" placeholder="+569 XXXX XXXX"></div><button class="btn sec" onclick="registrarPerfil()">Crear mi perfil</button></div>';
       return;
     }
-    if(esAdmin(p.nombre,p.email||"")){adminUnlocked=true;renderPerfilAdmin(p,pBody);return;}
+    var authEmail=(auth&&auth.currentUser&&auth.currentUser.email)||p.email||"";
+    if(esAdmin(p.nombre,authEmail)){adminUnlocked=true;renderPerfilAdmin(p,pBody);return;}
     var jugador=rankingData.find(function(j){return j[0].toLowerCase()===p.nombre.toLowerCase();});
     var pos=jugador?rankingData.indexOf(jugador)+1:null;
     var ini=initials(p.nombre);var col=avatarColor(p.nombre);
