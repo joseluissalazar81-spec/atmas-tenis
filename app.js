@@ -2326,11 +2326,19 @@ async function confirmarReserva(){
       ts:firebase.firestore.FieldValue.serverTimestamp()
     };
     var docRef=await db.collection("reservas").add(reservaData);
+    // Notificar al admin en la app
+    var fechaFmt=new Date(resState.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});
+    var canchaNom=cancha?cancha.nombre:"Cancha "+resState.canchaId;
+    try{db.collection("notificaciones_admin").add({
+      tipo:"🏟️ Nueva reserva",
+      nombre:nombre,tel:tel||"",
+      detalle:canchaNom+" · "+resState.horaInicio+" – "+resState.horaFin+" · "+fechaFmt+(tarifa>0?" · $"+tarifa.toLocaleString("es-CL"):"Gratis"),
+      reservaId:docRef.id,leida:false,
+      ts:firebase.firestore.FieldValue.serverTimestamp()
+    });}catch(e){}
     if(tarifa>0){
-      // Abrir WhatsApp con comprobante
-      var fechaFmt=new Date(resState.fecha+"T12:00").toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});
       var msg="Hola ATMAS! Adjunto comprobante de transferencia para reserva:\n"+
-        "• "+(cancha?cancha.nombre:"Cancha "+resState.canchaId)+"\n"+
+        "• "+canchaNom+"\n"+
         "• "+fechaFmt+"\n"+
         "• "+resState.horaInicio+" – "+resState.horaFin+"\n"+
         "• Monto: $"+tarifa.toLocaleString("es-CL")+"\n"+
@@ -2339,7 +2347,7 @@ async function confirmarReserva(){
       toast("Reserva registrada. Envía el comprobante por WhatsApp.");
       ocultarFormRes();resState.horaInicio=null;resState.horaFin=null;renderSlots();
     }else{
-      toast("¡Reserva confirmada! "+resState.horaInicio+" "+(cancha?cancha.nombre:""));
+      toast("¡Reserva confirmada! "+resState.horaInicio+" "+canchaNom);
       ocultarFormRes();resState.horaInicio=null;resState.horaFin=null;renderSlots();
     }
   }catch(e){toast("Error: "+e.message);}
@@ -2925,6 +2933,7 @@ async function renderNotificacionesAdmin(){
       var fecha=n.ts&&n.ts.seconds?new Date(n.ts.seconds*1000).toLocaleDateString("es-CL"):"";
       h+='<div style="background:'+(n.leida?"#f9fafb":"#fefce8")+';border:1.5px solid '+(n.leida?"#e5e7eb":"#fbbf24")+';border-radius:12px;padding:10px 12px;margin-bottom:8px">'+
         '<div style="font-weight:800;font-size:14px">'+(n.leida?"":"🆕 ")+n.nombre+'</div>'+
+        (n.detalle?'<div style="font-size:12px;color:#374151;margin-top:2px">'+n.detalle+'</div>':'')+
         (n.tel?'<div style="font-size:12px;color:#6b7280">📞 '+n.tel+'</div>':'')+
         (n.rut?'<div style="font-size:12px;color:#6b7280">🪪 '+n.rut+'</div>':'')+
         (n.email?'<div style="font-size:12px;color:#6b7280">✉️ '+n.email+'</div>':'')+
