@@ -2279,24 +2279,31 @@ async function renderSlotsAdmin(){
       .where("fecha","==",resState.fecha)
       .where("estado","in",["confirmada","confirmada_pagada","pendiente_pago","programado_partido"])
       .get();
-    // Indexar por canchaId → horaInicio → info
+    // Indexar por canchaId → horaInicio → info (con durHrs para rowspan)
     var porCancha={};
     CONFIG_RES.canchas.forEach(function(c){porCancha[c.id]={};});
     snap.forEach(function(doc){
       var r=doc.data();var cid=r.canchaId;
       if(!porCancha[cid])porCancha[cid]={};
-      var info={nombre:r.nombre||"",estado:r.estado||"",monto:r.monto||0,id:doc.id};
+      var durHrs=r.durHrs||1;
+      if(!durHrs||durHrs<1)durHrs=1;
+      // Calcular duración por horaFin si no está durHrs
+      if(r.horaFin&&r.horaInicio){
+        var hIni=parseInt(r.horaInicio);var hFin=parseInt(r.horaFin);
+        if(hFin>hIni)durHrs=hFin-hIni;
+      }
+      var info={nombre:r.nombre||"",estado:r.estado||"",monto:r.monto||0,id:doc.id,durHrs:durHrs};
       porCancha[cid][r.horaInicio]=info;
-      if(r.duracion===2||r.horaFin){
-        var h2=parseInt(r.horaInicio)+1;
-        porCancha[cid][(h2<10?"0"+h2:h2)+":00"]=info;
+      // Marcar horas siguientes como "skip" para no renderizarlas
+      for(var hx=1;hx<durHrs;hx++){
+        var hn=parseInt(r.horaInicio)+hx;
+        porCancha[cid][(hn<10?"0"+hn:hn)+":00"]={skip:true};
       }
     });
     var slots=getSlotsParaDia(resState.fecha);
     var ahora=new Date();
     var ec={confirmada:"#dcfce7",confirmada_pagada:"#bbf7d0",pendiente_pago:"#fef9c3",programado_partido:"#dbeafe"};
     var etc={confirmada:"#166534",confirmada_pagada:"#14532d",pendiente_pago:"#854d0e",programado_partido:"#1e3a5f"};
-    // Encabezado de canchas
     var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
     h+='<thead><tr><th style="padding:4px 6px;text-align:left;color:var(--suave);font-weight:600;width:52px">Hora</th>';
     CONFIG_RES.canchas.forEach(function(c){
@@ -2310,13 +2317,18 @@ async function renderSlotsAdmin(){
       h+='<td style="padding:5px 6px;color:var(--suave);font-weight:700;white-space:nowrap">'+s.hi+'</td>';
       CONFIG_RES.canchas.forEach(function(c){
         var info=porCancha[c.id]&&porCancha[c.id][s.hi];
-        var bg,txt,label,onclick3="";
-        if(pasado){bg="#f9fafb";txt="#d1d5db";label="—";}
-        else if(info){bg=ec[info.estado]||"#f3f4f6";txt=etc[info.estado]||"#374151";
-          label=info.nombre.split(" ")[0];// solo primer nombre para que quepa
-          onclick3=' onclick="verInfoSlot(\''+info.id.replace(/'/g,"\\'")+'\')\" style="cursor:pointer"';
+        if(info&&info.skip)return; // celda fusionada, no renderizar
+        var bg,txt,label,onclick3="",rowspan="";
+        if(pasado&&!info){bg="#f9fafb";txt="#d1d5db";label="—";}
+        else if(info&&!info.skip){
+          var dur=info.durHrs||1;
+          if(dur>1)rowspan=' rowspan="'+dur+'"';
+          bg=ec[info.estado]||"#f3f4f6";txt=etc[info.estado]||"#374151";
+          var nom=info.nombre.split(" ")[0];
+          label=nom+(dur>1?' <span style="font-size:9px;opacity:.8">'+dur+'hrs</span>':'');
+          onclick3=' onclick="verInfoSlot(\''+info.id.replace(/'/g,"\\'")+'\')\"';
         }else{bg="#fff";txt="#16a34a";label="Libre";}
-        h+='<td'+onclick3+' style="padding:4px 3px;background:'+bg+';text-align:center;border-radius:6px;border:1.5px solid '+txt+'22">'+
+        h+='<td'+rowspan+onclick3+' style="padding:4px 3px;background:'+bg+';text-align:center;border-radius:6px;border:1.5px solid '+txt+'22;cursor:'+(info&&!info.skip?"pointer":"default")+';vertical-align:middle">'+
           '<div style="font-size:10px;font-weight:700;color:'+txt+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72px;margin:0 auto">'+label+'</div>'+
           '</td>';
       });
@@ -2752,7 +2764,7 @@ async function verInfoSlot(reservaId){
 async function confirmarPagoSlot(reservaId){
   try{
     await db.collection("reservas").doc(reservaId).update({estado:"confirmada"});
-    toast("Pago confirmado ✓");closeModal();renderSlots();
+    toast("Pago confirmado ✓");closeModal();renderSlotsAdmin();
   }catch(e){toast("Error: "+e.message);}
 }
 
