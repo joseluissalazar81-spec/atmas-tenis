@@ -33,8 +33,10 @@ export default async function handler(req, res) {
     });
 
     if (!mpRes.ok) {
-      const err = await mpRes.json();
-      return res.status(500).json({ error: err.message || 'Error MercadoPago' });
+      const raw = await mpRes.text();
+      let msg = raw;
+      try { msg = JSON.parse(raw).message || raw; } catch (_) {}
+      return res.status(500).json({ error: msg || `Error MercadoPago (HTTP ${mpRes.status})` });
     }
     const data = await mpRes.json();
     return res.json({ preference_id: data.id, init_point: data.init_point, sandbox_init_point: data.sandbox_init_point });

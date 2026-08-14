@@ -93,14 +93,27 @@ service cloud.firestore {
     }
 
     // ── jugadores ──────────────────────────────────────────────────
+    // Cada jugador puede crear/actualizar su propio perfil (login/contacto).
+    // ranking_atmas (fuente real del ranking) sigue siendo admin-only;
+    // estos campos son solo un espejo de conveniencia dentro del perfil.
     match /jugadores/{docId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin()
+        || (isSignedIn()
+            && onlyFields(["nombre","rut","tel","fnac","email","socio","pts","jugados","ganados","perdidos","pct"]));
+      allow delete: if isAdmin();
     }
 
     // ── notificaciones_admin ───────────────────────────────────────
     match /notificaciones_admin/{docId} {
       allow read, update, delete: if isAdmin();
+      allow create: if isSignedIn();
+    }
+
+    // ── pagos_mp ───────────────────────────────────────────────────
+    // Registro de intentos de pago (analítica interna, solo admin lee)
+    match /pagos_mp/{docId} {
+      allow read: if isAdmin();
       allow create: if isSignedIn();
     }
 
