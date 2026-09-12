@@ -51,8 +51,12 @@ service cloud.firestore {
     }
 
     // ── reservas ──────────────────────────────────────────────────
+    // Lectura para cualquier usuario autenticado: la pantalla de arriendo
+    // necesita ver qué horarios están ocupados antes de reservar, y "Mis
+    // reservas" necesita ver el historial propio. Antes era admin-only,
+    // lo que hacía fallar la carga de horarios para todo socio/invitado.
     match /reservas/{docId} {
-      allow read: if isAdmin();
+      allow read: if isSignedIn();
       allow create: if isSignedIn()
         && request.resource.data.keys().hasAll(["nombre","fecha","hora","ts"]);
       allow update, delete: if isAdmin();

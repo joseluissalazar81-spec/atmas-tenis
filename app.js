@@ -1607,7 +1607,9 @@ async function renderAdmin(){
     '<button id="atab-evaluar" onclick="adminTab(this,\'evaluar\')" style="border:none;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--verde-mid)">&#128104;&#8205;&#127979; Evaluar</button>'+
     '</div>';
   h+='<div id="admin-tab-notifs" style="display:none"><div class="admin-section"><div class="section-title">🔔 Avisos &amp; Nuevos usuarios</div><div id="admin-notifs-cont"><p class="hint">Cargando...</p></div></div></div>';
-  h+='<div id="admin-tab-reservas"><div class="section-title">Reservas de canchas</div><div id="admin-reservas-cont"><p class="hint">Cargando...</p></div></div>';
+  h+='<div id="admin-tab-reservas"><div class="section-title">Reservas de canchas</div>'+
+    '<button class="btn sec" style="margin-bottom:12px;border-color:#dc2626;color:#dc2626" onclick="limpiarHistorialArriendo()">🗑️ Limpiar historial de arriendo</button>'+
+    '<div id="admin-reservas-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-sanciones" style="display:none"><div class="section-title">Sanciones activas</div><div id="admin-sanciones-cont"><p class="hint">Cargando...</p></div></div>';
   h+='<div id="admin-tab-torneos" style="display:none">';
   h+='<div class="admin-section"><button class="btn" onclick="abrirFormCrearTorneo()">+ Crear torneo</button><div id="admin-form-torneo" style="display:none;margin-top:14px;background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.07)">'+
@@ -2678,6 +2680,22 @@ async function levantarSancion(userId){
 }
 
 /* ─── ADMIN: RESERVAS Y SANCIONES ───────────────────────────── */
+async function limpiarHistorialArriendo(){
+  if(!confirm("Esto borra TODO el historial de reservas de cancha (ninguna se llegó a concretar realmente). ¿Continuar?"))return;
+  try{
+    var snap=await db.collection("reservas").get();
+    var n=snap.size;
+    if(!n){toast("No hay reservas guardadas");return;}
+    var docs=snap.docs;
+    for(var i=0;i<docs.length;i+=450){
+      var batch=db.batch();
+      docs.slice(i,i+450).forEach(function(d){batch.delete(d.ref);});
+      await batch.commit();
+    }
+    toast("✓ Se borraron "+n+" reservas");
+    renderAdminReservas();
+  }catch(e){toast("Error al limpiar: "+e.message);}
+}
 async function renderAdminReservas(){
   var cont=el("admin-reservas-cont");if(!cont)return;
   cont.innerHTML='<p class="hint">Cargando...</p>';
