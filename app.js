@@ -3151,8 +3151,30 @@ async function guardarAdminConfig(){
 /* ─── BADGE PENDIENTES (notificación admin) ───────────────────── */
 /* ─── NOTIFICACIONES ADMIN ────────────────────────────────────── */
 var _notifsListener=null;var _notifsAnterior=0;
+function pedirPermisoNotifsAdmin(){
+  try{
+    if("Notification" in window && Notification.permission==="default")Notification.requestPermission();
+  }catch(e){}
+}
+function sonarAvisoAdmin(){
+  try{
+    var Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;
+    var ctx=new Ctx();
+    [880,660].forEach(function(freq,i){
+      var o=ctx.createOscillator();var g=ctx.createGain();
+      o.type="sine";o.frequency.value=freq;
+      var start=ctx.currentTime+i*0.18;
+      g.gain.setValueAtTime(0.0001,start);
+      g.gain.exponentialRampToValueAtTime(0.25,start+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,start+0.35);
+      o.connect(g);g.connect(ctx.destination);
+      o.start(start);o.stop(start+0.35);
+    });
+  }catch(e){}
+}
 function iniciarNotificacionesAdmin(){
   if(_notifsListener)_notifsListener();
+  pedirPermisoNotifsAdmin();
   try{
     _notifsListener=db.collection("notificaciones_admin")
       .where("leida","==",false)
@@ -3167,12 +3189,21 @@ function iniciarNotificacionesAdmin(){
         // También actualizar badge del panel de admin si está abierto
         var badge2=el("badge-notifs");if(badge2){badge2.textContent=n>9?"9+":String(n);badge2.style.display=n>0?"":"none";}
         if(n>_notifsAnterior&&_notifsAnterior>=0&&n>0){
-          // Nueva notificación — tostar y vibrar
+          // Nueva notificación — tostar, vibrar, sonar y avisar aunque esté en otra pestaña
           var docs=[];snap.forEach(function(d){docs.push(d.data());});
           docs.sort(function(a,b){var ta=a.ts&&a.ts.seconds?a.ts.seconds:0;var tb=b.ts&&b.ts.seconds?b.ts.seconds:0;return tb-ta;});
           var ultimo=docs[0];
           if(ultimo)toast("🔔 "+(ultimo.tipo||"Notificación")+": "+ultimo.nombre);
           if(navigator.vibrate)navigator.vibrate([150,80,150,80,150]);
+          sonarAvisoAdmin();
+          try{
+            if("Notification" in window && Notification.permission==="granted" && ultimo){
+              new Notification("ATMAS · "+(ultimo.tipo||"Notificación"),{
+                body:ultimo.nombre+(ultimo.detalle?"\n"+ultimo.detalle:""),
+                icon:"icon-192.png",tag:"atmas-admin-aviso"
+              });
+            }
+          }catch(e){}
         }
         _notifsAnterior=n;
       },function(e){
