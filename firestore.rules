@@ -104,7 +104,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update: if isAdmin()
         || (isSignedIn()
-            && onlyFields(["nombre","rut","tel","fnac","email","socio","pts","jugados","ganados","perdidos","pct"]));
+            && onlyFields(["nombre","rut","tel","fnac","email","socio","pts","jugados","ganados","perdidos","pct","fotoURL"]));
       allow delete: if isAdmin();
     }
 
