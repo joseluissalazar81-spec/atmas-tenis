@@ -6,7 +6,7 @@ service firebase.storage {
     // Cada usuario solo puede subir/reemplazar su propia foto (nombrada
     // con su UID). Lectura pública para que se vea en el perfil sin
     // fricción, igual que los nombres del ranking.
-    match /fotos_perfil/{uid}.jpg {
+    match /fotos_perfil/{uid} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == uid
         && request.resource.size < 5 * 1024 * 1024
