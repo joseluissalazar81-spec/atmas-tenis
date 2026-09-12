@@ -554,13 +554,23 @@ async function onAuthStateChanged(user){
         iniciarNotificacionesAdmin();iniciarBadgePendientes();actualizarBadgesInicio();
       }
     }else{
-      // Usuario Google sin perfil: crear uno con sus datos de Google
-      var p={nombre:user.displayName||user.email||"Usuario",rut:"",tel:"",fnac:"",socio:false,email:user.email||""};
+      // Antes de crear un perfil en blanco, buscar si ya tenía un perfil viejo
+      // (creado antes de que existiera "Entrar con Google") por su email.
+      var legado=null;
+      if(user.email){
+        try{
+          var qs=await db.collection("jugadores").where("email","==",user.email).limit(1).get();
+          if(!qs.empty)legado=qs.docs[0].data();
+        }catch(e){console.warn("busqueda perfil legado por email:",e);}
+      }
+      var p=legado||{nombre:user.displayName||user.email||"Usuario",rut:"",tel:"",fnac:"",socio:false,email:user.email||""};
+      if(!p.email)p.email=user.email||"";
       var pv=await vincularRankingExistente(p);
       var enRanking=(pv.jugados>0||pv.pts>0);
       savePerfil(p);mostrarApp();renderPerfil();
-      try{db.collection("notificaciones_admin").add({tipo:"Nuevo usuario (Google)",nombre:p.nombre,email:p.email||"",leida:false,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}
-      if(enRanking){go("escalerilla");toast("¡Bienvenido, "+p.nombre+"! Tu historial fue vinculado ✓");}
+      try{db.collection("notificaciones_admin").add({tipo:legado?"Perfil recuperado (Google)":"Nuevo usuario (Google)",nombre:p.nombre,email:p.email||"",leida:false,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}
+      if(legado){go("inicio");toast("¡Bienvenido de vuelta, "+p.nombre+"! Recuperamos tu perfil ✓");}
+      else if(enRanking){go("escalerilla");toast("¡Bienvenido, "+p.nombre+"! Tu historial fue vinculado ✓");}
       else{go("perfil");toast("Bienvenido! Completa tu RUT en Mi Perfil.");}
     }
   }catch(e){
@@ -618,6 +628,22 @@ async function completarPerfil(){
   var fnac=(el("reg-fnac")||{}).value||"";
   if(!nombre||!rut){toast("Nombre y RUT son obligatorios");return;}
   var p={nombre:nombre,rut:rut,tel:tel,fnac:fnac,socio:false};
+  // Buscar un perfil viejo con este mismo RUT (de antes de que existiera Google/email),
+  // para no perder su estado de socio ni sus datos.
+  try{
+    var rutNorm=rut.replace(/\./g,"").replace(/-/g,"");
+    var legadoSnap=await db.collection("jugadores").doc(rutNorm).get();
+    var legadoData=legadoSnap.exists?legadoSnap.data():null;
+    if(!legadoData){
+      var qsLegado=await db.collection("jugadores").where("rut","==",rut).limit(1).get();
+      if(!qsLegado.empty)legadoData=qsLegado.docs[0].data();
+    }
+    if(legadoData){
+      p.socio=legadoData.socio||false;
+      if(legadoData.tel&&!p.tel)p.tel=legadoData.tel;
+      if(legadoData.fnac&&!p.fnac)p.fnac=legadoData.fnac;
+    }
+  }catch(e){console.warn("busqueda perfil legado por RUT:",e);}
   var enRanking=false;
   try{
     var pv=await vincularRankingExistente(p);
