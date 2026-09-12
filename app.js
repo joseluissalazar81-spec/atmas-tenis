@@ -141,6 +141,46 @@ const avatarColors=["#e74c3c","#e67e22","#f39c12","#2ecc71","#1abc9c","#3498db",
 function initials(n){if(!n)return"?";return n.split(" ").slice(0,2).map(function(x){return x[0];}).join("").toUpperCase();}
 function avatarColor(n){if(!n)return avatarColors[0];var h=0;for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%avatarColors.length;return avatarColors[h];}
 function slugify(n){if(!n)return"";return n.toLowerCase().replace(/[^a-z0-9]/g,"_");}
+
+/* ─── FOTO DE PERFIL ──────────────────────────────────────────── */
+function elegirFotoPerfil(){var inp=el("input-foto-perfil");if(inp)inp.click();}
+function redimensionarImagen(file,maxLado){
+  return new Promise(function(resolve,reject){
+    var img=new Image();
+    var url=URL.createObjectURL(file);
+    img.onload=function(){
+      URL.revokeObjectURL(url);
+      var w=img.width,h=img.height;
+      if(w>h){if(w>maxLado){h=Math.round(h*maxLado/w);w=maxLado;}}
+      else{if(h>maxLado){w=Math.round(w*maxLado/h);h=maxLado;}}
+      var canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+      canvas.getContext("2d").drawImage(img,0,0,w,h);
+      canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error("No se pudo procesar la imagen"));},"image/jpeg",0.85);
+    };
+    img.onerror=function(){URL.revokeObjectURL(url);reject(new Error("Archivo inválido"));};
+    img.src=url;
+  });
+}
+async function subirFotoPerfil(inputEl){
+  var file=inputEl&&inputEl.files&&inputEl.files[0];
+  if(!file)return;
+  if(!storage){toast("No se pudo conectar con el almacenamiento");return;}
+  var uidF=auth&&auth.currentUser&&!auth.currentUser.isAnonymous?auth.currentUser.uid:null;
+  if(!uidF){toast("Inicia sesión para subir tu foto");return;}
+  if(!file.type.startsWith("image/")){toast("Elige una imagen");return;}
+  toast("Subiendo foto...");
+  try{
+    var blob=await redimensionarImagen(file,400);
+    var ref=storage.ref().child("fotos_perfil/"+uidF+".jpg");
+    await ref.put(blob,{contentType:"image/jpeg"});
+    var url=await ref.getDownloadURL();
+    await db.collection("jugadores").doc(uidF).set({fotoURL:url},{merge:true});
+    var p=getPerfil()||{};p.fotoURL=url;savePerfil(p);
+    toast("✓ Foto actualizada");
+    renderPerfil();
+  }catch(e){toast("Error al subir la foto: "+e.message);}
+  finally{inputEl.value="";}
+}
 function el(id){return document.getElementById(id);}
 
 /* ─── DATOS INICIALES (solo para semilla) ─────────────────────── */
@@ -383,6 +423,8 @@ function registrarIntentoPago(label,monto){try{db.collection("pagos_mp").add({la
 /* ─── AUTH ────────────────────────────────────────────────────── */
 var auth=null;
 try{auth=firebase.auth();}catch(e){console.warn("Auth no disponible:",e);}
+var storage=null;
+try{storage=firebase.storage();}catch(e){console.warn("Storage no disponible:",e);}
 
 function getPerfil(){try{return JSON.parse(localStorage.getItem("atmas_perfil")||"null");}catch(e){return null;}}
 
@@ -740,13 +782,16 @@ function renderPerfil(){
     var jugador=rankingData.find(function(j){return j[0].toLowerCase()===p.nombre.toLowerCase();});
     var pos=jugador?rankingData.indexOf(jugador)+1:null;
     var ini=initials(p.nombre);var col=avatarColor(p.nombre);
+    var avatarHtml=p.fotoURL?
+      '<img src="'+p.fotoURL+'" style="width:54px;height:54px;border-radius:50%;object-fit:cover;flex-shrink:0">':
+      '<div class="avatar" style="background:'+col+';width:54px;height:54px;font-size:19px;flex-shrink:0">'+ini+'</div>';
     var esSocio=p.socio||!!getSocioTier();
     var socioTag=esSocio?'<span class="cupos" style="background:#15803d;color:#fff;font-weight:800">SOCIO ✓</span>':'<span class="cupos">Sin members&iacute;a</span>';
     var pct=jugador?jugador[5]:0;
     var statsHtml=jugador?'<div class="mycard" style="margin-bottom:14px"><div class="pos">Posicion #'+pos+' &middot; Escalerilla ATMAS</div><div class="name">'+p.nombre+'</div><div class="row"><div><span class="big">'+jugador[1]+'</span><span class="cap">Puntos</span></div><div><span class="big">'+jugador[3]+'</span><span class="cap">Ganados</span></div><div><span class="big">'+jugador[4]+'</span><span class="cap">Perdidos</span></div><div><span class="big">'+pct+'%</span><span class="cap">Rendimiento</span></div></div></div>':'<div class="aviso">Aun no tienes partidos en la escalerilla. Juega y sube tu ranking!</div>';
     var estiloTag=(p.estilo||p.golpe)?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+[p.estilo,p.golpe,p.superficie].filter(Boolean).map(function(x){return'<span style="background:var(--verde-claro);color:var(--verde-osc);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600">'+x+'</span>';}).join('')+'</div>':"";
     pBody.innerHTML=
-      '<div style="display:flex;align-items:center;gap:13px;background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><div class="avatar" style="background:'+col+';width:54px;height:54px;font-size:19px;flex-shrink:0">'+ini+'</div><div style="flex:1"><div style="font-weight:800;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;color:var(--suave)">RUT: '+p.rut+'</div><div style="font-size:12px;color:var(--suave);margin-top:2px">'+(p.tel||"")+'</div>'+estiloTag+'</div>'+socioTag+'</div>'+
+      '<div style="display:flex;align-items:center;gap:13px;background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><div style="position:relative;flex-shrink:0;cursor:pointer" onclick="elegirFotoPerfil()">'+avatarHtml+'<div style="position:absolute;bottom:-2px;right:-2px;background:var(--verde-osc);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid #fff">📷</div></div><div style="flex:1"><div style="font-weight:800;font-size:17px">'+p.nombre+'</div><div style="font-size:12px;color:var(--suave)">RUT: '+p.rut+'</div><div style="font-size:12px;color:var(--suave);margin-top:2px">'+(p.tel||"")+'</div>'+estiloTag+'</div>'+socioTag+'</div>'+
       statsHtml+
       // Accesos rápidos
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
