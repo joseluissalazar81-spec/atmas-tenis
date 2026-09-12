@@ -556,6 +556,9 @@ async function onAuthStateChanged(user){
       var p=getPerfil();
       if(p){mostrarApp();renderPerfil();return;}
       mostrarLogin();showAuthStep1();
+      // Recién acá sabemos con certeza que no hay ninguna sesión (ni real
+      // ni anónima) persistida — es seguro crear una anónima para invitados.
+      if(auth)auth.signInAnonymously().catch(function(){});
       return;
     }
     if(user.isAnonymous){
@@ -3650,22 +3653,18 @@ function adminSalir(){adminUnlocked=false;go('inicio');}
   try{autoLimpiarPruebas();}catch(e){}
   // Badge e notificaciones se inician en onAuthStateChanged solo para admins
   if(auth){
-    // Manejar resultado del redirect de Google antes de signInAnonymously
+    // Solo limpiar el flag de redirect pendiente de Google. La sesión
+    // anónima para invitados ahora se crea únicamente dentro de
+    // onAuthStateChanged cuando Firebase ya confirmó que no hay ninguna
+    // sesión real persistida — llamar signInAnonymously() acá en paralelo
+    // corría una carrera contra la restauración de sesión real y terminaba
+    // reemplazando silenciosamente a usuarios ya logueados por invitados
+    // anónimos en cada recarga de la página.
     auth.getRedirectResult().then(function(result){
       localStorage.removeItem("_gRedirect");
-      if(result&&result.user){
-        return;
-      }
-      // Solo iniciar anónimo si no hay redirect pendiente
-      auth.signInAnonymously().catch(function(e){
-        console.warn("signInAnonymously error:",e);
-        var p=getPerfil();
-        if(p){mostrarApp();renderPerfil();}
-        else{mostrarLogin();showAuthStep1();}
-      });
     }).catch(function(e){
       console.warn("getRedirectResult error:",e);
-      auth.signInAnonymously().catch(function(){});
+      localStorage.removeItem("_gRedirect");
     });
   }else{
     var p=getPerfil();
