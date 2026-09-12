@@ -64,9 +64,13 @@ header p{font-size:11px;color:var(--suave);white-space:nowrap}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 .chip{background:#fff;border:1px solid var(--linea);border-radius:20px;padding:7px 14px;font-size:13px;font-weight:700;color:var(--verde-osc)}
-.btn{display:block;width:100%;background:var(--verde);color:#fff;border:none;padding:15px;border-radius:14px;font-size:16px;font-weight:700;margin-top:8px;box-shadow:0 4px 12px rgba(122,193,67,.3);cursor:pointer}
-.btn.dark{background:var(--negro)}.btn.sec{background:#fff;color:var(--texto);border:1px solid var(--linea);box-shadow:none}
+.btn{display:block;width:100%;background:var(--verde);color:#fff;border:none;padding:15px;border-radius:14px;font-size:16px;font-weight:700;margin-top:8px;box-shadow:0 4px 12px rgba(122,193,67,.3);cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+.btn:active{transform:scale(.98);box-shadow:0 2px 6px rgba(122,193,67,.25)}
+.btn.dark{background:var(--negro)}.btn.dark:active{box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.btn.sec{background:#fff;color:var(--texto);border:1px solid var(--linea);box-shadow:none}
 .btn.wa{background:#25d366}
+.btn.google{background:#fff;color:#3c4043;border:1px solid #dadce0;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.btn.google:active{background:#f8f9fa;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .mini{background:var(--verde);color:#fff;border:none;padding:9px 15px;border-radius:20px;font-weight:700;font-size:13px;cursor:pointer}
 .mini.wa{background:#25d366}
 .field{margin-bottom:13px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:var(--suave)}
@@ -124,7 +128,7 @@ header p{font-size:11px;color:var(--suave);white-space:nowrap}
 .slot.sel{background:var(--verde-osc);border-color:var(--verde-osc);color:#fff}
 .slot.lleno{background:var(--gris);border-color:var(--linea);color:var(--suave);cursor:default}
 .slot .sub{font-size:10px;font-weight:400;display:block;margin-top:2px}
-#login-screen{display:none;flex-direction:column;min-height:100vh;background:linear-gradient(160deg,#2f6b1a,#4e8a1f);padding:32px 24px 40px;overflow-y:auto}
+#login-screen{display:none;flex-direction:column;min-height:100vh;background:radial-gradient(circle at 50% -10%,rgba(255,255,255,.16),transparent 55%),linear-gradient(160deg,#2f6b1a,#4e8a1f);padding:32px 24px 40px;overflow-y:auto}
 #login-screen.show{display:flex}
 .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
