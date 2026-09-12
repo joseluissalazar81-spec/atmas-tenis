@@ -2002,7 +2002,10 @@ var NOVICIOS3_SEED={
 var cuadroListener=null;var cuadroData=null;
 
 async function seedCuadroNovicios3(){
-  try{await db.collection("torneos_cuadro").doc("novicios3").set(NOVICIOS3_SEED);}catch(e){console.warn("seedCuadro error:",e);}
+  try{
+    var snap=await db.collection("torneos_cuadro").doc("novicios3").get();
+    if(!snap.exists)await db.collection("torneos_cuadro").doc("novicios3").set(NOVICIOS3_SEED);
+  }catch(e){console.warn("seedCuadro error:",e);}
 }
 
 async function seedCuadroZonaNorte(){
