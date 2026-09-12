@@ -418,6 +418,29 @@ function mostrarApp(){
   if(hd)hd.style.display="";
   if(ct)ct.style.display="";
   if(tb)tb.style.display="";
+  chequearProximidadClub();
+}
+
+/* ─── AVISO DE PROXIMIDAD AL CLUB ─────────────────────────────── */
+var CLUB_LAT=-33.3393867,CLUB_LON=-70.7454671,CLUB_RADIO_KM=1.5;
+function distanciaKm(lat1,lon1,lat2,lon2){
+  var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function chequearProximidadClub(){
+  try{
+    if(!navigator.geolocation)return;
+    var hoy=new Date().toISOString().split("T")[0];
+    if(localStorage.getItem("atmas_prox_check")===hoy)return; // maximo una vez por dia
+    localStorage.setItem("atmas_prox_check",hoy);
+    navigator.geolocation.getCurrentPosition(function(pos){
+      try{
+        var d=distanciaKm(pos.coords.latitude,pos.coords.longitude,CLUB_LAT,CLUB_LON);
+        if(d<=CLUB_RADIO_KM)toast("📍 ¡Estás cerca del club! ¿Jugamos hoy? 🎾");
+      }catch(e){}
+    },function(){/* permiso denegado o sin señal: no molestar */},{timeout:8000,maximumAge:600000});
+  }catch(e){}
 }
 function showAuthStep1(){
   ["auth-step1","auth-crear","auth-entrar","auth-step2","auth-email","auth-rut"].forEach(function(id){var e=el(id);if(e)e.style.display="none";});
@@ -1656,6 +1679,7 @@ async function renderAdmin(){
     '<div class="admin-section"><div class="section-title">Gestionar ranking</div><div id="a-ranking-admin"></div>'+
     '<button class="btn dark" style="margin-top:8px" onclick="openModal(\'jugador\')">+ Agregar jugador</button>'+
     '<button class="btn sec" style="margin-top:8px;border-color:#dc2626;color:#dc2626" onclick="resetearRanking()">🔄 Resetear ranking a cero</button></div>'+
+    '<div class="admin-section"><div class="section-title">😴 Jugadores inactivos</div><div id="a-inactivos"><p class="hint">Cargando...</p></div></div>'+
     '<div class="admin-section"><div class="section-title">📋 Planilla de resultados</div><div id="admin-planilla-cont"><p class="hint">Cargando...</p></div></div>'+
     '</div>';
   h+='<div id="admin-tab-agenda" style="display:none"><div class="admin-section"><div class="section-title">📅 Agenda Clases Individuales</div><div id="admin-slots-cont"><p class="hint">Cargando...</p></div></div></div>';
@@ -1680,6 +1704,54 @@ async function renderAdmin(){
   var ara=el("a-ranking-admin");if(ara)ara.innerHTML=rh||'<p class="hint">Cargando ranking...</p>';
 }
 
+var UMBRAL_DIAS_INACTIVO=21;
+async function cargarInactivos(){
+  var cont=el("a-inactivos");if(!cont)return;
+  cont.innerHTML='<p class="hint">Cargando...</p>';
+  try{
+    var snap=await db.collection("partidos_atmas").where("estado","==","aprobado").get();
+    var ultimoPorNombre={};
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var f=d.fecha?new Date(d.fecha+"T00:00:00"):(d.ts&&d.ts.seconds?new Date(d.ts.seconds*1000):null);
+      if(!f||isNaN(f.getTime()))return;
+      [d.jugador1,d.jugador2].forEach(function(nm){
+        if(!nm)return;
+        if(!ultimoPorNombre[nm]||f>ultimoPorNombre[nm])ultimoPorNombre[nm]=f;
+      });
+    });
+    var hoy=new Date();
+    var lista=rankingData.map(function(p){
+      var nombre=p[0];var jugados=p[2];
+      var ultimo=ultimoPorNombre[nombre]||null;
+      var dias=ultimo?Math.floor((hoy-ultimo)/86400000):null;
+      return {nombre:nombre,jugados:jugados,dias:dias};
+    }).filter(function(j){
+      return j.jugados>0&&(j.dias===null||j.dias>=UMBRAL_DIAS_INACTIVO);
+    }).sort(function(a,b){
+      if(a.dias===null)return -1;if(b.dias===null)return 1;
+      return b.dias-a.dias;
+    });
+    if(!lista.length){cont.innerHTML='<p class="hint">Nadie inactivo por ahora 🎾</p>';return;}
+    var h="";
+    lista.forEach(function(j){
+      var diasTxt=j.dias===null?"sin partidos registrados":j.dias+" d&iacute;as sin jugar";
+      h+='<div class="lcard"><div style="flex:1"><div class="nm">'+j.nombre+'</div><div class="ds">'+diasTxt+'</div></div>'+
+         '<button class="mini wa" onclick="motivarJugador(\''+j.nombre.replace(/'/g,"\\'")+'\')">📲 Motivar</button></div>';
+    });
+    cont.innerHTML=h;
+  }catch(e){cont.innerHTML='<p class="hint">Error: '+e.message+'</p>';}
+}
+async function motivarJugador(nombre){
+  try{
+    var snap=await db.collection("jugadores").where("nombre","==",nombre).limit(1).get();
+    var tel=!snap.empty?(snap.docs[0].data().tel||""):"";
+    var wp=tel.replace(/[^0-9]/g,"");
+    if(!wp){toast("😕 "+nombre+" no tiene tel\u00e9fono registrado");return;}
+    var msg="Hola "+nombre.split(" ")[0]+"! 🎾 Te extra\u00f1amos en las canchas de ATMAS. \u00bfNos vemos esta semana para jugar? Avisanos y te ayudamos a coordinar un partido.";
+    window.open("https://wa.me/"+wp+"?text="+encodeURIComponent(msg),"_blank");
+  }catch(e){toast("Error: "+e.message);}
+}
 function adminTab(el_,tab){if(tab===undefined){tab=el_;}
   ["notifs","reservas","sanciones","torneos","ranking","agenda","config","ingresos","evaluar"].forEach(function(t){
     var div=el("admin-tab-"+t);if(div)div.style.display=t===tab?"":"none";
@@ -1687,7 +1759,7 @@ function adminTab(el_,tab){if(tab===undefined){tab=el_;}
   });
   if(tab==="notifs")renderNotificacionesAdmin();
   if(tab==="sanciones")renderAdminSanciones();
-  if(tab==="ranking"){renderAdminTipos();cargarPlanillaResultados();}
+  if(tab==="ranking"){renderAdminTipos();cargarPlanillaResultados();cargarInactivos();}
   if(tab==="agenda")renderAdminSlots();
   if(tab==="config"){renderAdminConfig();setTimeout(cargarCodigosLista,300);}
   if(tab==="torneos"){loadAdminTorneos();cargarListaTorneos();}
