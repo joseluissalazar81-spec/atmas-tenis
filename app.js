@@ -171,7 +171,7 @@ async function subirFotoPerfil(inputEl){
   toast("Subiendo foto...");
   try{
     var blob=await redimensionarImagen(file,400);
-    var ref=storage.ref().child("fotos_perfil/"+uidF+".jpg");
+    var ref=storage.ref().child("fotos_perfil/"+uidF);
     await ref.put(blob,{contentType:"image/jpeg"});
     var url=await ref.getDownloadURL();
     await db.collection("jugadores").doc(uidF).set({fotoURL:url},{merge:true});
