@@ -2487,7 +2487,7 @@ async function renderSlotsAdmin(){
     });
     h+='</tbody></table></div>';
     cont.innerHTML=h;
-  }catch(e){cont.innerHTML='<p class="hint">Error al cargar</p>';console.warn(e);}
+  }catch(e){cont.innerHTML='<p class="hint">Error al cargar: '+e.message+'</p>';console.warn(e);}
 }
 
 async function renderSlots(){
@@ -2561,7 +2561,7 @@ async function renderSlots(){
     });
     htmlS+='</div>';
     cont.innerHTML=htmlS;
-  }catch(e){cont.innerHTML='<p class="hint">Error al cargar</p>';console.warn(e);}
+  }catch(e){cont.innerHTML='<p class="hint">Error al cargar: '+e.message+'</p>';console.warn(e);}
 }
 
 function padH(h){return h<10?"0"+Math.floor(h):String(Math.floor(h));}
