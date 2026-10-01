@@ -445,6 +445,23 @@ function esAdmin(nombre,email){
   return(n.includes("marcelo")&&n.includes("escalona"));
 }
 function formatRut(inp){if(!inp)return;var v=inp.value.replace(/[^0-9kK]/g,"");if(v.length>1){var d=v.slice(0,-1);var dv=v.slice(-1);var fmt="";for(var i=d.length-1,j=0;i>=0;i--,j++){if(j>0&&j%3===0)fmt="."+fmt;fmt=d[i]+fmt;}inp.value=fmt+"-"+dv;}else{inp.value=v;}}
+function formatClave(inp){if(!inp)return;inp.value=inp.value.replace(/[^0-9]/g,"").slice(0,4);}
+
+/* ─── USUARIO + CLAVE: credenciales sintéticas sobre Firebase Auth ──
+   No usamos email/password reales para el flujo nuevo: el usuario elige
+   un nombre de usuario y una clave de 4 números, y por debajo seguimos
+   usando email+password de Firebase (así no hay que tocar firestore.rules,
+   el chequeo de admin, ni vincularRankingExistente, que ya dependen de
+   request.auth/uid). El email y password se derivan de forma determinista
+   para que el mismo usuario+clave siempre dé las mismas credenciales. */
+var USUARIO_EMAIL_DOMINIO="@usuarios.atmas-tenis.app";
+function usuarioSlug(u){
+  return(u||"").toString().trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9_.-]/g,"");
+}
+function usuarioAEmail(usuario){return usuarioSlug(usuario)+USUARIO_EMAIL_DOMINIO;}
+function claveAPassword(clave){return "atm-"+clave;}
 
 /* ─── AUTH UI: UN SOLO PUNTO DE CONTROL ──────────────────────── */
 function mostrarLogin(){
@@ -506,39 +523,22 @@ function showAuthRut(){
 }
 function showAuthStep2(){var s1=el("auth-step1");var em=el("auth-email");var s2=el("auth-step2");if(s1)s1.style.display="none";if(em)em.style.display="none";if(s2)s2.style.display="";}
 
-async function loginGoogle(){
-  if(!auth){toast("Auth no disponible");return;}
-  var provider=new firebase.auth.GoogleAuthProvider();
-  try{
-    var result=await auth.signInWithPopup(provider);
-    if(result&&result.user)return;
-  }catch(e){
-    if(e.code==="auth/popup-blocked"||e.code==="auth/popup-closed-by-user"||e.code==="auth/cancelled-popup-request"){
-      try{
-        localStorage.setItem("_gRedirect","1");
-        await auth.signInWithRedirect(provider);
-      }catch(e2){
-        localStorage.removeItem("_gRedirect");
-        toast("Error Google: "+e2.message);
-      }
-    }else{
-      toast("Error Google: "+e.message);
-    }
-  }
-}
-
 async function crearCuenta(){
   if(!auth){toast("Auth no disponible");return;}
   var nombre=((el("crear-nombre")||{}).value||"").trim();
   var rut=((el("crear-rut")||{}).value||"").trim();
-  var em=((el("crear-em")||{}).value||"").trim();
-  var pw=((el("crear-pw")||{}).value||"").trim();
+  var usuarioRaw=((el("crear-usuario")||{}).value||"").trim();
+  var clave=((el("crear-clave")||{}).value||"").trim();
   if(!nombre||!rut){toast("Nombre y RUT son obligatorios");return;}
-  if(!em||!pw){toast("Email y contraseña son obligatorios");return;}
-  if(pw.length<6){toast("Contraseña: mínimo 6 caracteres");return;}
+  if(!usuarioRaw){toast("Elige un usuario");return;}
+  var usuario=usuarioSlug(usuarioRaw);
+  if(!usuario){toast("Usuario inválido, usa letras o números");return;}
+  if(!/^\d{4}$/.test(clave)){toast("La clave debe ser exactamente 4 números");return;}
+  var em=usuarioAEmail(usuario);
+  var pw=claveAPassword(clave);
   try{
     var cred=await auth.createUserWithEmailAndPassword(em,pw);
-    var p={nombre:nombre,rut:rut,tel:"",fnac:"",socio:false,email:em};
+    var p={nombre:nombre,rut:rut,tel:"",fnac:"",socio:false,email:em,usuario:usuario};
     var pv=await vincularRankingExistente(p);
     var enRanking=(pv.jugados>0||pv.pts>0);
     savePerfil(p);mostrarApp();renderPerfil();
@@ -546,17 +546,32 @@ async function crearCuenta(){
     else{go("inicio");toast("Bienvenido/a "+nombre+"!");}
   }catch(e){
     if(e.code==="auth/email-already-in-use"){
-      // Si es Gmail, probablemente ya tiene cuenta Google
-      if(em.endsWith("@gmail.com")){
-        toast("Ese Gmail ya está registrado. Usa 'Entrar con Google'.");
-        setTimeout(function(){showAuthStep1();},1500);
-      }else{
-        toast("Ese email ya tiene cuenta. Usa 'Ya tengo cuenta · Ingresar'.");
-        setTimeout(function(){showEntrarEmail();var f=el("entrar-em");if(f)f.value=em;},1500);
-      }
-    }else if(e.code==="auth/weak-password"){toast("Contraseña muy débil.");}
+      toast("Ese usuario ya existe, elige otro");
+    }else if(e.code==="auth/weak-password"){toast("Clave muy débil.");}
     else{toast("Error: "+e.message);}
   }
+}
+
+async function loginUsuario(){
+  if(!auth){toast("Auth no disponible");return;}
+  var usuarioRaw=((el("entrar-usuario")||{}).value||"").trim();
+  var clave=((el("entrar-clave")||{}).value||"").trim();
+  if(!usuarioRaw||!clave){toast("Ingresa tu usuario y clave");return;}
+  if(!/^\d{4}$/.test(clave)){toast("La clave debe tener 4 números");return;}
+  var em=usuarioAEmail(usuarioSlug(usuarioRaw));
+  var pw=claveAPassword(clave);
+  try{
+    await auth.signInWithEmailAndPassword(em,pw);
+  }catch(e){
+    if(e.code==="auth/user-not-found"||e.code==="auth/wrong-password"||e.code==="auth/invalid-credential"){
+      toast("Usuario o clave incorrectos");
+    }else{toast("Error: "+e.message);}
+  }
+}
+
+function toggleEntrarEmailAntiguo(){
+  var box=el("entrar-email-antiguo");if(!box)return;
+  box.style.display=(box.style.display==="none"||!box.style.display)?"":"none";
 }
 
 async function loginEmail(){
@@ -594,7 +609,6 @@ async function registrarEmail(){
 async function onAuthStateChanged(user){
   try{
     if(!user){
-      if(localStorage.getItem("_gRedirect")){return;}
       var p=getPerfil();
       if(p){mostrarApp();renderPerfil();return;}
       mostrarLogin();showAuthStep1();
@@ -623,7 +637,7 @@ async function onAuthStateChanged(user){
       }
     }else{
       // Antes de crear un perfil en blanco, buscar si ya tenía un perfil viejo
-      // (creado antes de que existiera "Entrar con Google") por su email.
+      // (creado con otro método de login) por su email.
       var legado=null;
       if(user.email){
         try{
@@ -636,7 +650,7 @@ async function onAuthStateChanged(user){
       var pv=await vincularRankingExistente(p);
       var enRanking=(pv.jugados>0||pv.pts>0);
       savePerfil(p);mostrarApp();renderPerfil();
-      try{db.collection("notificaciones_admin").add({tipo:legado?"Perfil recuperado (Google)":"Nuevo usuario (Google)",nombre:p.nombre,email:p.email||"",leida:false,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}
+      try{db.collection("notificaciones_admin").add({tipo:legado?"Perfil recuperado":"Nuevo usuario",nombre:p.nombre,email:p.email||"",leida:false,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}
       if(legado){go("inicio");toast("¡Bienvenido de vuelta, "+p.nombre+"! Recuperamos tu perfil ✓");}
       else if(enRanking){go("escalerilla");toast("¡Bienvenido, "+p.nombre+"! Tu historial fue vinculado ✓");}
       else{go("perfil");toast("Bienvenido! Completa tu RUT en Mi Perfil.");}
@@ -696,7 +710,7 @@ async function completarPerfil(){
   var fnac=(el("reg-fnac")||{}).value||"";
   if(!nombre||!rut){toast("Nombre y RUT son obligatorios");return;}
   var p={nombre:nombre,rut:rut,tel:tel,fnac:fnac,socio:false};
-  // Buscar un perfil viejo con este mismo RUT (de antes de que existiera Google/email),
+  // Buscar un perfil viejo con este mismo RUT (de antes de que existiera el login con cuenta),
   // para no perder su estado de socio ni sus datos.
   try{
     var rutNorm=rut.replace(/\./g,"").replace(/-/g,"");
@@ -3699,22 +3713,13 @@ function adminSalir(){adminUnlocked=false;go('inicio');}
   try{seedCuadroNovicios3().then(function(){iniciarCuadroLive();});}catch(e){}
   try{iniciarZonaNorteLive();}catch(e){}
   try{autoLimpiarPruebas();}catch(e){}
-  // Badge e notificaciones se inician en onAuthStateChanged solo para admins
-  if(auth){
-    // Solo limpiar el flag de redirect pendiente de Google. La sesión
-    // anónima para invitados ahora se crea únicamente dentro de
-    // onAuthStateChanged cuando Firebase ya confirmó que no hay ninguna
-    // sesión real persistida — llamar signInAnonymously() acá en paralelo
-    // corría una carrera contra la restauración de sesión real y terminaba
-    // reemplazando silenciosamente a usuarios ya logueados por invitados
-    // anónimos en cada recarga de la página.
-    auth.getRedirectResult().then(function(result){
-      localStorage.removeItem("_gRedirect");
-    }).catch(function(e){
-      console.warn("getRedirectResult error:",e);
-      localStorage.removeItem("_gRedirect");
-    });
-  }else{
+  // Badge e notificaciones se inician en onAuthStateChanged solo para admins.
+  // Si hay auth disponible, onAuthStateChanged (ya registrado arriba) se
+  // encarga de todo el estado de sesión — incluida la sesión anónima para
+  // invitados, que se crea únicamente ahí (ver comentario en esa función)
+  // para evitar la carrera que reemplazaba silenciosamente a usuarios ya
+  // logueados por invitados anónimos en cada recarga de la página.
+  if(!auth){
     var p=getPerfil();
     if(p){mostrarApp();renderPerfil();}
     else{mostrarLogin();showAuthStep1();}

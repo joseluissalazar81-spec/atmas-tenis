@@ -69,8 +69,6 @@ header p{font-size:11px;color:var(--suave);white-space:nowrap}
 .btn.dark{background:var(--negro)}.btn.dark:active{box-shadow:0 2px 6px rgba(0,0,0,.2)}
 .btn.sec{background:#fff;color:var(--texto);border:1px solid var(--linea);box-shadow:none}
 .btn.wa{background:#25d366}
-.btn.google{background:#fff;color:#3c4043;border:1px solid #dadce0;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.btn.google:active{background:#f8f9fa;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .mini{background:var(--verde);color:#fff;border:none;padding:9px 15px;border-radius:20px;font-weight:700;font-size:13px;cursor:pointer}
 .mini.wa{background:#25d366}
 .field{margin-bottom:13px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:var(--suave)}
