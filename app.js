@@ -659,6 +659,7 @@ async function crearCuenta(){
   if(pw.length<6){toast("Contraseña: mínimo 6 caracteres");return;}
   try{
     var cred=await auth.createUserWithEmailAndPassword(em,pw);
+    if(cred&&cred.user)cred.user.sendEmailVerification().catch(function(e){console.warn("sendEmailVerification error:",e);});
     var p={nombre:nombre,rut:rut,tel:"",fnac:"",socio:false,email:em};
     var pv=await vincularRankingExistente(p);
     var enRanking=(pv.jugados>0||pv.pts>0);
@@ -682,7 +683,14 @@ async function loginEmail(){
   var pw=(pwEl?pwEl.value||"":"").trim();
   if(!em||!pw){toast("Ingresa email y contrasena");return;}
   try{
-    await auth.signInWithEmailAndPassword(em,pw);
+    var cred=await auth.signInWithEmailAndPassword(em,pw);
+    // Los admins necesitan email verificado (ver esAdmin y firestore.rules)
+    var u=cred&&cred.user;
+    if(u&&!u.emailVerified&&ADMIN_EMAILS.indexOf((u.email||"").toLowerCase())!==-1){
+      u.sendEmailVerification().then(function(){
+        toast("Te enviamos un correo para verificar tu email. Ábrelo y vuelve a ingresar para ver el panel admin");
+      }).catch(function(e){console.warn("sendEmailVerification error:",e);});
+    }
   }catch(e){
     if(e.code==="auth/user-not-found"||e.code==="auth/wrong-password"||e.code==="auth/invalid-credential"){
       toast("Email o contraseña incorrectos");
