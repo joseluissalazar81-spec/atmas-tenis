@@ -581,7 +581,7 @@ function savePerfil(p){
   }catch(e){console.warn("savePerfil error:",e);}
 }
 
-var ADMIN_EMAILS=["educador10@hotmail.com"];
+var ADMIN_EMAILS=["educador10@hotmail.com","joseluissalazar81@gmail.com","locampinotenisclub@hotmail.com"];
 function esAdmin(){
   var email=auth&&auth.currentUser&&!auth.currentUser.isAnonymous?auth.currentUser.email:"";
   return !!(auth&&auth.currentUser&&auth.currentUser.emailVerified)&&!!email&&ADMIN_EMAILS.indexOf(email.toLowerCase().trim())!==-1;
