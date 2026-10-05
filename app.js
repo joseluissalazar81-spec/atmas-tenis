@@ -690,6 +690,20 @@ async function loginEmail(){
   }
 }
 
+async function recuperarClave(){
+  if(!auth){toast("Auth no disponible");return;}
+  var em=((el("entrar-em")||{}).value||"").trim();
+  if(!em){toast("Escribe tu email arriba y vuelve a tocar el link");var f=el("entrar-em");if(f)f.focus();return;}
+  try{
+    await auth.sendPasswordResetEmail(em);
+    toast("Si el email está registrado, te llegará un correo para crear tu clave");
+  }catch(e){
+    if(e.code==="auth/invalid-email"){toast("Email inválido");}
+    else if(e.code==="auth/user-not-found"){toast("Si el email está registrado, te llegará un correo para crear tu clave");}
+    else{toast("Error: "+e.message);}
+  }
+}
+
 async function registrarEmail(){
   if(!auth){toast("Auth no disponible");return;}
   var em=(el("auth-em")?el("auth-em").value||"":"").trim();
