@@ -5,12 +5,44 @@ service cloud.firestore {
     // ── Helpers ────────────────────────────────────────────────────
     function isAdmin() {
       return request.auth != null && (
-        request.auth.token.email == "joseluissalazar81@gmail.com" ||
-        request.auth.token.email == "locampinotenisclub@hotmail.com"
+        request.auth.token.email in ["educador10@hotmail.com", "joseluissalazar81@gmail.com", "locampinotenisclub@hotmail.com"]
+        && request.auth.token.email_verified == true
       );
     }
     function isSignedIn() {
       return request.auth != null;
+    }
+    function isSelfUser(docId) {
+      return isSignedIn() && (request.auth.uid == docId || resource.data.email == request.auth.token.email);
+    }
+    function isCurrentPlayer(name) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/jugadores/$(request.auth.uid))
+        && get(/databases/$(database)/documents/jugadores/$(request.auth.uid)).data.nombre == name;
+    }
+    function isSocioMensual() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/jugadores/$(request.auth.uid))
+        && get(/databases/$(database)/documents/jugadores/$(request.auth.uid)).data.socio == true;
+    }
+    function ownsReservation(data) {
+      return isSignedIn() && data.userId == request.auth.uid;
+    }
+    function validOwnedReservation(data) {
+      return ownsReservation(data)
+        && data.nombre is string && data.nombre.size() > 0 && data.nombre.size() <= 120
+        && data.fecha is string && data.fecha.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.horaInicio is string && data.horaInicio.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && data.horaFin is string && data.horaFin.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && data.canchaId in [1, 2, 3, 4]
+        && ((data.tipo == "socio_mensual" && data.monto == 0 && data.estado == "confirmada" && isSocioMensual())
+          || (data.tipo in ["socio_partido", "invitado", "arriendo", "academia"]
+            && data.estado == "pendiente_pago"
+            && exists(/databases/$(database)/documents/config_app/precios)
+            && data.monto in [
+              get(/databases/$(database)/documents/config_app/precios).data.cancha1h,
+              get(/databases/$(database)/documents/config_app/precios).data.cancha2h
+            ]));
     }
     // Solo los campos permitidos pueden ser escritos
     function onlyFields(allowed) {
@@ -21,7 +53,8 @@ service cloud.firestore {
     // Lectura pública, escritura solo admin
     match /ranking_atmas/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(["nombre","pts","jugados","ganados","perdidos","pct","socio","socioTier","tipo","ts"]);
     }
 
     // ── partidos_atmas ─────────────────────────────────────────────
@@ -30,12 +63,19 @@ service cloud.firestore {
     // Nadie puede borrar excepto admin
     match /partidos_atmas/{docId} {
       allow read: if true;
-      allow create: if isSignedIn()
-        && request.resource.data.keys().hasAll(["jugador1","jugador2","ganador","perdedor","estado","ts"])
-        && request.resource.data.estado == "pendiente_rival";
+      allow create: if request.resource.data.keys().hasAll(["jugador1","jugador2","ganador","perdedor","estado","ts"])
+        && request.resource.data.keys().hasOnly(["jugador1","jugador2","ganador","perdedor","sets","cancha","fecha","hora","contexto","estado","rivalConfirmo","ts","createdBy","autoGenerado"])
+        && ((isAdmin() && request.resource.data.estado in ["programado","pendiente_admin","aprobado"])
+          || (isCurrentPlayer(request.resource.data.jugador1)
+            && request.resource.data.createdBy == request.auth.uid
+            && request.resource.data.estado == "pendiente_rival")
+          || (isCurrentPlayer(request.resource.data.jugador2)
+            && request.resource.data.createdBy == request.auth.uid
+            && request.resource.data.estado == "pendiente_rival"));
       allow update: if isAdmin()
         || (isSignedIn()
             && resource.data.estado == "pendiente_rival"
+            && isCurrentPlayer(resource.data.perdedor)
             && request.resource.data.estado == "pendiente_admin"
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["estado","rivalConfirmo"]));
       allow delete: if isAdmin();
@@ -43,10 +83,16 @@ service cloud.firestore {
 
     // ── inscripciones_atmas ────────────────────────────────────────
     match /inscripciones_atmas/{docId} {
-      allow read: if true;
+      allow read: if isAdmin() || ownsReservation(resource.data);
       allow create: if isSignedIn()
-        && request.resource.data.keys().hasAll(["nombre","torneo","ts"])
-        && request.resource.data.estado == "pendiente_pago";
+        && docId == request.auth.uid + "_" + request.resource.data.torneo
+        && request.resource.data.keys().hasAll(["nombre","tel","torneo","userId","estado","monto","ts"])
+        && request.resource.data.keys().hasOnly(["nombre","tel","torneo","turno","userId","estado","monto","ts"])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() > 0 && request.resource.data.nombre.size() <= 120
+        && request.resource.data.tel is string && request.resource.data.tel.size() <= 30
+        && request.resource.data.estado == "pendiente_pago"
+        && request.resource.data.monto is number && request.resource.data.monto > 0 && request.resource.data.monto <= 250000;
       allow update, delete: if isAdmin();
     }
 
@@ -56,16 +102,47 @@ service cloud.firestore {
     // reservas" necesita ver el historial propio. Antes era admin-only,
     // lo que hacía fallar la carga de horarios para todo socio/invitado.
     match /reservas/{docId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn()
-        && request.resource.data.keys().hasAll(["nombre","fecha","hora","ts"]);
-      allow update, delete: if isAdmin();
+      allow read: if isAdmin() || ownsReservation(resource.data);
+      allow create: if isAdmin() || (isSignedIn()
+        && request.resource.data.keys().hasAll(["nombre","fecha","horaInicio","horaFin","canchaId","tipo","estado","monto","ts"])
+        && request.resource.data.keys().hasOnly(["userId","nombre","tel","tipo","canchaId","canchaNombre","fecha","horaInicio","horaFin","estado","monto","asistio","ts"])
+        && validOwnedReservation(request.resource.data));
+      allow update: if isAdmin()
+        || (ownsReservation(resource.data)
+          && resource.data.estado in ["pendiente_pago", "confirmada", "confirmada_pagada"]
+          && request.resource.data.estado == "cancelada"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["estado"]));
+      allow delete: if isAdmin();
+    }
+
+    // Calendario público: solo disponibilidad, nunca nombre, teléfono ni monto.
+    match /reservas_publicas/{slotId} {
+      allow read: if true;
+      allow create: if isAdmin() || (isSignedIn()
+        && request.resource.data.keys().hasOnly(["fecha","canchaId","horaInicio","ocupada","reservaId"])
+        && request.resource.data.ocupada == true
+        && request.resource.data.reservaId is string
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.userId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.fecha == request.resource.data.fecha
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.canchaId == request.resource.data.canchaId
+        && request.resource.data.horaInicio >= getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.horaInicio
+        && request.resource.data.horaInicio < getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.horaFin);
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (isSignedIn()
+        && getAfter(/databases/$(database)/documents/reservas/$(resource.data.reservaId)).data.userId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/reservas/$(resource.data.reservaId)).data.estado == "cancelada");
     }
 
     // ── slots_individuales ─────────────────────────────────────────
     match /slots_individuales/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read: if isAdmin() || resource.data.estado == "disponible" || ownsReservation(resource.data);
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isSignedIn()
+        && resource.data.estado == "disponible"
+        && request.resource.data.estado == "pendiente_pago"
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.monto == 30000
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["estado","nombre_reserva","tel_reserva","objetivo","detalle","monto","ts_reserva","userId"]));
     }
 
     // ── torneos_app, torneos_cuadro ────────────────────────────────
@@ -80,19 +157,29 @@ service cloud.firestore {
 
     // ── codigos_socio ──────────────────────────────────────────────
     match /codigos_socio/{docId} {
-      allow read: if isAdmin();
+      allow get: if isAdmin() || (isSignedIn() && resource.data.codigo == docId);
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ── sanciones ──────────────────────────────────────────────────
+    match /sanciones/{docId} {
+      allow read: if isAdmin() || isSelfUser(docId);
       allow write: if isAdmin();
     }
 
     // ── config_app ─────────────────────────────────────────────────
     match /config_app/{docId} {
-      allow read: if true;
+      allow read: if isAdmin() || docId == "precios";
       allow write: if isAdmin();
     }
 
     // ── progreso_alumnos ───────────────────────────────────────────
     match /progreso_alumnos/{docId} {
-      allow read: if isSignedIn();
+      allow read: if isAdmin()
+        || (isSignedIn()
+          && exists(/databases/$(database)/documents/jugadores/$(request.auth.uid))
+          && resource.data.nombre == get(/databases/$(database)/documents/jugadores/$(request.auth.uid)).data.nombre);
       allow write: if isAdmin();
     }
 
@@ -101,24 +188,27 @@ service cloud.firestore {
     // ranking_atmas (fuente real del ranking) sigue siendo admin-only;
     // estos campos son solo un espejo de conveniencia dentro del perfil.
     match /jugadores/{docId} {
-      allow read: if isSignedIn();
-      allow create, update: if isAdmin()
-        || (isSignedIn()
-            && onlyFields(["nombre","rut","tel","fnac","email","socio","pts","jugados","ganados","perdidos","pct","fotoURL"]));
+      allow read: if isAdmin() || isSelfUser(docId);
+      allow create: if isAdmin() || (isSignedIn()
+        && request.auth.uid == docId
+        && request.resource.data.keys().hasOnly(["nombre","rut","tel","fnac","email","socio","fotoURL","estilo","golpe","superficie","disponibilidad","disponibilidadParsed","membresiaSolicitud"])
+        && request.resource.data.email == request.auth.token.email
+        && (!('socio' in request.resource.data) || request.resource.data.socio == false));
+      allow update: if isAdmin()
+        || (isSelfUser(docId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre","rut","tel","fnac","email","fotoURL","estilo","golpe","superficie","disponibilidad","disponibilidadParsed","membresiaSolicitud"])
+          && request.resource.data.email == request.auth.token.email);
       allow delete: if isAdmin();
     }
 
     // ── notificaciones_admin ───────────────────────────────────────
     match /notificaciones_admin/{docId} {
       allow read, update, delete: if isAdmin();
-      allow create: if isSignedIn();
-    }
-
-    // ── pagos_mp ───────────────────────────────────────────────────
-    // Registro de intentos de pago (analítica interna, solo admin lee)
-    match /pagos_mp/{docId} {
-      allow read: if isAdmin();
-      allow create: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.tipo is string
+        && request.resource.data.tipo.size() <= 60
+        && request.resource.data.keys().hasOnly(["userId","tipo","nombre","email","tel","detalle","inscripcionId","torneoIdx","reservaId","leida","ts"]);
     }
 
     // ── Bloquear todo lo demás ─────────────────────────────────────
