@@ -1,8 +1,10 @@
 html,body{overflow-x:hidden}
 :root{--verde:#7ac143;--verde-osc:#2f6b1a;--verde-mid:#4e8a1f;--verde-claro:#e9f5dd;--lima:#c4f000;--gris:#f4f5f7;--texto:#1d2433;--suave:#6b7280;--linea:#e5e7eb;--negro:#121712;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--verde-osc);color:var(--texto);display:flex;justify-content:center;overflow-x:hidden}
+button,input,select,textarea{font:inherit}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--verde-osc);color:var(--texto);display:flex;justify-content:center;overflow-x:hidden;min-height:100vh}
 .phone{width:100%;max-width:430px;min-height:100vh;background:var(--gris);display:flex;flex-direction:column;overflow-x:hidden}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(47,107,26,.28);outline-offset:2px}
 header{background:#fff;padding:8px 14px 8px;border-bottom:1px solid var(--linea);display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
 header h1{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header p{font-size:11px;color:var(--suave);white-space:nowrap}
