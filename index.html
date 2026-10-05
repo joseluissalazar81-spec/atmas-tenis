@@ -59,6 +59,9 @@
       <div class="field"><label>Email</label><input id="entrar-em" type="email" placeholder="tu@email.com" autocomplete="email"></div>
       <div class="field"><label>Contrase&ntilde;a</label><input id="entrar-pw" type="password" placeholder="Tu contrase&ntilde;a" autocomplete="current-password"></div>
       <button class="btn" onclick="loginEmail()">Entrar</button>
+      <div style="text-align:center;margin-top:12px">
+        <span onclick="recuperarClave()" style="font-size:13px;color:var(--verde-mid);font-weight:700;cursor:pointer;text-decoration:underline">&iquest;Olvidaste tu clave? &middot; Crear o recuperar clave</span>
+      </div>
     </div>
 
     <!-- PASO 3: completar perfil -->
@@ -427,7 +430,7 @@
   <div class="modal" id="modal"><div class="sheet" id="sheet-content"></div></div>
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" onclick="this.classList.remove('show')"></div>
 </div>
-<script src="app.js?v=20261002-1"></script>
+<script src="app.js?v=20261005-1"></script>
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load",function(){
