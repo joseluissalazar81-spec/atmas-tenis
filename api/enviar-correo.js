@@ -1,103 +1,37 @@
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 
-// Pegar JSON multilinea en algunos formularios de variables de entorno
-// convierte los \n escapados dentro de los strings en saltos de linea
-// reales, lo que rompe JSON.parse. Esto repara ese caso reescapando los
-// saltos de linea que quedan DENTRO de un string, sin tocar el resto.
-function repararJSON(raw) {
-  var out = '';
-  var dentroString = false;
-  var escapando = false;
-  for (var i = 0; i < raw.length; i++) {
-    var ch = raw[i];
-    if (dentroString) {
-      if (escapando) {
-        out += ch;
-        escapando = false;
-      } else if (ch === '\\') {
-        out += ch;
-        escapando = true;
-      } else if (ch === '"') {
-        out += ch;
-        dentroString = false;
-      } else if (ch === '\n') {
-        out += '\\n';
-      } else if (ch === '\r') {
-        // omitir
-      } else {
-        out += ch;
-      }
-    } else {
-      if (ch === '"') dentroString = true;
-      out += ch;
-    }
-  }
-  return out;
-}
-
-// Si el valor quedo con el JSON pegado varias veces (de reintentos al
-// guardar la variable), esto extrae solo el primer objeto {...} completo
-// y descarta cualquier cosa despues, sin importar que sea.
-function extraerPrimerObjeto(raw) {
-  var inicio = raw.indexOf('{');
-  if (inicio === -1) return raw;
-  var profundidad = 0;
-  var dentroString = false;
-  var escapando = false;
-  for (var i = inicio; i < raw.length; i++) {
-    var ch = raw[i];
-    if (dentroString) {
-      if (escapando) { escapando = false; }
-      else if (ch === '\\') { escapando = true; }
-      else if (ch === '"') { dentroString = false; }
-      continue;
-    }
-    if (ch === '"') { dentroString = true; continue; }
-    if (ch === '{') profundidad++;
-    else if (ch === '}') {
-      profundidad--;
-      if (profundidad === 0) return raw.slice(inicio, i + 1);
-    }
-  }
-  return raw.slice(inicio);
-}
-
-function diagnosticoError(raw, e) {
-  var m = /position (\d+)/.exec(e.message || '');
-  var pos = m ? parseInt(m[1], 10) : -1;
-  var codigos = [];
-  if (pos >= 0) {
-    for (var i = Math.max(0, pos - 5); i < Math.min(raw.length, pos + 5); i++) {
-      codigos.push(raw.charCodeAt(i));
-    }
-  }
-  return { mensaje: e.message, largo: raw.length, posicion: pos, codigosAlrededor: codigos };
-}
-
+// El valor guardado en Vercel puede venir con el JSON duplicado y/o con
+// saltos de linea reales donde deberian ir \n escapados (de pegarlo mal
+// en el formulario). En vez de intentar parsear el JSON completo (fragil
+// ante esos daños), se extraen directamente los 3 campos que
+// admin.credential.cert() realmente necesita con patrones de texto, que
+// toman la primera coincidencia y listo.
 function parseServiceAccount(raw) {
-  var intentos = {
-    directo: function () { return raw; },
-    reparado: function () { return repararJSON(raw); },
-    primerObjeto: function () { return extraerPrimerObjeto(raw); },
-    primerObjetoReparado: function () { return repararJSON(extraerPrimerObjeto(raw)); },
-    reparadoPrimerObjeto: function () { return extraerPrimerObjeto(repararJSON(raw)); }
-  };
-  var nombres = Object.keys(intentos);
-  var detalle = {};
-  for (var i = 0; i < nombres.length; i++) {
-    var nombre = nombres[i];
-    try {
-      var texto = intentos[nombre]();
-      var obj = JSON.parse(texto);
-      return obj;
-    } catch (e) {
-      detalle[nombre] = diagnosticoError(intentos[nombre](), e);
-    }
+  var projectId = (/"project_id"\s*:\s*"([^"]*)"/.exec(raw) || [])[1];
+  var clientEmail = (/"client_email"\s*:\s*"([^"]*)"/.exec(raw) || [])[1];
+  var pkMatch = /"private_key"\s*:\s*"(-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----)[^"]*"/.exec(raw);
+
+  if (!projectId || !clientEmail || !pkMatch) {
+    var err = new Error('No se pudo interpretar FIREBASE_SERVICE_ACCOUNT');
+    err.diagnostico = {
+      largo: raw.length,
+      tieneProjectId: !!projectId,
+      tieneClientEmail: !!clientEmail,
+      tienePrivateKey: !!pkMatch
+    };
+    throw err;
   }
-  var err = new Error('No se pudo interpretar FIREBASE_SERVICE_ACCOUNT');
-  err.diagnostico = { largoOriginal: raw.length, intentos: detalle };
-  throw err;
+
+  var privateKey = pkMatch[1].replace(/\\n/g, '\n');
+  if (privateKey.indexOf('\n') === -1) {
+    privateKey = privateKey
+      .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n')
+      .replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----') + '\n';
+  }
+  if (privateKey.slice(-1) !== '\n') privateKey += '\n';
+
+  return { type: 'service_account', project_id: projectId, client_email: clientEmail, private_key: privateKey };
 }
 
 var adminInicializado = false;
