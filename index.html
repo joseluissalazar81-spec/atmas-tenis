@@ -99,9 +99,38 @@
       <div style="font-size:18px;font-weight:800;margin-bottom:8px;color:#fff">Revisa tu correo</div>
       <div style="font-size:13px;color:rgba(255,255,255,.65);margin-bottom:14px">Te enviamos un link de verificaci&oacute;n. Conf&iacute;rmalo y luego vuelve a iniciar sesi&oacute;n.</div>
       <div style="font-size:12px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.06);border-radius:12px;padding:12px 14px;margin-bottom:20px;text-align:left">
-        <b style="color:rgba(255,255,255,.75)">&iquest;No lo ves?</b> Revisa tu carpeta de Spam o Promociones. El correo llega en ingl&eacute;s y sin el logo de ATMAS (as&iacute; lo env&iacute;a nuestro sistema), pero es 100% leg&iacute;timo &mdash; viene de <b>noreply@atmas-tenis.firebaseapp.com</b>.
+        <b style="color:rgba(255,255,255,.75)">&iquest;No lo ves?</b> Revisa tu carpeta de Spam o Promociones. Te llega con el logo de ATMAS, en espa&ntilde;ol.
       </div>
       <button class="btn-outline-dark" style="justify-content:center" onclick="showLogin()">Ir a iniciar sesi&oacute;n</button>
+    </div>
+
+    <!-- ACCION: viene del link del correo (verificar cuenta / nueva contraseña) -->
+    <div id="auth-accion" style="display:none;text-align:center;position:relative;z-index:1">
+      <div id="accion-cargando">
+        <div style="font-size:40px;margin-bottom:10px">&#9203;</div>
+        <div style="font-size:15px;color:rgba(255,255,255,.7)">Procesando...</div>
+      </div>
+      <div id="accion-exito" style="display:none">
+        <div style="font-size:40px;margin-bottom:10px">&#9989;</div>
+        <div id="accion-exito-titulo" style="font-size:18px;font-weight:800;margin-bottom:8px;color:#fff"></div>
+        <div id="accion-exito-texto" style="font-size:13px;color:rgba(255,255,255,.65);margin-bottom:20px"></div>
+        <button class="btn-lima" onclick="showLogin()">Ir a iniciar sesi&oacute;n</button>
+      </div>
+      <div id="accion-error" style="display:none">
+        <div style="font-size:40px;margin-bottom:10px">&#9888;&#65039;</div>
+        <div style="font-size:16px;font-weight:800;margin-bottom:8px;color:#fff">Este link ya no es v&aacute;lido</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.65);margin-bottom:20px">Puede que ya lo hayas usado o que haya expirado. Solicita uno nuevo.</div>
+        <button class="btn-outline-dark" style="justify-content:center" onclick="showLogin()">Ir a iniciar sesi&oacute;n</button>
+      </div>
+      <div id="accion-reset-form" style="display:none;text-align:left">
+        <div style="text-align:center;font-size:40px;margin-bottom:10px">&#128273;</div>
+        <div style="text-align:center;font-size:18px;font-weight:800;margin-bottom:4px;color:#fff">Crear nueva contrase&ntilde;a</div>
+        <div id="accion-reset-email" style="text-align:center;font-size:12px;color:rgba(255,255,255,.6);margin-bottom:18px"></div>
+        <div id="accion-reset-error" style="display:none;background:rgba(220,38,38,.18);border:1px solid rgba(248,113,113,.4);color:#fecaca;border-radius:10px;padding:10px 12px;font-size:12px;margin-bottom:16px"></div>
+        <div class="field"><label>Nueva contrase&ntilde;a</label><input id="accion-reset-pw" type="password" placeholder="M&iacute;nimo 6 caracteres" autocomplete="new-password"></div>
+        <div class="field"><label>Confirmar contrase&ntilde;a</label><input id="accion-reset-pw2" type="password" placeholder="Repite tu contrase&ntilde;a" autocomplete="new-password"></div>
+        <button class="btn-lima" onclick="confirmarResetPassword()">Guardar nueva contrase&ntilde;a</button>
+      </div>
     </div>
 
     <p style="text-align:center;font-size:11px;color:rgba(255,255,255,.4);margin-top:24px;position:relative;z-index:1">Tus datos se guardan de forma segura &middot; ATMAS</p>

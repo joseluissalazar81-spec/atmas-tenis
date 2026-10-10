@@ -645,6 +645,54 @@ function showVerificar(){
   var lg=el("auth-login");var rg=el("auth-registro");var vf=el("auth-verificar");
   if(lg)lg.style.display="none";if(rg)rg.style.display="none";if(vf)vf.style.display="";
 }
+function showAccion(sub){
+  var lg=el("auth-login");var rg=el("auth-registro");var vf=el("auth-verificar");var ac=el("auth-accion");
+  if(lg)lg.style.display="none";if(rg)rg.style.display="none";if(vf)vf.style.display="none";if(ac)ac.style.display="";
+  ["accion-cargando","accion-exito","accion-error","accion-reset-form"].forEach(function(id){var e=el(id);if(e)e.style.display=id===sub?"":"none";});
+}
+function mostrarAccionExito(titulo,texto){
+  var t=el("accion-exito-titulo");if(t)t.textContent=titulo;
+  var x=el("accion-exito-texto");if(x)x.textContent=texto;
+  showAccion("accion-exito");
+}
+var _accionOobCode=null;
+async function procesarAccionCorreo(){
+  var params=new URLSearchParams(location.search);
+  var mode=params.get("mode");
+  var oobCode=params.get("oobCode");
+  if(!mode||!oobCode||!auth)return;
+  _skipAuthCheck=true;
+  history.replaceState(null,"",location.pathname);
+  mostrarLogin();showAccion("accion-cargando");
+  try{
+    if(mode==="verifyEmail"){
+      await auth.applyActionCode(oobCode);
+      mostrarAccionExito("¡Cuenta verificada!","Tu correo quedó confirmado. Ya puedes iniciar sesión.");
+    }else if(mode==="resetPassword"){
+      var email=await auth.verifyPasswordResetCode(oobCode);
+      _accionOobCode=oobCode;
+      var em=el("accion-reset-email");if(em)em.textContent=email;
+      showAccion("accion-reset-form");
+    }else{
+      showAccion("accion-error");
+    }
+  }catch(e){
+    showAccion("accion-error");
+  }
+}
+async function confirmarResetPassword(){
+  var err=el("accion-reset-error");if(err){err.style.display="none";err.textContent="";}
+  var pw=((el("accion-reset-pw")||{}).value||"").trim();
+  var pw2=((el("accion-reset-pw2")||{}).value||"").trim();
+  if(!pw||pw.length<6){if(err){err.textContent="La contraseña debe tener mínimo 6 caracteres";err.style.display="";}return;}
+  if(pw!==pw2){if(err){err.textContent="Las contraseñas no coinciden";err.style.display="";}return;}
+  try{
+    await auth.confirmPasswordReset(_accionOobCode,pw);
+    mostrarAccionExito("¡Contraseña actualizada!","Ya puedes iniciar sesión con tu nueva contraseña.");
+  }catch(e){
+    if(err){err.textContent="Error: "+e.message;err.style.display="";}
+  }
+}
 function mostrarErrorLogin(msg){var e=el("login-error");if(e){e.textContent=msg;e.style.display="";}}
 function ocultarErrorLogin(){var e=el("login-error");if(e){e.style.display="none";e.textContent="";}}
 function mostrarErrorRegistro(msg){var e=el("registro-error");if(e){e.textContent=msg;e.style.display="";}}
@@ -818,6 +866,7 @@ async function onAuthStateChanged(user){
 }
 
 if(auth){auth.onAuthStateChanged(onAuthStateChanged);}
+procesarAccionCorreo();
 
 async function vincularMiRanking(){
   var p=getPerfil();if(!p||!p.nombre){toast("Primero completa tu perfil");return;}

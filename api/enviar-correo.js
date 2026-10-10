@@ -89,7 +89,7 @@ module.exports = async (req, res) => {
 
     initAdmin();
 
-    const actionCodeSettings = { url: APP_URL, handleCodeInApp: false };
+    const actionCodeSettings = { url: APP_URL, handleCodeInApp: true };
     let link, asunto, html;
 
     if (tipo === 'verificacion') {
