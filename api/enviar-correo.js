@@ -44,20 +44,25 @@ function initAdmin() {
 }
 
 // Igual que FIREBASE_SERVICE_ACCOUNT, estos valores pueden haber quedado
-// duplicados o con espacios/saltos de linea de mas por los reintentos al
-// guardarlos en Vercel. Las contraseñas de aplicacion de Google son
-// siempre 16 letras minusculas: se toma solo ese primer tramo.
-function limpiarSmtpPass(raw) {
+// duplicados, con espacios/saltos de linea de mas, o incluso CRUZADOS
+// (el correo guardado en SMTP_PASS y la clave en SMTP_USER) por los
+// reintentos al guardarlos en Vercel. En vez de confiar en el nombre de
+// la variable, se busca el patron correcto (email, o 16 letras seguidas)
+// en cualquiera de los dos valores crudos.
+function buscarEmail(raw) {
+  var m = /[^\s,"'{}]+@[^\s,"'{}]+\.[^\s,"'{}]+/.exec(raw || '');
+  return m ? m[0].replace(/[",}]+$/, '') : null;
+}
+function buscarPass16(raw) {
   var sinEspacios = (raw || '').replace(/\s+/g, '');
   var m = /[a-z]{16}/.exec(sinEspacios);
-  return m ? m[0] : sinEspacios.slice(0, 16);
-}
-function limpiarSmtpUser(raw) {
-  var m = /[^\s,"'{}]+@[^\s,"'{}]+\.[^\s,"'{}]+/.exec((raw || ''));
-  return m ? m[0].replace(/[",}]+$/, '') : (raw || '').trim();
+  return m ? m[0] : null;
 }
 
-const SMTP_USER_LIMPIO = limpiarSmtpUser(process.env.SMTP_USER);
+const SMTP_USER_CRUDO = process.env.SMTP_USER || '';
+const SMTP_PASS_CRUDO = process.env.SMTP_PASS || '';
+const SMTP_USER_LIMPIO = buscarEmail(SMTP_USER_CRUDO) || buscarEmail(SMTP_PASS_CRUDO) || SMTP_USER_CRUDO.trim();
+const SMTP_PASS_LIMPIA = buscarPass16(SMTP_PASS_CRUDO) || buscarPass16(SMTP_USER_CRUDO) || SMTP_PASS_CRUDO.replace(/\s+/g, '').slice(0, 16);
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
@@ -65,7 +70,7 @@ const transporter = nodemailer.createTransport({
   secure: true,
   auth: {
     user: SMTP_USER_LIMPIO,
-    pass: limpiarSmtpPass(process.env.SMTP_PASS)
+    pass: SMTP_PASS_LIMPIA
   }
 });
 
@@ -142,7 +147,7 @@ module.exports = async (req, res) => {
         largoUserCrudo: (process.env.SMTP_USER || '').length,
         largoPassCrudo: (process.env.SMTP_PASS || '').length,
         largoUserLimpio: SMTP_USER_LIMPIO.length,
-        largoPassLimpio: limpiarSmtpPass(process.env.SMTP_PASS).length
+        largoPassLimpio: SMTP_PASS_LIMPIA.length
       }
     });
   }
