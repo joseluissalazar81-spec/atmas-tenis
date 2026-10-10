@@ -36,18 +36,39 @@ function repararJSON(raw) {
   return out;
 }
 
+function diagnosticoError(raw, e) {
+  var m = /position (\d+)/.exec(e.message || '');
+  var pos = m ? parseInt(m[1], 10) : -1;
+  var codigos = [];
+  if (pos >= 0) {
+    for (var i = Math.max(0, pos - 5); i < Math.min(raw.length, pos + 5); i++) {
+      codigos.push(raw.charCodeAt(i));
+    }
+  }
+  return { mensaje: e.message, largo: raw.length, posicion: pos, codigosAlrededor: codigos };
+}
+
 function parseServiceAccount(raw) {
   try {
     return JSON.parse(raw);
-  } catch (e) {
-    return JSON.parse(repararJSON(raw));
+  } catch (e1) {
+    try {
+      return JSON.parse(repararJSON(raw));
+    } catch (e2) {
+      var err = new Error('No se pudo interpretar FIREBASE_SERVICE_ACCOUNT');
+      err.diagnostico = diagnosticoError(raw, e1);
+      throw err;
+    }
   }
 }
 
-if (!admin.apps.length) {
+var adminInicializado = false;
+function initAdmin() {
+  if (adminInicializado) return;
   admin.initializeApp({
     credential: admin.credential.cert(parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT))
   });
+  adminInicializado = true;
 }
 
 const transporter = nodemailer.createTransport({
@@ -91,6 +112,8 @@ module.exports = async (req, res) => {
       return;
     }
 
+    initAdmin();
+
     const actionCodeSettings = { url: APP_URL, handleCodeInApp: false };
     let link, asunto, html;
 
@@ -125,6 +148,6 @@ module.exports = async (req, res) => {
     res.status(200).json({ ok: true });
   } catch (e) {
     console.error('enviar-correo error:', e);
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: e.message, diagnostico: e.diagnostico || null });
   }
 };
