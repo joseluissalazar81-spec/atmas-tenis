@@ -76,23 +76,27 @@ function diagnosticoError(raw, e) {
 }
 
 function parseServiceAccount(raw) {
-  var intentos = [
-    function () { return raw; },
-    function () { return repararJSON(raw); },
-    function () { return extraerPrimerObjeto(raw); },
-    function () { return repararJSON(extraerPrimerObjeto(raw)); },
-    function () { return extraerPrimerObjeto(repararJSON(raw)); }
-  ];
-  var primerError = null;
-  for (var i = 0; i < intentos.length; i++) {
+  var intentos = {
+    directo: function () { return raw; },
+    reparado: function () { return repararJSON(raw); },
+    primerObjeto: function () { return extraerPrimerObjeto(raw); },
+    primerObjetoReparado: function () { return repararJSON(extraerPrimerObjeto(raw)); },
+    reparadoPrimerObjeto: function () { return extraerPrimerObjeto(repararJSON(raw)); }
+  };
+  var nombres = Object.keys(intentos);
+  var detalle = {};
+  for (var i = 0; i < nombres.length; i++) {
+    var nombre = nombres[i];
     try {
-      return JSON.parse(intentos[i]());
+      var texto = intentos[nombre]();
+      var obj = JSON.parse(texto);
+      return obj;
     } catch (e) {
-      if (!primerError) primerError = e;
+      detalle[nombre] = diagnosticoError(intentos[nombre](), e);
     }
   }
   var err = new Error('No se pudo interpretar FIREBASE_SERVICE_ACCOUNT');
-  err.diagnostico = diagnosticoError(raw, primerError);
+  err.diagnostico = { largoOriginal: raw.length, intentos: detalle };
   throw err;
 }
 
