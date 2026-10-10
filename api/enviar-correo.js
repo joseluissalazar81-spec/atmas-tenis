@@ -36,6 +36,33 @@ function repararJSON(raw) {
   return out;
 }
 
+// Si el valor quedo con el JSON pegado varias veces (de reintentos al
+// guardar la variable), esto extrae solo el primer objeto {...} completo
+// y descarta cualquier cosa despues, sin importar que sea.
+function extraerPrimerObjeto(raw) {
+  var inicio = raw.indexOf('{');
+  if (inicio === -1) return raw;
+  var profundidad = 0;
+  var dentroString = false;
+  var escapando = false;
+  for (var i = inicio; i < raw.length; i++) {
+    var ch = raw[i];
+    if (dentroString) {
+      if (escapando) { escapando = false; }
+      else if (ch === '\\') { escapando = true; }
+      else if (ch === '"') { dentroString = false; }
+      continue;
+    }
+    if (ch === '"') { dentroString = true; continue; }
+    if (ch === '{') profundidad++;
+    else if (ch === '}') {
+      profundidad--;
+      if (profundidad === 0) return raw.slice(inicio, i + 1);
+    }
+  }
+  return raw.slice(inicio);
+}
+
 function diagnosticoError(raw, e) {
   var m = /position (\d+)/.exec(e.message || '');
   var pos = m ? parseInt(m[1], 10) : -1;
@@ -49,17 +76,24 @@ function diagnosticoError(raw, e) {
 }
 
 function parseServiceAccount(raw) {
-  try {
-    return JSON.parse(raw);
-  } catch (e1) {
+  var intentos = [
+    function () { return raw; },
+    function () { return repararJSON(raw); },
+    function () { return extraerPrimerObjeto(raw); },
+    function () { return repararJSON(extraerPrimerObjeto(raw)); },
+    function () { return extraerPrimerObjeto(repararJSON(raw)); }
+  ];
+  var primerError = null;
+  for (var i = 0; i < intentos.length; i++) {
     try {
-      return JSON.parse(repararJSON(raw));
-    } catch (e2) {
-      var err = new Error('No se pudo interpretar FIREBASE_SERVICE_ACCOUNT');
-      err.diagnostico = diagnosticoError(raw, e1);
-      throw err;
+      return JSON.parse(intentos[i]());
+    } catch (e) {
+      if (!primerError) primerError = e;
     }
   }
+  var err = new Error('No se pudo interpretar FIREBASE_SERVICE_ACCOUNT');
+  err.diagnostico = diagnosticoError(raw, primerError);
+  throw err;
 }
 
 var adminInicializado = false;
