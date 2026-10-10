@@ -43,13 +43,29 @@ function initAdmin() {
   adminInicializado = true;
 }
 
+// Igual que FIREBASE_SERVICE_ACCOUNT, estos valores pueden haber quedado
+// duplicados o con espacios/saltos de linea de mas por los reintentos al
+// guardarlos en Vercel. Las contraseñas de aplicacion de Google son
+// siempre 16 letras minusculas: se toma solo ese primer tramo.
+function limpiarSmtpPass(raw) {
+  var sinEspacios = (raw || '').replace(/\s+/g, '');
+  var m = /^[a-z]{16}/.exec(sinEspacios);
+  return m ? m[0] : sinEspacios;
+}
+function limpiarSmtpUser(raw) {
+  var m = /^[^\s,]+@[^\s,]+/.exec((raw || '').trim());
+  return m ? m[0] : (raw || '').trim();
+}
+
+const SMTP_USER_LIMPIO = limpiarSmtpUser(process.env.SMTP_USER);
+
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
   secure: true,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+    user: SMTP_USER_LIMPIO,
+    pass: limpiarSmtpPass(process.env.SMTP_PASS)
   }
 });
 
@@ -111,7 +127,7 @@ module.exports = async (req, res) => {
     }
 
     await transporter.sendMail({
-      from: '"ATMAS" <' + process.env.SMTP_USER + '>',
+      from: '"ATMAS" <' + SMTP_USER_LIMPIO + '>',
       to: email,
       subject: asunto,
       html: html
