@@ -49,12 +49,12 @@ function initAdmin() {
 // siempre 16 letras minusculas: se toma solo ese primer tramo.
 function limpiarSmtpPass(raw) {
   var sinEspacios = (raw || '').replace(/\s+/g, '');
-  var m = /^[a-z]{16}/.exec(sinEspacios);
-  return m ? m[0] : sinEspacios;
+  var m = /[a-z]{16}/.exec(sinEspacios);
+  return m ? m[0] : sinEspacios.slice(0, 16);
 }
 function limpiarSmtpUser(raw) {
-  var m = /^[^\s,]+@[^\s,]+/.exec((raw || '').trim());
-  return m ? m[0] : (raw || '').trim();
+  var m = /[^\s,"'{}]+@[^\s,"'{}]+\.[^\s,"'{}]+/.exec((raw || ''));
+  return m ? m[0].replace(/[",}]+$/, '') : (raw || '').trim();
 }
 
 const SMTP_USER_LIMPIO = limpiarSmtpUser(process.env.SMTP_USER);
@@ -136,6 +136,14 @@ module.exports = async (req, res) => {
     res.status(200).json({ ok: true });
   } catch (e) {
     console.error('enviar-correo error:', e);
-    res.status(500).json({ error: e.message, diagnostico: e.diagnostico || null });
+    res.status(500).json({
+      error: e.message,
+      diagnostico: e.diagnostico || {
+        largoUserCrudo: (process.env.SMTP_USER || '').length,
+        largoPassCrudo: (process.env.SMTP_PASS || '').length,
+        largoUserLimpio: SMTP_USER_LIMPIO.length,
+        largoPassLimpio: limpiarSmtpPass(process.env.SMTP_PASS).length
+      }
+    });
   }
 };
