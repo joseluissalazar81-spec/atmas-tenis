@@ -4,15 +4,36 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+
 jobs:
   syntax-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Verificar sintaxis JavaScript
         run: node --check app.js
-      - name: Confirmar archivos presentes
+
+      - name: Validar archivos críticos del front-end
         run: |
-          test -f index.html && echo OK index.html
-          test -f style.css && echo OK style.css
-          test -f app.js && echo OK app.js
+          test -f index.html
+          test -f style.css
+          test -f app.js
+          test -f manifest.json
+          test -f sw.js
+          test -f icon.png
+
+          python3 - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          required_refs = ['style.css', 'app.js', 'manifest.json', 'sw.js', 'icon.png']
+          missing_refs = [ref for ref in required_refs if ref not in html]
+          if missing_refs:
+              raise SystemExit(f'Faltan referencias en index.html: {missing_refs}')
+          print('Archivos críticos y referencias de HTML OK')
+          PY

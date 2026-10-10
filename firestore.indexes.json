@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "reservas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "ts", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "inscripciones_atmas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "torneo", "order": "ASCENDING" },
+        { "fieldPath": "nombre", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -15,10 +15,12 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="phone auth-pending">
+  <input type="file" id="input-foto-perfil" accept="image/*" style="display:none" onchange="subirFotoPerfil(this)">
   <div id="login-screen">
     <div style="text-align:center;margin-bottom:28px;margin-top:10px;position:relative;z-index:1">
       <img src="icon.png" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:4px solid rgba(255,255,255,.25);box-shadow:0 8px 24px rgba(0,0,0,.4)">
@@ -140,7 +142,7 @@
         <div class="stat"><div class="n">4</div><div class="l">Canchas</div></div>
       </div>
       <div class="section-title">Proximo torneo</div>
-      <div class="tcard" onclick="go('torneos')" style="cursor:pointer"><div class="tn">Torneo Novicios 5</div><div class="tm">22 agosto 2026 &middot; 16:00 y 17:30 &middot; Cierre 15 ago</div><div class="trow"><span class="price">$20.000</span><span class="cupos">10 cupos</span><button class="mini">Ver mas</button></div></div>
+      <div class="tcard" onclick="go('torneos')" style="cursor:pointer"><div class="tn">Torneo Novicios 5</div><div class="tm">25 octubre 2026 &middot; Horario por confirmar</div><div class="trow"><span class="price">$20.000</span><span class="cupos">16 cupos</span><button class="mini">Ver mas</button></div></div>
       <div class="section-title">⚡ Actividad reciente</div>
       <div id="feed-actividad"><p class="hint">Cargando...</p></div>
     </section>
@@ -448,9 +450,9 @@
     <button class="tab" data-s="perfil" onclick="go('perfil')"><span class="ic">&#128100;</span>Mi perfil<span id="badge-admin" style="display:none;position:absolute;top:4px;right:calc(50% - 28px);background:#dc2626;color:#fff;font-size:9px;font-weight:900;min-width:16px;height:16px;border-radius:8px;padding:0 4px;line-height:16px;text-align:center"></span></button>
   </div>
   <div class="modal" id="modal"><div class="sheet" id="sheet-content"></div></div>
-  <div class="toast" id="toast" onclick="this.classList.remove('show')"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" onclick="this.classList.remove('show')"></div>
 </div>
-<script src="app.js"></script>
+<script src="app.js?v=20261005-1"></script>
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load",function(){
@@ -460,3 +462,4 @@ if("serviceWorker" in navigator){
 </script>
 </body>
 </html>
+<!-- deploy trigger: reconexión Git-Vercel -->

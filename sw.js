@@ -1,6 +1,6 @@
 /* ATMAS Service Worker — cache-first para assets, network-first para Firestore */
-var CACHE = "atmas-v10";
-var STATIC = ["/", "/index.html", "/app.js", "/style.css", "/icon.png", "/manifest.json"];
+var CACHE = "atmas-v13";
+var STATIC = ["/app.js", "/style.css", "/icon.png", "/icon-192.png", "/icon-512.png", "/icon-maskable-512.png", "/manifest.json"];
 
 self.addEventListener("install", function(e){
   e.waitUntil(
@@ -25,6 +25,10 @@ self.addEventListener("fetch", function(e){
      url.indexOf("firebase")!==-1 ||
      url.indexOf("googleapis.com")!==-1 ||
      url.indexOf("gstatic.com")!==-1 ||
+    new URL(url).pathname==="/" ||
+    new URL(url).pathname==="/index.html" ||
+     url.indexOf("/app.js")!==-1 ||
+     url.indexOf("/style.css")!==-1 ||
      e.request.method !== "GET"){
     return;
   }
