@@ -1,9 +1,52 @@
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 
+// Pegar JSON multilinea en algunos formularios de variables de entorno
+// convierte los \n escapados dentro de los strings en saltos de linea
+// reales, lo que rompe JSON.parse. Esto repara ese caso reescapando los
+// saltos de linea que quedan DENTRO de un string, sin tocar el resto.
+function repararJSON(raw) {
+  var out = '';
+  var dentroString = false;
+  var escapando = false;
+  for (var i = 0; i < raw.length; i++) {
+    var ch = raw[i];
+    if (dentroString) {
+      if (escapando) {
+        out += ch;
+        escapando = false;
+      } else if (ch === '\\') {
+        out += ch;
+        escapando = true;
+      } else if (ch === '"') {
+        out += ch;
+        dentroString = false;
+      } else if (ch === '\n') {
+        out += '\\n';
+      } else if (ch === '\r') {
+        // omitir
+      } else {
+        out += ch;
+      }
+    } else {
+      if (ch === '"') dentroString = true;
+      out += ch;
+    }
+  }
+  return out;
+}
+
+function parseServiceAccount(raw) {
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return JSON.parse(repararJSON(raw));
+  }
+}
+
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+    credential: admin.credential.cert(parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT))
   });
 }
 
