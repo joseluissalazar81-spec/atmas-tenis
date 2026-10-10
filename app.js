@@ -406,40 +406,68 @@ function formatRut(inp){if(!inp)return;var v=inp.value.replace(/[^0-9kK]/g,"");i
 
 /* ─── AUTH UI: UN SOLO PUNTO DE CONTROL ──────────────────────── */
 function mostrarLogin(){
-  var ls=el("login-screen");var hd=document.querySelector("header");var ct=document.querySelector(".content");var tb=document.querySelector(".tabbar");
+  var ph=document.querySelector(".phone");var ls=el("login-screen");var hd=document.querySelector("header");var ct=document.querySelector(".content");var tb=document.querySelector(".tabbar");
+  if(ph)ph.classList.remove("auth-pending");
   if(ls)ls.classList.add("show");
   if(hd)hd.style.display="none";
   if(ct)ct.style.display="none";
   if(tb)tb.style.display="none";
 }
 function mostrarApp(){
-  var ls=el("login-screen");var hd=document.querySelector("header");var ct=document.querySelector(".content");var tb=document.querySelector(".tabbar");
+  var ph=document.querySelector(".phone");var ls=el("login-screen");var hd=document.querySelector("header");var ct=document.querySelector(".content");var tb=document.querySelector(".tabbar");
+  if(ph)ph.classList.remove("auth-pending");
   if(ls)ls.classList.remove("show");
   if(hd)hd.style.display="";
   if(ct)ct.style.display="";
   if(tb)tb.style.display="";
 }
-function showAuthStep1(){
-  ["auth-step1","auth-crear","auth-entrar","auth-step2","auth-email","auth-rut"].forEach(function(id){var e=el(id);if(e)e.style.display="none";});
-  var s1=el("auth-step1");if(s1)s1.style.display="";
+var _skipAuthCheck=false;
+
+function showLogin(){
+  _skipAuthCheck=false;
+  var lg=el("auth-login");var rg=el("auth-registro");var vf=el("auth-verificar");
+  if(lg)lg.style.display="";if(rg)rg.style.display="none";if(vf)vf.style.display="none";
+  ocultarErrorLogin();
 }
-function showCrearPerfil(){
-  ["auth-step1","auth-entrar","auth-step2","auth-email","auth-rut"].forEach(function(id){var e=el(id);if(e)e.style.display="none";});
-  var c=el("auth-crear");if(c)c.style.display="";
+function showRegistro(){
+  var lg=el("auth-login");var rg=el("auth-registro");var vf=el("auth-verificar");
+  if(lg)lg.style.display="none";if(rg)rg.style.display="";if(vf)vf.style.display="none";
+  ocultarErrorRegistro();
 }
-function showEntrarEmail(){
-  ["auth-step1","auth-crear","auth-step2","auth-email","auth-rut"].forEach(function(id){var e=el(id);if(e)e.style.display="none";});
-  var e=el("auth-entrar");if(e)e.style.display="";
+function showVerificar(){
+  var lg=el("auth-login");var rg=el("auth-registro");var vf=el("auth-verificar");
+  if(lg)lg.style.display="none";if(rg)rg.style.display="none";if(vf)vf.style.display="";
 }
-function showAuthEmail(){showEntrarEmail();}
-function showAuthRut(){
-  var s1=el("auth-step1");var s2=el("auth-step2");var rutBox=el("auth-rut");
-  if(s1)s1.style.display="none";if(s2)s2.style.display="none";
-  if(!rutBox)return;
-  rutBox.style.display="";
-  rutBox.innerHTML='<div style="font-size:18px;font-weight:800;margin-bottom:16px">Ingresar con RUT</div><div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters"></div><button class="btn" onclick="recuperarPerfil()">Buscar mi perfil</button><div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>';
+function mostrarErrorLogin(msg){var e=el("login-error");if(e){e.textContent=msg;e.style.display="";}}
+function ocultarErrorLogin(){var e=el("login-error");if(e){e.style.display="none";e.textContent="";}}
+function mostrarErrorRegistro(msg){var e=el("registro-error");if(e){e.textContent=msg;e.style.display="";}}
+function ocultarErrorRegistro(){var e=el("registro-error");if(e){e.style.display="none";e.textContent="";}}
+
+async function loginConCorreo(){
+  if(!auth){toast("Auth no disponible");return;}
+  ocultarErrorLogin();
+  var email=((el("login-email")||{}).value||"").trim();
+  var pw=((el("login-pw")||{}).value||"").trim();
+  if(!email||!pw){mostrarErrorLogin("Ingresa tu correo y contraseña");return;}
+  try{
+    await auth.signInWithEmailAndPassword(email,pw);
+  }catch(e){
+    if(e.code==="auth/user-not-found"||e.code==="auth/wrong-password"||e.code==="auth/invalid-credential"){
+      mostrarErrorLogin("Correo o contraseña incorrectos");
+    }else{mostrarErrorLogin("Error: "+e.message);}
+  }
 }
-function showAuthStep2(){var s1=el("auth-step1");var em=el("auth-email");var s2=el("auth-step2");if(s1)s1.style.display="none";if(em)em.style.display="none";if(s2)s2.style.display="";}
+
+async function recuperarContrasena(){
+  if(!auth){toast("Auth no disponible");return;}
+  var email=((el("login-email")||{}).value||"").trim();
+  if(!email){mostrarErrorLogin("Escribe tu correo arriba para enviarte el link de recuperación");return;}
+  try{
+    await auth.sendPasswordResetEmail(email);
+    ocultarErrorLogin();
+    toast("Te enviamos un correo para restablecer tu contraseña");
+  }catch(e){mostrarErrorLogin("Error: "+e.message);}
+}
 
 async function loginGoogle(){
   if(!auth){toast("Auth no disponible");return;}
@@ -454,74 +482,50 @@ async function loginGoogle(){
         await auth.signInWithRedirect(provider);
       }catch(e2){
         localStorage.removeItem("_gRedirect");
-        toast("Error Google: "+e2.message);
+        mostrarErrorLogin("Error Google: "+e2.message);
       }
     }else{
-      toast("Error Google: "+e.message);
+      mostrarErrorLogin("Error Google: "+e.message);
     }
   }
 }
 
-async function crearCuenta(){
+async function crearCuentaCompleta(){
   if(!auth){toast("Auth no disponible");return;}
-  var nombre=((el("crear-nombre")||{}).value||"").trim();
-  var rut=((el("crear-rut")||{}).value||"").trim();
-  var em=((el("crear-em")||{}).value||"").trim();
-  var pw=((el("crear-pw")||{}).value||"").trim();
-  if(!nombre||!rut){toast("Nombre y RUT son obligatorios");return;}
-  if(!em||!pw){toast("Email y contraseña son obligatorios");return;}
-  if(pw.length<6){toast("Contraseña: mínimo 6 caracteres");return;}
+  ocultarErrorRegistro();
+  var nombre=((el("reg-nombre2")||{}).value||"").trim();
+  var apellidos=((el("reg-apellidos")||{}).value||"").trim();
+  var email=((el("reg-email")||{}).value||"").trim();
+  var telDigits=((el("reg-tel2")||{}).value||"").trim();
+  var tel=telDigits?("+569"+telDigits):"";
+  var comuna=((el("reg-comuna")||{}).value||"").trim();
+  var nivel=((el("reg-nivel")||{}).value||"").trim();
+  var pw=((el("reg-pw")||{}).value||"").trim();
+  var pw2=((el("reg-pw2")||{}).value||"").trim();
+  var terminos=!!((el("reg-terminos")||{}).checked);
+  if(!nombre||!apellidos){mostrarErrorRegistro("Nombre y apellidos son obligatorios");return;}
+  if(!email){mostrarErrorRegistro("Ingresa tu correo");return;}
+  if(!pw||pw.length<6){mostrarErrorRegistro("La contraseña debe tener mínimo 6 caracteres");return;}
+  if(pw!==pw2){mostrarErrorRegistro("Las contraseñas no coinciden");return;}
+  if(!terminos){mostrarErrorRegistro("Debes aceptar los Términos de servicio y la Política de privacidad");return;}
+  var nombreCompleto=(nombre+" "+apellidos).trim();
+  _skipAuthCheck=true;
   try{
-    var cred=await auth.createUserWithEmailAndPassword(em,pw);
-    var p={nombre:nombre,rut:rut,tel:"",fnac:"",socio:false,email:em};
+    var cred=await auth.createUserWithEmailAndPassword(email,pw);
+    try{await cred.user.updateProfile({displayName:nombreCompleto});}catch(eU){}
+    try{await cred.user.sendEmailVerification();}catch(eV){}
+    var p={nombre:nombreCompleto,apellidos:apellidos,rut:"",tel:tel,fnac:"",socio:false,email:email,comuna:comuna,nivel:nivel};
     var pv=await vincularRankingExistente(p);
-    var enRanking=(pv.jugados>0||pv.pts>0);
-    savePerfil(p);mostrarApp();renderPerfil();
-    if(enRanking){go("escalerilla");toast("¡Bienvenido, "+nombre+"! Tu historial fue vinculado ✓");}
-    else{go("inicio");toast("Bienvenido/a "+nombre+"!");}
+    await db.collection("jugadores").doc(cred.user.uid).set(p,{merge:true});
+    try{db.collection("notificaciones_admin").add({tipo:"Nuevo usuario",nombre:nombreCompleto,email:email,leida:false,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e3){}
+    await auth.signOut();
+    showVerificar();
   }catch(e){
-    if(e.code==="auth/email-already-in-use"){
-      // Si es Gmail, probablemente ya tiene cuenta Google
-      if(em.endsWith("@gmail.com")){
-        toast("Ese Gmail ya está registrado. Usa 'Entrar con Google'.");
-        setTimeout(function(){showAuthStep1();},1500);
-      }else{
-        toast("Ese email ya tiene cuenta. Usa 'Ya tengo cuenta · Ingresar'.");
-        setTimeout(function(){showEntrarEmail();var f=el("entrar-em");if(f)f.value=em;},1500);
-      }
-    }else if(e.code==="auth/weak-password"){toast("Contraseña muy débil.");}
-    else{toast("Error: "+e.message);}
-  }
-}
-
-async function loginEmail(){
-  if(!auth){toast("Auth no disponible");return;}
-  var emEl=el("entrar-em")||el("auth-em");
-  var pwEl=el("entrar-pw")||el("auth-pw");
-  var em=(emEl?emEl.value||"":"").trim();
-  var pw=(pwEl?pwEl.value||"":"").trim();
-  if(!em||!pw){toast("Ingresa email y contrasena");return;}
-  try{
-    await auth.signInWithEmailAndPassword(em,pw);
-  }catch(e){
-    if(e.code==="auth/user-not-found"||e.code==="auth/wrong-password"||e.code==="auth/invalid-credential"){
-      toast("Email o contraseña incorrectos");
-    }else{toast("Error: "+e.message);}
-  }
-}
-
-async function registrarEmail(){
-  if(!auth){toast("Auth no disponible");return;}
-  var em=(el("auth-em")?el("auth-em").value||"":"").trim();
-  var pw=(el("auth-pw")?el("auth-pw").value||"":"").trim();
-  if(!em||!pw){toast("Ingresa email y contrasena");return;}
-  if(pw.length<6){toast("Minimo 6 caracteres");return;}
-  try{
-    await auth.createUserWithEmailAndPassword(em,pw);
-  }catch(e){
-    if(e.code==="auth/configuration-not-found"||e.code==="auth/internal-error"){
-      toast("Email Auth no activado aun. Usa RUT por ahora.");showAuthRut();
-    }else{toast("Error: "+e.message);}
+    _skipAuthCheck=false;
+    if(e.code==="auth/email-already-in-use"){mostrarErrorRegistro("Ese correo ya tiene una cuenta. Intenta iniciar sesión.");}
+    else if(e.code==="auth/weak-password"){mostrarErrorRegistro("Contraseña muy débil.");}
+    else if(e.code==="auth/invalid-email"){mostrarErrorRegistro("Correo inválido.");}
+    else{mostrarErrorRegistro("Error: "+e.message);}
   }
 }
 
@@ -529,16 +533,28 @@ async function registrarEmail(){
 async function onAuthStateChanged(user){
   try{
     if(!user){
+      if(_skipAuthCheck)return;
       if(localStorage.getItem("_gRedirect")){return;}
       var p=getPerfil();
       if(p){mostrarApp();renderPerfil();return;}
-      mostrarLogin();showAuthStep1();
+      mostrarLogin();showLogin();
       return;
     }
     if(user.isAnonymous){
+      if(_skipAuthCheck)return;
       var p=getPerfil();
       if(p){mostrarApp();renderPerfil();}
-      else{mostrarLogin();showAuthStep1();}
+      else{mostrarLogin();showLogin();}
+      return;
+    }
+    var CORTE_VERIFICACION=new Date("2026-10-10T17:10:00Z");
+    var creada=user.metadata&&user.metadata.creationTime?new Date(user.metadata.creationTime):null;
+    var esCuentaAntigua=creada&&creada<CORTE_VERIFICACION;
+    if(!user.emailVerified&&!esCuentaAntigua){
+      if(_skipAuthCheck)return;
+      await auth.signOut();
+      mostrarLogin();showLogin();
+      mostrarErrorLogin("Tu cuenta no está activa. Por favor, confirma tu correo electrónico o contacta a soporte.");
       return;
     }
     var snap=await db.collection("jugadores").doc(user.uid).get();
@@ -548,26 +564,29 @@ async function onAuthStateChanged(user){
       if(user.email&&p.email!==user.email){p.email=user.email;db.collection("jugadores").doc(user.uid).set({email:user.email},{merge:true}).catch(function(){});}
       localStorage.setItem("atmas_perfil",JSON.stringify(p));
       mostrarApp();renderPerfil();go("inicio");
-      toast("Bienvenido, "+p.nombre+"!");
+      if(!sessionStorage.getItem("atmas_welcomed")){
+        toast("Bienvenido, "+p.nombre+"!");
+        sessionStorage.setItem("atmas_welcomed","1");
+      }
       if(esAdmin(p.nombre||"",user.email||p.email||"")){
         var campanaBtn=el("btn-campana");if(campanaBtn)campanaBtn.style.display="";
         iniciarNotificacionesAdmin();iniciarBadgePendientes();actualizarBadgesInicio();
       }
     }else{
       // Usuario Google sin perfil: crear uno con sus datos de Google
-      var p={nombre:user.displayName||user.email||"Usuario",rut:"",tel:"",fnac:"",socio:false,email:user.email||""};
-      var pv=await vincularRankingExistente(p);
-      var enRanking=(pv.jugados>0||pv.pts>0);
-      savePerfil(p);mostrarApp();renderPerfil();
-      try{db.collection("notificaciones_admin").add({tipo:"Nuevo usuario (Google)",nombre:p.nombre,email:p.email||"",leida:false,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}
-      if(enRanking){go("escalerilla");toast("¡Bienvenido, "+p.nombre+"! Tu historial fue vinculado ✓");}
-      else{go("perfil");toast("Bienvenido! Completa tu RUT en Mi Perfil.");}
+      var pg={nombre:user.displayName||user.email||"Usuario",rut:"",tel:"",fnac:"",socio:false,email:user.email||""};
+      var pvg=await vincularRankingExistente(pg);
+      var enRankingG=(pvg.jugados>0||pvg.pts>0);
+      savePerfil(pg);mostrarApp();renderPerfil();
+      try{db.collection("notificaciones_admin").add({tipo:"Nuevo usuario (Google)",nombre:pg.nombre,email:pg.email||"",leida:false,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(eN){}
+      if(enRankingG){go("escalerilla");toast("¡Bienvenido, "+pg.nombre+"! Tu historial fue vinculado ✓");}
+      else{go("perfil");toast("Bienvenido! Completa tu perfil.");}
     }
   }catch(e){
     console.warn("onAuthStateChanged error:",e);
     var p=getPerfil();
     if(p){mostrarApp();renderPerfil();}
-    else{mostrarLogin();showAuthStep1();}
+    else{mostrarLogin();showLogin();}
   }
 }
 
@@ -611,62 +630,50 @@ async function vincularRankingExistente(perfil){
   }catch(e){console.warn("vincularRankingExistente:",e);return perfil;}
 }
 
-async function completarPerfil(){
-  var nombre=((el("reg-nombre")||{}).value||"").trim();
-  var rut=((el("reg-rut")||{}).value||"").trim();
-  var tel=((el("reg-tel")||{}).value||"").trim();
-  var fnac=(el("reg-fnac")||{}).value||"";
-  if(!nombre||!rut){toast("Nombre y RUT son obligatorios");return;}
-  var p={nombre:nombre,rut:rut,tel:tel,fnac:fnac,socio:false};
-  var enRanking=false;
-  try{
-    var pv=await vincularRankingExistente(p);
-    enRanking=(pv.jugados>0||pv.pts>0);
-  }catch(e){}
-  savePerfil(p);mostrarApp();renderPerfil();
-  try{db.collection("notificaciones_admin").add({tipo:"Nuevo usuario",nombre:nombre,tel:tel||"",rut:rut||"",leida:false,ts:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){}
-  if(enRanking){go("escalerilla");toast("¡Bienvenido, "+nombre+"! Tu historial fue vinculado ✓");}
-  else{go("inicio");toast("Bienvenido "+nombre+"!");}
-}
-
-async function recuperarPerfil(){
-  var rutEl=el("rec-rut");
-  var rut=(rutEl?rutEl.value||"":"").trim();
-  if(!rut){toast("Ingresa tu RUT");return;}
-  toast("Buscando perfil...");
-  try{
-    var rutNorm=rut.replace(/\./g,"").replace(/-/g,"");
-    var direct=await db.collection("jugadores").doc(rutNorm).get();
-    if(direct.exists&&direct.data().nombre){
-      var p=direct.data();
-      savePerfil(p);mostrarApp();renderPerfil();go("inicio");
-      toast("Bienvenido de vuelta, "+p.nombre+"!");return;
-    }
-    var snap=await db.collection("jugadores").where("rut","==",rut).limit(1).get();
-    if(!snap.empty){
-      var p=snap.docs[0].data();
-      savePerfil(p);mostrarApp();renderPerfil();go("inicio");
-      toast("Bienvenido de vuelta, "+p.nombre+"!");return;
-    }
-    toast("RUT no encontrado. Crea tu perfil.");
-    var rutBox=el("auth-rut");
-    if(rutBox){rutBox.innerHTML='<div style="font-size:18px;font-weight:800;margin-bottom:12px">Ingresar con RUT</div><div style="background:#fee2e2;border-radius:12px;padding:12px;font-size:13px;color:#b91c1c;margin-bottom:14px">&#10060; RUT <b>'+rut+'</b> no tiene perfil en el sistema.</div><button class="btn" onclick="prepararCrearPerfil(\''+rut+'\')">Crear mi perfil ahora</button><div style="text-align:center;margin-top:12px"><span onclick="showAuthRut()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Intentar otro RUT</span> &nbsp;·&nbsp; <span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>';}
-  }catch(e){
-    console.warn("recuperarPerfil error:",e);
-    toast("Error de conexion. Intenta de nuevo.");
-    var rutBox2=el("auth-rut");
-    if(rutBox2){rutBox2.innerHTML='<div style="font-size:18px;font-weight:800;margin-bottom:12px">Ingresar con RUT</div><div style="background:#fee2e2;border-radius:12px;padding:12px;font-size:13px;color:#b91c1c;margin-bottom:14px">&#9888; No se pudo conectar. Intenta de nuevo.</div><button class="btn" onclick="showAuthRut()">Reintentar</button><button class="btn sec" style="margin-top:8px" onclick="prepararCrearPerfil(\''+rut+'\')">Crear perfil nuevo</button><div style="text-align:center;margin-top:12px"><span onclick="showAuthStep1()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline">Volver</span></div>';}
-  }
-}
-
-function registrarPerfil(){completarPerfil();}
-function prepararCrearPerfil(rut){showAuthStep2();var rEl=el("reg-rut");if(rEl)rEl.value=rut;var tit=document.querySelector("#auth-step2 div");if(tit)tit.textContent="Crear mi perfil";}
-
 function cerrarSesion(){
   localStorage.removeItem("atmas_perfil");
+  sessionStorage.removeItem("atmas_welcomed");
   if(auth)auth.signOut().catch(function(){});
-  mostrarLogin();showAuthStep1();
+  mostrarLogin();showLogin();
   toast("Sesion cerrada");
+}
+
+function togglePerfilPrivado(checked){
+  var p=getPerfil();if(!p)return;
+  p.privado=checked;
+  savePerfil(p);
+  toast(checked?"Tu perfil ahora es privado":"Tu perfil ahora es público");
+}
+
+async function cambiarContrasenaUsuario(){
+  if(!auth){toast("Auth no disponible");return;}
+  var p=getPerfil();
+  var email=(auth.currentUser&&auth.currentUser.email)||(p&&p.email)||"";
+  if(!email){toast("No encontramos tu correo");return;}
+  try{
+    await auth.sendPasswordResetEmail(email);
+    toast("Te enviamos un correo para cambiar tu contraseña");
+  }catch(e){toast("Error: "+e.message);}
+}
+
+async function eliminarCuenta(){
+  if(!confirm("¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.")){return;}
+  try{
+    if(auth&&auth.currentUser){
+      try{await db.collection("jugadores").doc(auth.currentUser.uid).delete();}catch(eD){}
+      await auth.currentUser.delete();
+    }
+    localStorage.removeItem("atmas_perfil");
+    sessionStorage.removeItem("atmas_welcomed");
+    mostrarLogin();showLogin();
+    toast("Tu cuenta fue eliminada");
+  }catch(e){
+    if(e.code==="auth/requires-recent-login"){
+      toast("Por seguridad, cierra sesión, vuelve a entrar y prueba de nuevo.");
+    }else{
+      toast("Error: "+e.message);
+    }
+  }
 }
 
 /* ─── PERFIL ──────────────────────────────────────────────────── */
@@ -675,7 +682,7 @@ function renderPerfil(){
   try{
     var p=getPerfil();
     if(!p){
-      pBody.innerHTML='<div class="hero" style="margin-bottom:14px"><div class="ball"></div><h2>Bienvenido a ATMAS</h2><p>Tu academia de tenis en un solo lugar.</p></div><div class="infobox" style="margin-bottom:12px"><div style="font-weight:800;font-size:14px;margin-bottom:10px">Ya soy miembro &middot; Ingresar con RUT</div><div class="field"><label>Tu RUT</label><input id="rec-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)"></div><button class="btn" onclick="recuperarPerfil()">Ingresar</button></div><div style="text-align:center;color:var(--suave);font-size:12px;margin:8px 0">o</div><div class="infobox"><div style="font-weight:800;font-size:14px;margin-bottom:10px">Soy nuevo &middot; Crear perfil</div><div class="field"><label>Nombre completo</label><input id="reg-nombre" placeholder="Ej: Juan Perez"></div><div class="field"><label>RUT</label><input id="reg-rut" placeholder="Ej: 12.345.678-9" oninput="formatRut(this)"></div><div class="field"><label>Fecha de nacimiento</label><input id="reg-fnac" type="date"></div><div class="field"><label>Telefono</label><input id="reg-tel" type="tel" placeholder="+569 XXXX XXXX"></div><button class="btn sec" onclick="registrarPerfil()">Crear mi perfil</button></div>';
+      pBody.innerHTML='<div class="hero" style="margin-bottom:14px"><div class="ball"></div><h2>Bienvenido a ATMAS</h2><p>Tu academia de tenis en un solo lugar.</p></div><div class="infobox"><p class="hint" style="margin-bottom:12px">Tu sesión no tiene un perfil cargado.</p><button class="btn" onclick="cerrarSesion()">Volver a entrar</button></div>';
       return;
     }
     var authEmail=(auth&&auth.currentUser&&auth.currentUser.email)||p.email||"";
@@ -717,7 +724,15 @@ function renderPerfil(){
       '<button class="btn dark" style="margin-top:8px" onclick="openModal(\'socio\')">Membres&iacute;a ATMAS</button>'+
       '<button class="btn sec" style="margin-top:8px" onclick="go(\'cancha\')">Reservar cancha</button>'+
       (!p.jugados?'<button class="btn sec" style="margin-top:8px;border-color:#6366f1;color:#6366f1" onclick="vincularMiRanking()">🔗 Vincular mi historial de ranking</button>':'')+
-      '<button class="btn sec" style="margin-top:8px;font-size:13px;padding:10px" onclick="cerrarSesion()">Cerrar sesi&oacute;n</button>'+
+      '<div class="section-title">Privacidad</div>'+
+      '<div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px">'+
+        '<div><div style="font-weight:700;font-size:14px">Perfil privado</div><div style="font-size:12px;color:var(--suave);margin-top:2px">No aparecer en la escalerilla p&uacute;blica del club</div></div>'+
+        '<input type="checkbox" id="chk-privado" onchange="togglePerfilPrivado(this.checked)"'+(p.privado?' checked':'')+' style="width:20px;height:20px;flex-shrink:0">'+
+      '</div>'+
+      '<div class="section-title">Seguridad</div>'+
+      '<button class="btn sec" style="margin-bottom:8px" onclick="cambiarContrasenaUsuario()">Cambiar contrase&ntilde;a</button>'+
+      '<button class="btn sec" style="margin-bottom:8px" onclick="cerrarSesion()">Cerrar sesi&oacute;n</button>'+
+      '<button class="btn sec" style="border-color:#dc2626;color:#dc2626" onclick="eliminarCuenta()">Eliminar cuenta</button>'+
       '<p class="foot" style="margin-top:16px">@ATMAS_TENIS &middot; Club Las Avestruces</p>';
     cargarMisReservas(p.nombre);cargarPartidosPendientes(p.nombre);cargarHistorial(p.nombre);mostrarPopupTorneos();
   }catch(e){console.warn("renderPerfil error:",e);}
@@ -3514,7 +3529,7 @@ function adminSalir(){adminUnlocked=false;go('inicio');}
         console.warn("signInAnonymously error:",e);
         var p=getPerfil();
         if(p){mostrarApp();renderPerfil();}
-        else{mostrarLogin();showAuthStep1();}
+        else{mostrarLogin();showLogin();}
       });
     }).catch(function(e){
       console.warn("getRedirectResult error:",e);
@@ -3523,7 +3538,7 @@ function adminSalir(){adminUnlocked=false;go('inicio');}
   }else{
     var p=getPerfil();
     if(p){mostrarApp();renderPerfil();}
-    else{mostrarLogin();showAuthStep1();}
+    else{mostrarLogin();showLogin();}
   }
 })();
 

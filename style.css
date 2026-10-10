@@ -3,6 +3,7 @@ html,body{overflow-x:hidden}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--verde-osc);color:var(--texto);display:flex;justify-content:center;overflow-x:hidden}
 .phone{width:100%;max-width:430px;min-height:100vh;background:var(--gris);display:flex;flex-direction:column;overflow-x:hidden}
+.phone.auth-pending header,.phone.auth-pending .content,.phone.auth-pending .tabbar{display:none}
 header{background:#fff;padding:8px 14px 8px;border-bottom:1px solid var(--linea);display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
 header h1{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header p{font-size:11px;color:var(--suave);white-space:nowrap}
@@ -124,8 +125,23 @@ header p{font-size:11px;color:var(--suave);white-space:nowrap}
 .slot.sel{background:var(--verde-osc);border-color:var(--verde-osc);color:#fff}
 .slot.lleno{background:var(--gris);border-color:var(--linea);color:var(--suave);cursor:default}
 .slot .sub{font-size:10px;font-weight:400;display:block;margin-top:2px}
-#login-screen{display:none;flex-direction:column;min-height:100vh;background:linear-gradient(160deg,#2f6b1a,#4e8a1f);padding:32px 24px 40px;overflow-y:auto}
+#login-screen{display:none;flex-direction:column;min-height:100vh;position:relative;
+  background-color:var(--negro);
+  padding:40px 24px 40px;overflow-y:auto;overflow-x:hidden}
 #login-screen.show{display:flex}
+#login-screen:before{content:"";position:absolute;top:0;left:0;right:0;height:320px;z-index:0;
+  background-image:url('img/login-bg.jpg');background-size:cover;background-position:center 80%;background-repeat:no-repeat}
+#login-screen:after{content:"";position:absolute;top:0;left:0;right:0;height:320px;z-index:0;
+  background:linear-gradient(180deg,rgba(5,10,5,.5) 0%,rgba(5,10,5,.72) 55%,var(--negro) 100%)}
+#login-screen .field label{color:rgba(255,255,255,.55)}
+#login-screen .field input,#login-screen .field select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#fff}
+#login-screen .field input::placeholder{color:rgba(255,255,255,.35)}
+#login-screen .field select{color:#fff}
+#login-screen .field select option{color:#000}
+.btn-lima{display:block;width:100%;background:var(--lima);color:#121712;border:none;padding:15px;border-radius:14px;font-size:16px;font-weight:800;margin-top:8px;cursor:pointer;position:relative;z-index:1}
+.btn-outline-dark{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:rgba(255,255,255,.04);color:#fff;border:1.5px solid rgba(255,255,255,.25);padding:13px;border-radius:14px;font-size:15px;font-weight:700;margin-top:10px;cursor:pointer;position:relative;z-index:1}
+.auth-divider{display:flex;align-items:center;gap:10px;margin:18px 0 2px;color:rgba(255,255,255,.4);font-size:11px}
+.auth-divider:before,.auth-divider:after{content:"";flex:1;height:1px;background:rgba(255,255,255,.15)}
 .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
 .cal-hdr{text-align:center;font-size:10px;font-weight:700;color:var(--suave);padding:4px 0}

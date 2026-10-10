@@ -100,8 +100,8 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update: if isAdmin()
         || (isSignedIn()
-            && onlyFields(["nombre","rut","tel","fnac","email","socio","pts","jugados","ganados","perdidos","pct"]));
-      allow delete: if isAdmin();
+            && onlyFields(["nombre","apellidos","rut","tel","fnac","email","socio","comuna","nivel","privado","pts","jugados","ganados","perdidos","pct"]));
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid==docId);
     }
 
     // ── notificaciones_admin ───────────────────────────────────────
