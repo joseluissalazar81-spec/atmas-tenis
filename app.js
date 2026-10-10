@@ -665,12 +665,24 @@ async function loginConCorreo(){
   }
 }
 
+async function enviarCorreoATMAS(tipo,email,nombre){
+  var resp=await fetch("/api/enviar-correo",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({tipo:tipo,email:email,nombre:nombre||""})
+  });
+  if(!resp.ok){
+    var data=null;try{data=await resp.json();}catch(e){}
+    throw new Error((data&&data.error)||"No se pudo enviar el correo");
+  }
+}
+
 async function recuperarContrasena(){
   if(!auth){toast("Auth no disponible");return;}
   var email=((el("login-email")||{}).value||"").trim();
   if(!email){mostrarErrorLogin("Escribe tu correo arriba para enviarte el link de recuperación");return;}
   try{
-    await auth.sendPasswordResetEmail(email);
+    await enviarCorreoATMAS("reset",email);
     ocultarErrorLogin();
     toast("Te enviamos un correo para restablecer tu contraseña");
   }catch(e){mostrarErrorLogin("Error: "+e.message);}
@@ -720,7 +732,7 @@ async function crearCuentaCompleta(){
   try{
     var cred=await auth.createUserWithEmailAndPassword(email,pw);
     try{await cred.user.updateProfile({displayName:nombreCompleto});}catch(eU){}
-    try{await cred.user.sendEmailVerification();}catch(eV){}
+    try{await enviarCorreoATMAS("verificacion",email,nombreCompleto);}catch(eV){console.warn("enviarCorreoATMAS verificacion:",eV);}
     var p={nombre:nombreCompleto,apellidos:apellidos,rut:"",tel:tel,fnac:"",socio:false,email:email,comuna:comuna,nivel:nivel};
     var pv=await vincularRankingExistente(p);
     await db.collection("jugadores").doc(cred.user.uid).set(p,{merge:true});
@@ -858,7 +870,7 @@ async function cambiarContrasenaUsuario(){
   var email=(auth.currentUser&&auth.currentUser.email)||(p&&p.email)||"";
   if(!email){toast("No encontramos tu correo");return;}
   try{
-    await auth.sendPasswordResetEmail(email);
+    await enviarCorreoATMAS("reset",email,p&&p.nombre);
     toast("Te enviamos un correo para cambiar tu contraseña");
   }catch(e){toast("Error: "+e.message);}
 }
